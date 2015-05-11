@@ -46,15 +46,14 @@ namespace TecWare.DES.Stuff
 		/// <typeparam name="T"></typeparam>
 		/// <param name="value"></param>
 		/// <returns></returns>
-		public static T ChangeValue<T>(object value)
+		public static T ChangeType<T>(this object value)
 		{
 			return (T)Procs.ChangeType(value, typeof(T));
-		} // func ChangeValue
+		} // func ChangeType
 
 		// Todo: Dynamische Implementierung
 		//       Erzeugt eine CallSite, die in einer Variable gecached werden muss, und immer wieder gerufen wird.
 
 		#endregion
-
 	} // class Procs
 }
