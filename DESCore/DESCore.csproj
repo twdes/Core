@@ -39,6 +39,7 @@
     <Compile Include="Stuff\Exceptions.cs" />
     <Compile Include="Stuff\Lua.cs" />
     <Compile Include="Stuff\Objects.cs" />
+    <Compile Include="Stuff\PropertyList.cs" />
     <Compile Include="Stuff\StringBuilder.cs" />
     <Compile Include="Stuff\Xml.cs" />
   </ItemGroup>
