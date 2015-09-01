@@ -20,6 +20,7 @@ namespace TecWare.DES.Networking
 		public const string Text = "text/plain";
 		public const string Xml = "text/xml";
 		public const string Xaml = "application/xaml+xml";
+		public const string Lua = Text;
 	} // class MimeTypes
 
 	#region -- interface IDataRecord ----------------------------------------------------
@@ -89,27 +90,51 @@ namespace TecWare.DES.Networking
 			else
 				return null;
 		} // func CheckMimeType
-
-
+		
 		private bool IsCompressed(string contentEncoding)
 		{
 			return contentEncoding != null && contentEncoding.IndexOf("gzip") >= 0;
 		} // func IsCompressed
 
-		public async Task<WebResponse> GetResponseAsync(string relativeUri)
+		public Uri GetFullUri(string path)
 		{
-			var uri = baseUri == null ? new Uri(relativeUri) : new Uri(baseUri, relativeUri);
-			var request = WebRequest.Create(uri);
+			Uri uri;
+
+			if (path == null)
+				uri = baseUri;
+			else
+			{
+				uri = new Uri(path, UriKind.RelativeOrAbsolute);
+				if (!uri.IsAbsoluteUri && baseUri != null)
+					uri = new Uri(baseUri, uri);
+			}
+
+			if (uri == null)
+				throw new ArgumentNullException("Uri can not be null.");
+
+			return uri;
+		} // func GetFullUri
+
+		/// <summary></summary>
+		/// <param name="path"></param>
+		/// <returns></returns>
+		public async Task<WebResponse> GetResponseAsync(string path)
+		{
+			var request = WebRequest.Create(GetFullUri(path));
+
+			// we accept always gzip
+			request.Headers[HttpRequestHeader.AcceptEncoding] = "gzip";
+
 			return await request.GetResponseAsync();
 		} // func GetResponseAsync
 
 		/// <summary>Creates a plain Web-Request, special arguments are filled with IWebRequestCreate.</summary>
-		/// <param name="uri">Resource</param>
+		/// <param name="path">Resource</param>
 		/// <param name="acceptedMimeType">Optional.</param>
 		/// <returns></returns>
-		public async Task<Stream> GetStreamAsync(string relativeUri, string acceptedMimeType)
+		public async Task<Stream> GetStreamAsync(string path, string acceptedMimeType)
 		{
-			return GetStreamAsync(await GetResponseAsync(relativeUri), acceptedMimeType);
+			return GetStreamAsync(await GetResponseAsync(path), acceptedMimeType);
 		} // func GetStreamAsync
 
 		public Stream GetStreamAsync(WebResponse response, string acceptedMimeType)
@@ -121,9 +146,9 @@ namespace TecWare.DES.Networking
 				return response.GetResponseStream();
 		} // func GetStreamAsync
 
-		public async Task<TextReader> GetTextReaderAsync(string relativeUri, string acceptedMimeType)
+		public async Task<TextReader> GetTextReaderAsync(string path, string acceptedMimeType)
 		{
-			return GetTextReaderAsync(await GetResponseAsync(relativeUri), acceptedMimeType);
+			return GetTextReaderAsync(await GetResponseAsync(path), acceptedMimeType);
 		} // func GetTextReaderAsync
 
 		public TextReader GetTextReaderAsync(WebResponse response, string acceptedMimeType)
@@ -135,7 +160,7 @@ namespace TecWare.DES.Networking
 				return new StreamReader(response.GetResponseStream(), enc);
 		}// func GetTextReaderAsync
 
-		public async Task<XmlReader> GetXmlStreamAsync(string relativeUri, string acceptedMimeType = MimeTypes.Xml, XmlReaderSettings settings = null)
+		public async Task<XmlReader> GetXmlStreamAsync(string path, string acceptedMimeType = MimeTypes.Xml, XmlReaderSettings settings = null)
 		{
 			if (settings == null)
 			{
@@ -145,7 +170,7 @@ namespace TecWare.DES.Networking
 			}
 			settings.CloseInput = true;
 
-			var response = await GetResponseAsync(relativeUri);
+			var response = await GetResponseAsync(path);
 			var baseUri = response.ResponseUri.GetComponents(UriComponents.Scheme | UriComponents.Host | UriComponents.Port | UriComponents.Path, UriFormat.SafeUnescaped);
 			var context = new XmlParserContext(null, null, null, null, null, null, baseUri, null, XmlSpace.Default);
 			return XmlReader.Create(GetTextReaderAsync(response, acceptedMimeType), settings, context);
