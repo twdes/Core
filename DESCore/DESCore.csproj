@@ -8,7 +8,7 @@
     <ProjectGuid>{67528843-E631-4C05-B6E8-514CC8BEC7B6}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>TecWare.DES</RootNamespace>
+    <RootNamespace>TecWare.DE</RootNamespace>
     <AssemblyName>DES.Core</AssemblyName>
     <DefaultLanguage>de-DE</DefaultLanguage>
     <FileAlignment>512</FileAlignment>

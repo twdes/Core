@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Neo.IronLua;
 
-namespace TecWare.DES.Stuff
+namespace TecWare.DE.Stuff
 {
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>

@@ -7,7 +7,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace TecWare.DES.Stuff
+namespace TecWare.DE.Stuff
 {
 	#region -- class Procs --------------------------------------------------------------
 

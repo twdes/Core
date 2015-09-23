@@ -11,7 +11,7 @@ using System.Xml;
 using System.Xml.Linq;
 using Neo.IronLua;
 
-namespace TecWare.DES.Networking
+namespace TecWare.DE.Networking
 {
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>

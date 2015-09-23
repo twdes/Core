@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 
-namespace TecWare.DES.Stuff
+namespace TecWare.DE.Stuff
 {
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>

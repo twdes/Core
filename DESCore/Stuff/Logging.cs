@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace TecWare.DES.Stuff
+namespace TecWare.DE.Stuff
 {
 	#region -- enum LogMsgType ----------------------------------------------------------
 
@@ -121,7 +121,7 @@ namespace TecWare.DES.Stuff
 			return this;
 		} // func WriteLine
 
-		public LogMessageScopeProxy Write((string text)
+		public LogMessageScopeProxy Write(string text)
 		{
 			scope?.Write(text);
 			return this;

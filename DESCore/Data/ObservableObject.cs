@@ -8,7 +8,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace TecWare.DES.Data
+namespace TecWare.DE.Data
 {
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>

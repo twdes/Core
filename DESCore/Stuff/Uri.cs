@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace TecWare.DES.Stuff
+namespace TecWare.DE.Stuff
 {
 	public static partial class UriHelper
 	{
