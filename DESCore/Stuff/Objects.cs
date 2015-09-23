@@ -55,5 +55,28 @@ namespace TecWare.DES.Stuff
 		//       Erzeugt eine CallSite, die in einer Variable gecached werden muss, und immer wieder gerufen wird.
 
 		#endregion
+
+		#region -- GetService ---------------------------------------------------------------
+		
+		public static T GetService<T>(this IServiceProvider sp, bool throwException = false)
+			where T : class
+		{
+			return GetService<T>(sp, typeof(T), throwException);
+		} // func GetService
+
+		public static T GetService<T>(this IServiceProvider sp, Type serviceType, bool throwException = false)
+			where T : class
+		{
+			T r = null;
+			if (sp != null)
+				r = sp.GetService(serviceType) as T;
+
+			if (r == null && throwException)
+				throw new ArgumentException(String.Format("Service {0} is not implemented by {1}.", serviceType.Name, typeof(T).Name));
+
+			return r;
+		} // func GetService
+
+		#endregion
 	} // class Procs
 }

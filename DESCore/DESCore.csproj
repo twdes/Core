@@ -38,6 +38,7 @@
     <Compile Include="Networking\Requests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Stuff\Exceptions.cs" />
+    <Compile Include="Stuff\Logging.cs" />
     <Compile Include="Stuff\Lua.cs" />
     <Compile Include="Stuff\Objects.cs" />
     <Compile Include="Stuff\PropertyList.cs" />
