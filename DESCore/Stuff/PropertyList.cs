@@ -126,7 +126,7 @@ namespace TecWare.DE.Stuff
 			{
 				foreach (var c in args)
 					SetProperty(c);
-      }
+			}
 		} // proc AddRange
 
 		#endregion
@@ -284,7 +284,7 @@ namespace TecWare.DE.Stuff
 		} // func Contains
 
 		#endregion
-		
+
 		/// <summary>Setzt/Gibt einen Parameter zurück.</summary>
 		/// <param name="name">Name des Parameters.</param>
 		/// <returns>Wert</returns>
@@ -293,7 +293,7 @@ namespace TecWare.DE.Stuff
 			get { return GetProperty(name, null); }
 			set { SetProperty(name, value); }
 		} // prop this
-		
+
 		/// <summary></summary>
 		public IEnumerable<KeyValuePair<string, object>> PropertyObjects => from c in properties select new KeyValuePair<string, object>(c.Key, c.Value.Value);
 		/// <summary></summary>
@@ -318,7 +318,7 @@ namespace TecWare.DE.Stuff
 	#endregion
 
 
-		public partial class Procs
+	public partial class Procs
 	{
 		#region -- PropertyList -----------------------------------------------------------
 

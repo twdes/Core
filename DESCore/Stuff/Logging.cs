@@ -109,6 +109,12 @@ namespace TecWare.DE.Stuff
 
 		#region -- Write ------------------------------------------------------------------
 
+		public LogMessageScopeProxy AutoFlush()
+		{
+			scope?.AutoFlush();
+			return this;
+		} // func AutoFlush
+
 		public LogMessageScopeProxy NewLine()
 		{
 			scope?.WriteLine(false);
@@ -193,6 +199,8 @@ namespace TecWare.DE.Stuff
 				return new LogMessageScopeProxy(logger2.GetScope(typ, autoFlush));
 			return LogMessageScopeProxy.Empty;
 		} // func GetScope
+
+		public bool IsEmpty => logger == null;
 
 		public static LoggerProxy Empty { get; } = new LoggerProxy(null);
 	} // class LoggerProxy

@@ -7,6 +7,27 @@ using Neo.IronLua;
 
 namespace TecWare.DE.Stuff
 {
+	#region -- class DisposableScope ----------------------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public sealed class DisposableScope : IDisposable
+	{
+		private Action dispose;
+
+		public DisposableScope(Action dispose)
+		{
+			this.dispose = dispose;
+		} // ctor
+
+		public void Dispose()
+		{
+			dispose();
+		} // proc Dispose
+	} // class class DisposableScope
+
+	#endregion
+
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public static partial class Procs
@@ -50,13 +71,10 @@ namespace TecWare.DE.Stuff
 		{
 			return (T)Procs.ChangeType(value, typeof(T));
 		} // func ChangeType
-
-		// Todo: Dynamische Implementierung
-		//       Erzeugt eine CallSite, die in einer Variable gecached werden muss, und immer wieder gerufen wird.
-
+		
 		#endregion
 
-		#region -- GetService ---------------------------------------------------------------
+		#region -- GetService -------------------------------------------------------------
 		
 		public static T GetService<T>(this IServiceProvider sp, bool throwException = false)
 			where T : class
@@ -78,5 +96,48 @@ namespace TecWare.DE.Stuff
 		} // func GetService
 
 		#endregion
+
+		#region -- CompareBytes -----------------------------------------------------------
+
+		public static bool CompareBytes(byte[] a, byte[] b)
+		{
+			if (a == null || b == null)
+				return false;
+			if (a.Length != b.Length)
+				return false;
+
+			return CompareBytes(a, 0, b, 0, a.Length);
+		} // func CompareBytes
+
+		public static bool CompareBytes(byte[] a, int aOffset, byte[] b, int bOffset, int length)
+		{
+			if (a == null || b == null)
+				return false;
+
+			if (aOffset < 0 || bOffset < 0 || length < 0)
+				throw new ArgumentOutOfRangeException();
+
+			if (a.Length < aOffset + length)
+				return false;
+			if (b.Length < bOffset + length)
+				return false;
+
+			return CompareBytesIntern(a, aOffset, b, bOffset, length);
+		} // proc CompareBytes
+
+		private static bool CompareBytesIntern(byte[] a, int aOffset, byte[] b, int bOffset, int length)
+		{
+			for (var i = 0; i < length; i++)
+			{
+				if (a[aOffset + i] != b[bOffset + i])
+					return false;
+			}
+
+			return true;
+		} // func CompareBytesIntern
+
+		#endregion
+
+		public readonly static string[] EmptyStringArray = new string[0];
 	} // class Procs
 }
