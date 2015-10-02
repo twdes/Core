@@ -30,7 +30,7 @@ namespace TecWare.DE.Stuff
 
 			this.name = name;
 			this.type = type ?? typeof(object);
-			this.value = Procs.ChangeType(value, type);
+			this.value = Procs.ChangeType(value, this.type);
 		} // ctor
 
 		public string Name => name;

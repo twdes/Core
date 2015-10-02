@@ -167,7 +167,7 @@ namespace TecWare.DE.Stuff
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Extensions for the Logger-Interface.</summary>
-	public sealed class LoggerProxy
+	public sealed class LoggerProxy : ILogger
 	{
 		private ILogger logger;
 
@@ -202,6 +202,9 @@ namespace TecWare.DE.Stuff
 
 		public bool IsEmpty => logger == null;
 
+		public static LoggerProxy Create(ILogger log)
+			=> log == null ? Empty : new LoggerProxy(log);
+		
 		public static LoggerProxy Empty { get; } = new LoggerProxy(null);
 	} // class LoggerProxy
 
@@ -216,8 +219,7 @@ namespace TecWare.DE.Stuff
 		public static void LogMsg(this ILogger logger, LogMsgType typ, string message, params object[] args) => logger?.LogMsg(typ, String.Format(message, args));
 		public static void LogMsg(this ILogger logger, LogMsgType typ, string message, Exception e) => logger?.LogMsg(typ, message + Environment.NewLine + Environment.NewLine + e.GetMessageString());
 		public static void LogMsg(this ILogger logger, LogMsgType typ, Exception e) => LogMsg(logger, typ, e.Message, e);
-		public static LoggerProxy LogProxy(this ILogger logger) => logger == null ? LoggerProxy.Empty : new LoggerProxy(logger);
-		public static LoggerProxy LogProxy(this IServiceProvider sp) => LogProxy(sp?.GetService<ILogger>(false));
+		public static LoggerProxy LogProxy(this IServiceProvider sp) => LoggerProxy.Create(sp?.GetService<ILogger>(false));
   } // class Procs
 
 	#endregion

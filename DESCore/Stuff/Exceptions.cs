@@ -58,6 +58,11 @@ namespace TecWare.DE.Stuff
 				sb.WriteSeperator(sSectionName);
 			} // proc AppendSection
 
+			private static string ReplaceNoneVisibleChars(string value)
+				=> value.Replace("\n", "\\n")
+						.Replace("\r", "\\r")
+						.Replace("\t", "\\t");
+
 			protected override void AppendProperty(string sName, Type type, Func<object> value)
 			{
 				sb.Append((sName + ":").PadRight(20, ' ')).Append(' ');
@@ -69,14 +74,20 @@ namespace TecWare.DE.Stuff
 						sb.AppendLine("<null>");
 					else
 					{
-						string sValue = Convert.ToString(v, CultureInfo.InvariantCulture);
-						sValue = sValue.Replace("\n", "\\n")
-							.Replace("\r", "\\r")
-							.Replace("\t", "\\t");
+						var stringValue = Convert.ToString(v, CultureInfo.InvariantCulture);
+
 
 						if (type == typeof(string))
 						{
-							sb.Append('\'').Append(sValue).Append('\'').AppendLine();
+							if (stringValue.Contains('\n'))
+							{
+								var lines =stringValue.Replace("\r", "").Split('\n');
+								sb.AppendLine();
+								foreach (var l in lines)
+									sb.Append("    ").AppendLine(l);
+							}
+							else
+								sb.Append('\'').Append(ReplaceNoneVisibleChars(stringValue)).Append('\'').AppendLine();
 						}
 						else if (type != typeof(sbyte) && type != typeof(byte) &&
 								type != typeof(short) && type != typeof(ushort) &&
@@ -85,11 +96,11 @@ namespace TecWare.DE.Stuff
 								type != typeof(decimal) && type != typeof(DateTime) &&
 								type != typeof(float) && type != typeof(double))
 						{
-							sb.Append('(').Append(type.Name).Append(')').AppendLine(sValue);
+							sb.Append('(').Append(type.Name).Append(')').AppendLine(ReplaceNoneVisibleChars(stringValue));
 						}
 						else
 						{
-							sb.AppendLine(sValue);
+							sb.AppendLine(stringValue);
 						}
 					}
 				}
