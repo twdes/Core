@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -67,8 +68,9 @@ namespace TecWare.DE.Stuff
 		ILogMessageScope WriteLine(bool force = true);
 
 		/// <summary>Indents all follow up lines.</summary>
+		/// <param name="indentation"></param>
 		/// <returns></returns>
-		IDisposable Indent();
+		IDisposable Indent(string indentation = "  ");
 
 		/// <summary>Activates the automatisch flush on dispose.</summary>
 		/// <returns></returns>
@@ -86,12 +88,14 @@ namespace TecWare.DE.Stuff
 	public sealed class LogMessageScopeProxy : IDisposable
 	{
 		private ILogMessageScope scope;
+		private Stopwatch stopWatch;
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
-		internal LogMessageScopeProxy(ILogMessageScope scope)
+		internal LogMessageScopeProxy(ILogMessageScope scope, bool stopTime = false)
 		{
 			this.scope = scope;
+			this.stopWatch = stopTime ? Stopwatch.StartNew() : null;
 		} // ctor
 
 		public void Dispose()
@@ -102,7 +106,14 @@ namespace TecWare.DE.Stuff
 		private void Dispose(bool disposing)
 		{
 			if (disposing)
+			{
+				if (scope != null && stopWatch != null)
+				{
+					this.NewLine()
+						.WriteLine("=== Dauer = {0:N0}ms, {1:N0}ticks ===", stopWatch.ElapsedMilliseconds, stopWatch.ElapsedTicks);
+        }
 				scope?.Dispose();
+			}
 		} // proc Dispose
 
 		#endregion
@@ -163,6 +174,137 @@ namespace TecWare.DE.Stuff
 
 	#endregion
 
+	#region -- class LogMessageScope ----------------------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public sealed class LogMessageScope : ILogMessageScope
+	{
+		#region -- class IndentationScope -------------------------------------------------
+
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary></summary>
+		private class IndentationScope : IDisposable
+		{
+			private LogMessageScope owner;
+			private IndentationScope parent;
+			
+			public IndentationScope(LogMessageScope owner, string indentation)
+			{
+				this.owner = owner;
+				this.parent = owner.currentIndentation;
+				this.Indentation = parent == null ? indentation : parent.Indentation + indentation;
+      } // ctor
+
+			public void Dispose()
+			{
+				if (owner.currentIndentation != this)
+					throw new InvalidOperationException("Invalid indentation stack.");
+
+				this.owner.currentIndentation = parent;
+			} // proc Dispose
+
+			public string Indentation { get; }
+		} // class IndentationScope
+
+		#endregion
+
+		private ILogger log;
+
+		private LogMsgType typ;
+		private bool autoFlush;
+		private bool startIndent = false;
+		private IndentationScope currentIndentation = null;
+		private StringBuilder sb = new StringBuilder();
+
+		public LogMessageScope(ILogger log, LogMsgType typ, bool autoFlush)
+		{
+			this.log = log;
+			this.typ = typ;
+			this.autoFlush = autoFlush;
+		} // ctor
+
+		// no dtor, only flush log in the calling thread
+		public void Dispose()
+		{
+			if (autoFlush)
+				Flush();
+    } // proc Dispose
+
+		public void Flush()
+		{
+			log?.LogMsg(typ, sb.ToString());
+			sb.Length = 0;
+		} // proc Flush
+
+		public ILogMessageScope AutoFlush()
+		{
+			autoFlush = true;
+			return this;
+		} // func AutoFlush
+
+		public IDisposable Indent(string indentation = "  ")
+		{
+			return currentIndentation = new IndentationScope(this, indentation);
+		} // proc Indent
+		
+		private void AppendLine(string text, int startAt, int endAt)
+		{
+			if (startIndent)
+			{
+				if (currentIndentation != null)
+					sb.Append(currentIndentation.Indentation);
+				startIndent = false;
+			}
+			sb.Append(text, startAt, endAt);
+		} // proc AppendLine
+
+		public ILogMessageScope Write(string text)
+		{
+			if (currentIndentation != null)
+			{
+				var n2 = Environment.NewLine.Length;
+				var pos = 0;
+				var idx = text.IndexOf(Environment.NewLine);
+				while (idx >= 0)
+				{
+					idx += n2;
+					AppendLine(text, pos, idx - pos);
+					startIndent = true;
+					pos = idx;
+					idx = text.IndexOf(Environment.NewLine, pos);
+				}
+				if (pos < text.Length)
+					AppendLine(text, pos, text.Length - pos);
+			}
+			else
+				sb.Append(text);
+			return this;
+		} // func Write
+
+		public ILogMessageScope WriteLine(bool force = true)
+		{
+			if (force || !startIndent)
+			{
+				sb.AppendLine();
+				startIndent = true;
+			}
+			return this;
+		} // func WriteLine
+
+		public LogMsgType Typ
+		{
+			get { return typ; }
+			set
+			{
+				if (typ < value)
+					typ = value;
+			}
+		} // prop Type
+	} // class LogMessageScope
+
+	#endregion
+
 	#region -- class LoggerProxy --------------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -192,11 +334,11 @@ namespace TecWare.DE.Stuff
 		public void LogMsg(LogMsgType typ, string message) => logger?.LogMsg(typ, message);
 		public void LogMsg(LogMsgType typ, string message, params object[] args) => logger?.LogMsg(typ, String.Format(message, args));
 
-		public LogMessageScopeProxy GetScope(LogMsgType typ = LogMsgType.Information, bool autoFlush = true)
+		public LogMessageScopeProxy GetScope(LogMsgType typ = LogMsgType.Information, bool autoFlush = true, bool stopTime = false)
 		{
 			var logger2 = logger as ILogger2;
 			if (logger2 != null)
-				return new LogMessageScopeProxy(logger2.GetScope(typ, autoFlush));
+				return new LogMessageScopeProxy(logger2.GetScope(typ, autoFlush), stopTime);
 			return LogMessageScopeProxy.Empty;
 		} // func GetScope
 
