@@ -7,8 +7,16 @@ using System.Threading.Tasks;
 
 namespace TecWare.DE.Stuff
 {
-	public static partial class UriHelper
+	public static partial class Procs
 	{
+		public static IEnumerable<string> ParseMultiValueHeader(string value)
+		{
+			return from c in value.Split(',')
+						 let t = c.Trim()
+						 where t.Length > 0
+						 select t;
+		} // func ParseMultiValueHeader
+
 		public static string GetFileName(this Uri uri)
 		{
 			return Path.GetFileName(uri.AbsolutePath);
