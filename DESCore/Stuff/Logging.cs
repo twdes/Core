@@ -58,6 +58,11 @@ namespace TecWare.DE.Stuff
 	/// <summary></summary>
 	public interface ILogMessageScope : IDisposable
 	{
+		/// <summary></summary>
+		/// <param name="value"></param>
+		/// <param name="force"></param>
+		ILogMessageScope SetType(LogMsgType value, bool force = false);
+
 		/// <summary>Writes text to the scope.</summary>
 		/// <param name="text"></param>
 		/// <returns></returns>
@@ -78,7 +83,7 @@ namespace TecWare.DE.Stuff
 
 		/// <summary></summary>
 		/// <remarks>Upgrades the scope type to an higher level (info->warn->error)</remarks>
-		LogMsgType Typ { get; set; }
+		LogMsgType Typ { get; }
   } // interface ILogMessageScope
 
 	#endregion
@@ -144,11 +149,11 @@ namespace TecWare.DE.Stuff
 			return this;
 		} // proc Write
 
-		public LogMessageScopeProxy SetType(LogMsgType typ)
+		public LogMessageScopeProxy SetType(LogMsgType typ, bool force = false)
 		{
 			if (scope != null)
 			{
-				scope.Typ = typ;
+				scope.SetType(typ, force);
 				if (typ != LogMsgType.Information)
 					scope.AutoFlush();
 			}
@@ -237,6 +242,13 @@ namespace TecWare.DE.Stuff
 			sb.Length = 0;
 		} // proc Flush
 
+		public ILogMessageScope SetType(LogMsgType value, bool force = false)
+		{
+			if (force || typ < value)
+				typ = value;
+			return this;
+		} // proc SetType
+
 		public ILogMessageScope AutoFlush()
 		{
 			autoFlush = true;
@@ -292,15 +304,7 @@ namespace TecWare.DE.Stuff
 			return this;
 		} // func WriteLine
 
-		public LogMsgType Typ
-		{
-			get { return typ; }
-			set
-			{
-				if (typ < value)
-					typ = value;
-			}
-		} // prop Type
+		public LogMsgType Typ => typ;
 	} // class LogMessageScope
 
 	#endregion
