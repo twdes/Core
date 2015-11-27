@@ -313,15 +313,51 @@ namespace TecWare.DE.Stuff
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Extensions for the Logger-Interface.</summary>
-	public sealed class LoggerProxy : ILogger
+	public abstract class LoggerProxy : ILogger
 	{
+		#region -- class LoggerProxySimple ------------------------------------------------
+
+		private sealed class LoggerProxySimple : LoggerProxy
+		{
+			internal LoggerProxySimple(ILogger logger)
+				: base(logger)
+			{
+			} // ctor
+
+			public sealed override void LogMsg(LogMsgType typ, string message) => Logger?.LogMsg(typ, message);
+			public sealed override void LogMsg(LogMsgType typ, string message, params object[] args) => Logger?.LogMsg(typ, String.Format(message, args));
+		} // class LoggerProxy
+
+		#endregion
+
+		#region -- class LoggerProxyPrefix ------------------------------------------------
+
+		private sealed class LoggerProxyPrefix : LoggerProxy
+		{
+			private readonly string prefix;
+
+			internal LoggerProxyPrefix(ILogger logger, string prefix)
+				: base(logger)
+			{
+				this.prefix = prefix;
+			} // ctor
+
+			private string GetMessage(string message)
+				=> "[" + prefix + "] " + message;
+
+			public sealed override void LogMsg(LogMsgType typ, string message) => Logger?.LogMsg(typ, GetMessage(message));
+			public sealed override void LogMsg(LogMsgType typ, string message, params object[] args) => Logger?.LogMsg(typ, GetMessage(String.Format(message, args)));
+		} // class LoggerProxyPrefix
+
+		#endregion
+
 		private ILogger logger;
 
-		internal LoggerProxy(ILogger logger)
+		protected LoggerProxy(ILogger logger)
 		{
 			this.logger = logger;
 		} // ctor
-		
+
 		public void Info(string message) => LogMsg(LogMsgType.Information, message);
 		public void Info(string message, params object[] args) => LogMsg(LogMsgType.Information, message, args);
 
@@ -335,8 +371,8 @@ namespace TecWare.DE.Stuff
 		public void Except(Exception e) => Procs.LogMsg(logger, LogMsgType.Error, e);
 		public void Except(string message, Exception e) => Procs.LogMsg(logger, LogMsgType.Error, message, e);
 
-		public void LogMsg(LogMsgType typ, string message) => logger?.LogMsg(typ, message);
-		public void LogMsg(LogMsgType typ, string message, params object[] args) => logger?.LogMsg(typ, String.Format(message, args));
+		public abstract void LogMsg(LogMsgType typ, string message);
+		public abstract void LogMsg(LogMsgType typ, string message, params object[] args);
 
 		public LogMessageScopeProxy GetScope(LogMsgType typ = LogMsgType.Information, bool autoFlush = true, bool stopTime = false)
 		{
@@ -346,12 +382,23 @@ namespace TecWare.DE.Stuff
 			return LogMessageScopeProxy.Empty;
 		} // func GetScope
 
+		public LogMessageScopeProxy CreateScope(LogMsgType typ = LogMsgType.Information, bool autoFlush = true, bool stopTime = false)
+			=> new LogMessageScopeProxy(new LogMessageScope(this, typ, autoFlush), stopTime);
+
 		public bool IsEmpty => logger == null;
+		public ILogger Logger => logger;
 
 		public static LoggerProxy Create(ILogger log)
-			=> log == null ? Empty : new LoggerProxy(log);
-		
-		public static LoggerProxy Empty { get; } = new LoggerProxy(null);
+			=> log == null ? Empty : new LoggerProxySimple(log);
+
+		public static LoggerProxy Create(ILogger log, string prefix)
+		{
+			if (String.IsNullOrEmpty(prefix))
+				throw new ArgumentNullException("prefix");
+			return log == null ? Empty : new LoggerProxyPrefix(log, prefix);
+		} // func Create
+
+		public static LoggerProxy Empty { get; } = new LoggerProxySimple(null);
 	} // class LoggerProxy
 
 	#endregion
