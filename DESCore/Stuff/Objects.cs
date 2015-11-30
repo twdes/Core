@@ -60,7 +60,13 @@ namespace TecWare.DE.Stuff
 		/// <remarks>Es wird der Lua Converter verwendet, da er Schnittstelle, Operatoren und allgemeine Regeln beherrscht ohne auf das TypeDescriptor-Framework zu verweisen.</remarks>
 		public static object ChangeType(object value, Type typeTo)
 		{
-			return Lua.RtConvertValue(value, typeTo);
+			if (typeTo == typeof(bool) && value is string)
+			{
+				var t = (string)value;
+				return t == "1" || String.Compare(t, Boolean.TrueString, StringComparison.OrdinalIgnoreCase) == 0;
+			}
+			else
+				return Lua.RtConvertValue(value, typeTo);
 		} // func ChangeType
 
 		/// <summary>Generische Implementierung von <c>ChangeType</c>.</summary>
