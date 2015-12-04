@@ -35,6 +35,10 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Data\CsvCommon.cs" />
+    <Compile Include="Data\CsvReader.cs" />
+    <Compile Include="Data\CsvReaderDynamic.cs" />
+    <Compile Include="Data\CsvWriter.cs" />
     <Compile Include="Data\ObservableObject.cs" />
     <Compile Include="Networking\Requests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
