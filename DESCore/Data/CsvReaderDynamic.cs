@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -20,6 +22,8 @@ namespace TecWare.DE.Data
 		public Type DataType { get; set; }
 		/// <summary>Optional special provider for the format of the value.</summary>
 		public IFormatProvider FormatProvider { get; set; }
+		/// <summary>Convert Type.</summary>
+		public Func<string, object> Converter { get; set; }
 	} // class TextDynamicColumn
 
 	#endregion
@@ -47,10 +51,14 @@ namespace TecWare.DE.Data
 		{
 			// get value
 			var value = owner.CoreReader[columnIndex];
-			var column = owner.Columns[columnIndex];
+			var column = owner.Columns?[columnIndex];
+			if (column == null)
+				return null; // no column defined
 
 			// convert
-			if (column.DataType == typeof(decimal))
+			if (column.Converter != null)
+				return column.Converter(value);
+			else if (column.DataType == typeof(decimal))
 				return Decimal.Parse(value, NumberStyles.Currency | NumberStyles.Float, column.FormatProvider);
 			else if (column.DataType == typeof(double))
 				return Double.Parse(value, NumberStyles.Currency | NumberStyles.Float, column.FormatProvider);
@@ -58,24 +66,27 @@ namespace TecWare.DE.Data
 				return Single.Parse(value, NumberStyles.Currency | NumberStyles.Float, column.FormatProvider);
 
 			else if (column.DataType == typeof(byte))
-				return Byte.Parse(value, NumberStyles.Integer | ~NumberStyles.AllowLeadingSign, column.FormatProvider);
+				return Byte.Parse(value, NumberStyles.Integer, column.FormatProvider);
 			else if (column.DataType == typeof(sbyte))
 				return SByte.Parse(value, NumberStyles.Integer, column.FormatProvider);
 			else if (column.DataType == typeof(ushort))
-				return UInt16.Parse(value, NumberStyles.Integer | ~NumberStyles.AllowLeadingSign, column.FormatProvider);
+				return UInt16.Parse(value, NumberStyles.Integer, column.FormatProvider);
 			else if (column.DataType == typeof(short))
 				return Int16.Parse(value, NumberStyles.Integer, column.FormatProvider);
 			else if (column.DataType == typeof(uint))
-				return UInt32.Parse(value, NumberStyles.Integer | ~NumberStyles.AllowLeadingSign, column.FormatProvider);
+				return UInt32.Parse(value, NumberStyles.Integer, column.FormatProvider);
 			else if (column.DataType == typeof(int))
 				return Int32.Parse(value, NumberStyles.Integer, column.FormatProvider);
 			else if (column.DataType == typeof(ulong))
-				return UInt64.Parse(value, NumberStyles.Integer | ~NumberStyles.AllowLeadingSign, column.FormatProvider);
+				return UInt64.Parse(value, NumberStyles.Integer, column.FormatProvider);
 			else if (column.DataType == typeof(long))
 				return Int64.Parse(value, NumberStyles.Integer, column.FormatProvider);
 
 			else if (column.DataType == typeof(DateTime))
 				return DateTime.Parse(value, column.FormatProvider, DateTimeStyles.AssumeLocal);
+
+			else if (column.DataType == typeof(string))
+				return value;
 
 			else
 				return Procs.ChangeType(value, column.DataType);
@@ -87,14 +98,13 @@ namespace TecWare.DE.Data
 			{
 				return GetValueIntern(columnIndex);
 			}
-			catch
+			catch (Exception e)
 			{
-				{
+				Debug.WriteLine(String.Format("[{0}] {1}", e.GetType().Name, e.Message));
 					if (owner.IsParsedStrict)
 						throw;
 					else
 						return null;
-				}
 			}
 		} // func GetValue
 
@@ -102,10 +112,12 @@ namespace TecWare.DE.Data
 		{
 			try
 			{
-				return (T)GetValueIntern(columnIndex);
+				var obj = GetValueIntern(columnIndex);
+				return obj == null ? default(T) :(T)obj;
 			}
-			catch
+			catch (Exception e)
 			{
+				Debug.WriteLine(String.Format("[{0}] {1}", e.GetType().Name, e.Message));
 				if (owner.IsParsedStrict)
 					throw;
 				else
@@ -140,6 +152,11 @@ namespace TecWare.DE.Data
 			: base(coreReader)
 		{
 			this.currentRow = new TextDynamicRow(this);
+		} // ctor
+
+		public TextDynamicRowEnumerator(TextReader tr, TextCsvSettings settings)
+			: this(new TextCsvReader(tr, settings))
+		{
 		} // ctor
 
 		protected override void Dispose(bool disposing)
