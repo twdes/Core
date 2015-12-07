@@ -159,6 +159,11 @@ namespace TecWare.DE.Data
 		{
 		} // ctor
 
+		public TextDynamicRowEnumerator(TextReader tr, TextFixedSettings settings)
+			: this(new TextFixedReader(tr, settings))
+		{
+		} // ctor
+
 		protected override void Dispose(bool disposing)
 		{
 			if (disposing)
