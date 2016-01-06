@@ -40,10 +40,44 @@ namespace TecWare.DE.Stuff
 
 	#endregion
 
+	#region -- class IPropertyReadOnlyDictionary ----------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public interface IPropertyReadOnlyDictionary
+	{
+		/// <summary></summary>
+		/// <param name="name"></param>
+		/// <param name="value"></param>
+		/// <returns></returns>
+		bool TryGetProperty(string name, out object value);
+	} //  interface IPropertyReadOnlyDictionary
+
+	#endregion
+
 	#region -- class PropertyDictionary -------------------------------------------------
 
-	public sealed class PropertyDictionary : IEnumerable<PropertyValue>
+	public sealed class PropertyDictionary : IPropertyReadOnlyDictionary, IEnumerable<PropertyValue>
 	{
+		#region -- class EmptyReadOnlyDictionary ------------------------------------------
+
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary></summary>
+		private sealed class EmptyReadOnlyDictionary : IPropertyReadOnlyDictionary
+		{
+			public EmptyReadOnlyDictionary()
+			{
+			} // ctor
+
+			public bool TryGetProperty(string name, out object value)
+			{
+				value = null;
+				return false;
+			} // func TryGetProperty
+		} //class EmptyReadOnlyDictionary
+
+		#endregion
+
 		private PropertyDictionary parentDictionary = null;
 		private Dictionary<string, PropertyValue> properties = new Dictionary<string, PropertyValue>(StringComparer.OrdinalIgnoreCase);
 
@@ -313,10 +347,94 @@ namespace TecWare.DE.Stuff
 		System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => properties.Values.GetEnumerator();
 
 		#endregion
+
+		public static IPropertyReadOnlyDictionary EmptyReadOnly { get; } = new EmptyReadOnlyDictionary();
 	} // class PropertyDictionary
 
 	#endregion
 
+	public static class PropertyDictionaryExtensions
+	{
+		#region -- GetProperty ------------------------------------------------------------
+
+		/// <summary>Gibt einen Parameter zurück.</summary>
+		/// <param name="name">Parametername.</param>
+		/// <param name="default">Defaultwert, falls der Wert nicht ermittelt werden konnte.</param>
+		/// <returns>Abgelegter Wert oder der Default-Wert.</returns>
+		public static object GetProperty(this IPropertyReadOnlyDictionary propertyDictionary, string name, object @default)
+		{
+			object r;
+			return propertyDictionary.TryGetProperty(name, out r) ? r : @default;
+		} // func GetProperty
+
+		/// <summary>Gibt einen Parameter zurück.</summary>
+		/// <param name="name">Parametername.</param>
+		/// <param name="default">Defaultwert, falls der Wert nicht ermittelt werden konnte.</param>
+		/// <returns>Abgelegter Wert oder der Default-Wert.</returns>
+		public static string GetProperty(this IPropertyReadOnlyDictionary propertyDictionary, string name, string @default)
+		{
+			string r;
+			return propertyDictionary.TryGetProperty(name, out r) ? r : @default;
+		} // func GetProperty
+
+		/// <summary>Gibt einen Parameter zurück.</summary>
+		/// <typeparam name="T">Rückgabewert.</typeparam>
+		/// <param name="name">Parametername.</param>
+		/// <param name="def">Defaultwert, falls der Wert nicht ermittelt werden konnte.</param>
+		/// <returns>Abgelegter Wert oder der Default-Wert.</returns>
+		public static T GetProperty<T>(this IPropertyReadOnlyDictionary propertyDictionary, string name, T @default)
+		{
+			T r;
+			return propertyDictionary.TryGetProperty(name, out r) ? r : @default;
+		} // func GetProperty
+
+		/// <summary>Versucht einen Paremter zurückzugeben.</summary>
+		/// <param name="name">Parametername.</param>
+		/// <param name="value">Wert der abgelegt wurde.</param>
+		/// <returns><c>true</c>, wenn ein Wert gefunden wurde.</returns>
+		public static bool TryGetProperty(this IPropertyReadOnlyDictionary propertyDictionary, string name, out string value)
+		{
+			object ret;
+			if (propertyDictionary.TryGetProperty(name, out ret) && ret != null)
+			{
+				value = ret.ToString();
+				return true;
+			}
+			else
+			{
+				value = String.Empty;
+				return false;
+			}
+		} // func TryGetProperty
+
+		/// <summary>Versucht einen Paremter zurückzugeben.</summary>
+		/// <typeparam name="T">Rückgabewert.</typeparam>
+		/// <param name="name">Parametername.</param>
+		/// <param name="value">Wert der abgelegt wurde.</param>
+		/// <returns><c>true</c>, wenn ein Wert gefunden wurde.</returns>
+		public static bool TryGetProperty<T>(this IPropertyReadOnlyDictionary propertyDictionary, string name, out T value)
+		{
+			object ret;
+			if (propertyDictionary.TryGetProperty(name, out ret) && ret != null)
+			{
+				try
+				{
+					if (ret is T)
+						value = (T)ret;
+					else
+						value = (T)Procs.ChangeType(ret, typeof(T));
+					return true;
+				}
+				catch (FormatException)
+				{
+				}
+			}
+			value = default(T);
+			return false;
+		} // func TryGetProperty
+
+		#endregion
+	} // class PropertyDictionaryExtensions
 
 	public partial class Procs
 	{
