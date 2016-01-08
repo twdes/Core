@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using Neo.IronLua;
 
 namespace TecWare.DE.Stuff
 {
@@ -167,6 +168,11 @@ namespace TecWare.DE.Stuff
 					}
 					else
 						AppendProperty(pi.Name, pi.PropertyType, () => pi.GetValue(e));
+
+				// LuaStackFrame
+				var data = e.Data[LuaRuntimeException.ExceptionDataKey] as ILuaExceptionData;
+				if (data != null && data.Count > 0)
+					AppendProperty("LuaStackTrace:", typeof(string), () => data.FormatStackTrace(skipSClrFrame: false));
 
 				// Stacktrace
 				AppendProperty("StackTrace", typeof(string), () => e.StackTrace);

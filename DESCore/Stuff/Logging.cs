@@ -48,6 +48,11 @@ namespace TecWare.DE.Stuff
 		/// <param name="autoFlush"></param>
 		/// <returns></returns>
 		ILogMessageScope GetScope(LogMsgType typ = LogMsgType.Information, bool autoFlush = true);
+		/// <summary>Creates a new log scope.</summary>
+		/// <param name="typ"></param>
+		/// <param name="autoFlush"></param>
+		/// <returns></returns>
+		ILogMessageScope CreateScope(LogMsgType typ = LogMsgType.Information, bool autoFlush = true);
 	} // interface ILogger2
 
 	#endregion
@@ -379,11 +384,18 @@ namespace TecWare.DE.Stuff
 			var logger2 = logger as ILogger2;
 			if (logger2 != null)
 				return new LogMessageScopeProxy(logger2.GetScope(typ, autoFlush), stopTime);
-			return LogMessageScopeProxy.Empty;
+
+			return new LogMessageScopeProxy(new LogMessageScope(this, typ, autoFlush), stopTime);
 		} // func GetScope
 
 		public LogMessageScopeProxy CreateScope(LogMsgType typ = LogMsgType.Information, bool autoFlush = true, bool stopTime = false)
-			=> new LogMessageScopeProxy(new LogMessageScope(this, typ, autoFlush), stopTime);
+		{
+			var logger2 = logger as ILogger2;
+			if (logger2 != null)
+				return new LogMessageScopeProxy(logger2.CreateScope(typ, autoFlush), stopTime);
+
+			return new LogMessageScopeProxy(new LogMessageScope(this, typ, autoFlush), stopTime);
+		} // func CreateScopy
 
 		public bool IsEmpty => logger == null;
 		public ILogger Logger => logger;
