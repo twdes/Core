@@ -8,7 +8,7 @@
     <ProjectGuid>{67528843-E631-4C05-B6E8-514CC8BEC7B6}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>TecWare.DE</RootNamespace>
+    <RootNamespace>TecWare.DES</RootNamespace>
     <AssemblyName>DES.Core</AssemblyName>
     <DefaultLanguage>de-DE</DefaultLanguage>
     <FileAlignment>512</FileAlignment>
@@ -24,7 +24,6 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -35,17 +34,10 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Data\CsvCommon.cs" />
-    <Compile Include="Data\CsvReader.cs" />
-    <Compile Include="Data\CsvReaderDynamic.cs" />
-    <Compile Include="Data\CsvWriter.cs" />
     <Compile Include="Data\ObservableObject.cs" />
     <Compile Include="Networking\Requests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Stuff\Exceptions.cs" />
-    <Compile Include="Stuff\FileSize.cs" />
-    <Compile Include="Stuff\IO.cs" />
-    <Compile Include="Stuff\Logging.cs" />
     <Compile Include="Stuff\Lua.cs" />
     <Compile Include="Stuff\Objects.cs" />
     <Compile Include="Stuff\PropertyList.cs" />
@@ -55,7 +47,7 @@
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Neo.Lua, Version=5.3.0.0, Culture=neutral, PublicKeyToken=fdb0cd4fe8a6e3b2, processorArchitecture=MSIL">
-      <HintPath>..\..\..\packages\NeoLua.1.1.5\lib\portable-net45+netcore45+wpa81+MonoAndroid1+MonoTouch1\Neo.Lua.dll</HintPath>
+      <HintPath>..\..\..\..\..\packages\NeoLua.1.1.5\lib\portable-net45+netcore45+wpa81+MonoAndroid1+MonoTouch1\Neo.Lua.dll</HintPath>
       <Private>True</Private>
     </Reference>
   </ItemGroup>
