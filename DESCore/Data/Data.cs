@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using TecWare.DE.Stuff;
 
 namespace TecWare.DES.Data
 {
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public interface IDataRecord
+	public interface IDataRow : IPropertyReadOnlyDictionary
 	{
 		/// <summary>Name of the columns</summary>
 		string[] ColumnNames { get; }
@@ -23,5 +24,5 @@ namespace TecWare.DES.Data
 		/// <param name="columnName"></param>
 		/// <returns></returns>
 		object this[string columnName] { get; }
-	} // interface IDataRecord
+	} // interface IDataRow
 }
