@@ -77,5 +77,32 @@ namespace TecWare.DE.Stuff
 		} // func ReadInArray
 
 		#endregion
+
+		#region -- FileFilterToRegex ------------------------------------------------------
+
+		public static string FileFilterToRegex(string filter)
+		{
+			if (String.IsNullOrEmpty(filter))
+				return "*.";
+
+			var sb = new StringBuilder("^");
+
+			foreach (var c in filter)
+			{
+				if (c == '*')
+					sb.Append("*.");
+				else if (c == '?')
+					sb.Append('.');
+				else if (Char.IsLetterOrDigit(c))
+					sb.Append(c);
+				else
+					sb.Append('\\').Append(c);
+			}
+			sb.Append('$');
+
+			return sb.ToString();
+		} // func FileFilterToRegex
+
+		#endregion
 	} // class Procs
 }
