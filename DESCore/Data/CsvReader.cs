@@ -53,6 +53,7 @@ namespace TecWare.DE.Data
 
 		public void Dispose()
 		{
+			Dispose(true);
 		} // proc Dispose
 
 		protected virtual void Dispose(bool disposing)
