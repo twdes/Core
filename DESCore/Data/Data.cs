@@ -13,6 +13,8 @@ namespace TecWare.DES.Data
 	{
 		/// <summary>Name of the columns</summary>
 		string[] ColumnNames { get; }
+		/// <summary></summary>
+		Type[] ColumnTypes { get; }
 		/// <summary>Number of columns</summary>
 		int ColumnCount { get; }
 
