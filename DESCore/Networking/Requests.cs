@@ -83,12 +83,12 @@ namespace TecWare.DE.Networking
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public sealed class BaseWebReqeust
+	public sealed class BaseWebRequest
 	{
 		private Uri baseUri;
 		private Encoding defaultEncoding;
 
-		public BaseWebReqeust(Uri baseUri, Encoding defaultEncoding)
+		public BaseWebRequest(Uri baseUri, Encoding defaultEncoding)
 		{
 			this.baseUri = baseUri;
 			this.defaultEncoding = defaultEncoding;
