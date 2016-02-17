@@ -65,6 +65,8 @@ namespace TecWare.DE.Stuff
 				var t = (string)value;
 				return t == "1" || String.Compare(t, Boolean.TrueString, StringComparison.OrdinalIgnoreCase) == 0;
 			}
+			else if (typeTo == typeof(DateTimeOffset) && (value == null || value is string))
+				return value == null ? DateTimeOffset.MinValue : DateTimeOffset.Parse((string)value);
 			else
 				return Lua.RtConvertValue(value, typeTo);
 		} // func ChangeType
