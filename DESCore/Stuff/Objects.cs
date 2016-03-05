@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -66,7 +67,7 @@ namespace TecWare.DE.Stuff
 				return t == "1" || String.Compare(t, Boolean.TrueString, StringComparison.OrdinalIgnoreCase) == 0;
 			}
 			else if (typeTo == typeof(DateTimeOffset) && (value == null || value is string))
-				return value == null ? DateTimeOffset.MinValue : DateTimeOffset.Parse((string)value);
+				return value == null ? DateTimeOffset.MinValue : DateTimeOffset.Parse((string)value, CultureInfo.InvariantCulture);
 			else
 				return Lua.RtConvertValue(value, typeTo);
 		} // func ChangeType
