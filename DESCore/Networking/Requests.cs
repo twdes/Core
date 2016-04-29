@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -163,7 +164,20 @@ namespace TecWare.DE.Networking
 			// we accept always gzip
 			request.Headers[HttpRequestHeader.AcceptEncoding] = "gzip";
 
-			return await request.GetResponseAsync();
+#if DEBUG
+			Debug.WriteLine($"Request: {path}");
+			var sw = Stopwatch.StartNew();
+			try
+			{
+#endif
+				return await request.GetResponseAsync();
+#if DEBUG
+			}
+			finally
+			{
+				Debug.WriteLine("Request: {0}ms", sw.ElapsedMilliseconds);
+			}
+#endif
 		} // func GetResponseAsync
 
 		/// <summary>Creates a plain Web-Request, special arguments are filled with IWebRequestCreate.</summary>
@@ -211,12 +225,15 @@ namespace TecWare.DE.Networking
 			var response = await GetResponseAsync(path);
 			var baseUri = response.ResponseUri.GetComponents(UriComponents.Scheme | UriComponents.Host | UriComponents.Port | UriComponents.Path, UriFormat.SafeUnescaped);
 			var context = new XmlParserContext(null, null, null, null, null, null, baseUri, null, XmlSpace.Default);
+
 			return XmlReader.Create(GetTextReaderAsync(response, acceptedMimeType), settings, context);
 		} // func GetXmlStreamAsync
 
 		public async Task<XElement> GetXmlAsync(string relativeUri, string acceptedMimeType = MimeTypes.Text.Xml, XName rootName = null)
 		{
-			var document = XDocument.Load(await GetXmlStreamAsync(relativeUri), LoadOptions.SetBaseUri);
+			XDocument document;
+			using (var xmlReader = await GetXmlStreamAsync(relativeUri))
+				document = XDocument.Load(xmlReader, LoadOptions.SetBaseUri);
 			if (document == null)
 				throw new ArgumentException("Keine Antwort vom Server.");
 

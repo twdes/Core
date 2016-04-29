@@ -30,5 +30,19 @@ namespace TecWare.DE.Stuff
 
 	public static partial class Procs
 	{
+		public static int CompareStringKey(object key, string other)
+		{
+			if (key == null && other == null)
+				return 0;
+			else if (key is string)
+			{
+				if (other == null)
+					return 1;
+				else
+					return String.Compare((string)key, other, StringComparison.OrdinalIgnoreCase);
+			}
+			else
+				return -1;
+		} // CompareStringKey
 	} // class Procs
 }
