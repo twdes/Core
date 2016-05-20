@@ -17,15 +17,19 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Dynamic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 using Neo.IronLua;
+using TecWare.DE.Data;
+using TecWare.DE.Stuff;
 
 namespace TecWare.DE.Networking
 {
@@ -61,53 +65,23 @@ namespace TecWare.DE.Networking
 		} // class Application
 	} // class MimeTypes
 
-	#endregion
+    #endregion
 
-	#region -- interface IDataReader ----------------------------------------------------
+    #region -- class BaseWebRequest -----------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
-	public interface IDataReader : IEnumerable<IDataRecord>
-	{
-		Type GetFieldType(int fieldIndex);
-		string GetName(int fieldIndex);
-
-		int FieldCount { get; }
-	} // interface IDataReader
-
-	#endregion
-
-	#region -- interface IDataRecord ----------------------------------------------------
-
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
-	public interface IDataRecord
-	{
-		bool IsNull(int fieldIndex);
-		Type GetFieldType(int fieldIndex);
-		string GetName(int fieldIndex);
-
-		int FieldCount { get; }
-
-		object this[int fieldIndex] { get; }
-		object this[string fieldName] { get; }
-	} // interface IDataRecord
-
-	#endregion
-	
-	#region -- class BaseWebReqeust -----------------------------------------------------
-
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
-	public sealed class BaseWebRequest
+    ///////////////////////////////////////////////////////////////////////////////
+    /// <summary></summary>
+    public sealed class BaseWebRequest
 	{
 		private Uri baseUri;
 		private Encoding defaultEncoding;
+        private ICredentials credentials;
 
-		public BaseWebRequest(Uri baseUri, Encoding defaultEncoding)
+		public BaseWebRequest(Uri baseUri, Encoding defaultEncoding, ICredentials credentials = null)
 		{
 			this.baseUri = baseUri;
 			this.defaultEncoding = defaultEncoding;
+            this.credentials = credentials;
 		} // ctor
 
 		private Encoding CheckMimeType(string contentType, string acceptedMimeType, bool charset)
@@ -179,6 +153,9 @@ namespace TecWare.DE.Networking
 			// we accept always gzip
 			request.Headers[HttpRequestHeader.AcceptEncoding] = "gzip";
 
+            // set network login information
+            request.Credentials = credentials;
+
 #if DEBUG
 			Debug.WriteLine($"Request: {path}");
 			var sw = Stopwatch.StartNew();
@@ -244,175 +221,310 @@ namespace TecWare.DE.Networking
 			return XmlReader.Create(GetTextReaderAsync(response, acceptedMimeType), settings, context);
 		} // func GetXmlStreamAsync
 
-		public async Task<XElement> GetXmlAsync(string relativeUri, string acceptedMimeType = MimeTypes.Text.Xml, XName rootName = null)
+		public async Task<XElement> GetXmlAsync(string path, string acceptedMimeType = MimeTypes.Text.Xml, XName rootName = null)
 		{
-			XDocument document;
-			using (var xmlReader = await GetXmlStreamAsync(relativeUri))
-				document = XDocument.Load(xmlReader, LoadOptions.SetBaseUri);
-			if (document == null)
-				throw new ArgumentException("Keine Antwort vom Server.");
+            XDocument document;
+            using (var xmlReader = await GetXmlStreamAsync(path))
+                document = XDocument.Load(xmlReader, LoadOptions.SetBaseUri);
+            if (document == null)
+                throw new ArgumentException("Keine Antwort vom Server.");
 
-			// Wurzelelement prüfen
-			if (rootName != null && document.Root.Name != rootName)
-				throw new ArgumentException(String.Format("Wurzelelement erwartet '{0}', aber '{1}' vorgefunden.", document.Root.Name, rootName));
+            // Wurzelelement prüfen
+            if (rootName != null && document.Root.Name != rootName)
+                throw new ArgumentException(String.Format("Wurzelelement erwartet '{0}', aber '{1}' vorgefunden.", document.Root.Name, rootName));
 
-			return document.Root;
-		} // func GetXmlAsync
+            return document.Root;
+        } // func GetXmlAsync
 
-		#region -- GetReaderAsync ---------------------------------------------------------
+        #region -- CreateViewDataReader ---------------------------------------------------
 
-		#region -- class DataReaderRecord--------------------------------------------------
+        #region -- class ViewDataReader ---------------------------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
-		private sealed class DataReaderRecord : IDataRecord
-		{
-			private DataReaderResult reader;
-			private XElement record;
+        ///////////////////////////////////////////////////////////////////////////////
+        /// <summary></summary>
+        public class ViewDataReader : IEnumerable<IDataRow>
+        {
+            #region -- class ViewDataRow ------------------------------------------------------
 
-			public DataReaderRecord(DataReaderResult reader, XElement record)
-			{
-				this.reader = reader;
-				this.record = record;
-			} // ctor
+            ///////////////////////////////////////////////////////////////////////////////
+            /// <summary></summary>
+            private sealed class ViewDataRow : IDataRow, IDynamicMetaObjectProvider
+            {
+                private readonly ViewDataEnumerator enumerator;
+                private readonly object[] columnValues;
 
-			public Type GetFieldType(int fieldIndex)
-			{
-				return reader.GetField(fieldIndex).FieldType;
-			} // func GetFieldType
+                #region -- Ctor/Dtor --------------------------------------------------------------
 
-			public string GetName(int fieldIndex)
-			{
-				return reader.GetField(fieldIndex).FieldName;
-			} // func GetName
+                public ViewDataRow(ViewDataEnumerator enumerator, object[] columnValues)
+                {
+                    this.enumerator = enumerator;
+                    this.columnValues = columnValues;
+                } // ctor
 
-			public bool IsNull(int fieldIndex)
-			{
-				return GetValue(reader.GetField(fieldIndex), false) == null;
-			} // func IsNull
+                #endregion
 
-			private object GetValue(DataReaderField f, bool convert)
-			{
-				var x = record.Element(f.FieldName);
-				if (x == null)
-					return null;
+                #region -- IDataRow ---------------------------------------------------------------
 
-				var tmp = x.Value;
-				if (!convert)
-					return tmp;
+                public bool TryGetProperty(string name, out object value)
+                {
+                    value = null;
 
-				return Lua.RtConvertValue(tmp, f.FieldType);
-			} // func GetValue
+                    if (String.IsNullOrEmpty(name))
+                        return false;
 
-			public object this[string fieldName] => GetValue(reader.GetFieldByName(fieldName), true);
-			public object this[int fieldIndex] => GetValue(reader.GetField(fieldIndex), true);
+                    if (enumerator == null)
+                        return false;
 
-			public int FieldCount => reader.FieldCount;
-		} // class DataReaderRecord
+                    if (ColumnNames == null || ColumnNames.Length != ColumnCount)
+                        return false;
 
-		#endregion
+                    if (columnValues == null || columnValues.Length != ColumnCount)
+                        return false;
 
-		#region -- class DataReaderField --------------------------------------------------
+                    var index = Array.FindIndex(ColumnNames, c => String.Compare(c, name, StringComparison.Ordinal) == 0);
+                    if (index == -1)
+                        return false;
 
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
-		private sealed class DataReaderField
-		{
-			public string FieldName { get; set; }
-			public Type FieldType { get; set; }
-		} // class DataReaderField
+                    value = columnValues[index];
+                    return true;
+                } // func TryGetProperty
 
-		#endregion
+                public object this[int index] => columnValues[index];
 
-		#region -- class DataReaderResult -------------------------------------------------
+                public string[] ColumnNames => enumerator.ColumnNames;
+                public Type[] ColumnTypes => enumerator.ColumnTypes;
+                public int ColumnCount => enumerator.ColumnCount;
 
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
-		private sealed class DataReaderResult : IDataReader
-		{
-			private XmlReader xml;
-			private DataReaderField[] fields = null;
+                public object this[string columnName] => Array.Find(ColumnNames, c => String.Compare(c, columnName, StringComparison.OrdinalIgnoreCase) == 0);
 
-			public DataReaderResult(XmlReader xml)
-			{
-				this.xml = xml;
-			} // ctor
+                #endregion
 
-			public Type GetFieldType(int fieldIndex)
-				=> fields[fieldIndex].FieldType;
+                #region -- IDynamicMetaObjectProvider ---------------------------------------------
 
-			public string GetName(int fieldIndex)
-				=> fields[fieldIndex].FieldName;
+                public DynamicMetaObject GetMetaObject(Expression parameter)
+                {
+                    throw new NotImplementedException();
+                } // func GetMetaObject
 
-			public IEnumerator<IDataRecord> GetEnumerator()
-			{
-				// Read over header
-				xml.Read();
-				if (xml.NodeType == XmlNodeType.XmlDeclaration)
-					xml.Read();
+                #endregion
+            } // class ViewDataRow
 
-				if (xml.NodeType == XmlNodeType.Element && xml.LocalName == "datareader")
-					xml.Read();
-				else
-					throw new ArgumentException(); // todo: Exception
+            #endregion
 
-				// Read column informations
-				if (xml.NodeType == XmlNodeType.Element && xml.LocalName == "columns")
-				{
-					var fieldList = new List<DataReaderField>();
-					while (xml.Read() && xml.NodeType == XmlNodeType.Element && xml.LocalName == "column")
-					{
-						var name = xml.GetAttribute("name");
-						var type = xml.GetAttribute("type");
-						fieldList.Add(new DataReaderField() { FieldName = name, FieldType = LuaType.GetType(type) });
-					}
-					if (xml.NodeType != XmlNodeType.EndElement || xml.LocalName != "columns")
-						throw new ArgumentException(); // todo: Exception
-					else
-					{
-						xml.Read();
-						fields = fieldList.ToArray();
-					}
-				}
-				else
-					throw new ArgumentException(); // todo: Exception
+            #region -- class ViewDataEnumerator -----------------------------------------------
 
-				// Read content
-				if (xml.NodeType == XmlNodeType.Element && xml.LocalName == "items")
-				{
-					xml.Read();
-          while (xml.NodeType == XmlNodeType.Element && xml.LocalName == "item")
-						yield return new DataReaderRecord(this, (XElement)XElement.ReadFrom(xml));
+            ///////////////////////////////////////////////////////////////////////////////
+            /// <summary></summary>
+            private sealed class ViewDataEnumerator : IEnumerator<IDataRow>, IDataColumns
+            {
+                #region -- enum ReadingState ------------------------------------------------------
 
-					//if (xml.NodeType != XmlNodeType.EndElement || xml.LocalName != "items")
-					//	throw new ArgumentException(); // todo: Exception
-				}
-				else
-					throw new ArgumentException(); // todo: Exception
-			} // func GetEnumerator
+                ///////////////////////////////////////////////////////////////////////////////
+                /// <summary></summary>
+                private enum ReadingState
+                {
+                    Unread,
+                    Partly,
+                    Complete,
+                } // enum ReadingState
 
-			IEnumerator IEnumerable.GetEnumerator()
-				=> GetEnumerator();
+                #endregion
 
-			internal DataReaderField GetField(int fieldIndex)
-				=> fields[fieldIndex];
-			
-			internal DataReaderField GetFieldByName(string fieldName)
-				=> Array.Find(fields, c => String.Compare(c.FieldName, fieldName, StringComparison.OrdinalIgnoreCase) == 0);
+                private readonly XmlReader xml;
+                private string[] columnNames;
+                private Type[] columnTypes;
+                private int columnCount;
+                private ReadingState state;
+                private ViewDataRow currentRow;
 
-			public int FieldCount => fields.Length;
-		} // class DataReaderResult
+                #region -- Ctor/Dtor --------------------------------------------------------------
 
-		#endregion
+                public ViewDataEnumerator(BaseWebRequest owner, string path, string acceptedMimeType)
+                {
+                    xml = owner.GetXmlStreamAsync(path, acceptedMimeType).Result;
+                } // ctor
 
-		public async Task<IDataReader> GetReaderAsync(string relativeUri, string acceptedMimeType = MimeTypes.Text.Xml)
-		{
-			return new DataReaderResult(await GetXmlStreamAsync(relativeUri, acceptedMimeType));
-		} // func GetReaderAsync
+                public void Dispose()
+                    => Dispose(true);
 
-		#endregion
+                private void Dispose(bool disposing)
+                {
+                    if (disposing)
+                        xml?.Dispose();
+                } // proc Dispose
 
-		public Uri BaseUri => baseUri;
+                #endregion
+
+                #region -- IEnumerator ------------------------------------------------------------
+
+                public bool MoveNext()
+                {
+                    switch (state)
+                    {
+                        #region -- ReadingState.Unread --
+                        case ReadingState.Unread:
+                            xml.Read();
+                            if (xml.NodeType == XmlNodeType.XmlDeclaration)
+                                xml.Read();
+
+                            if (xml.NodeType != XmlNodeType.Element || String.Compare(xml.LocalName, "view", StringComparison.Ordinal) != 0)
+                                throw new InvalidDataException(string.Format("Expected \"view\" ({0}), read \"{1}\" ({2}).", XmlNodeType.Element, xml.LocalName, xml.NodeType));
+
+                            xml.Read();
+                            if (xml.NodeType != XmlNodeType.Element || String.Compare(xml.LocalName, "fields", StringComparison.Ordinal) != 0)
+                                throw new InvalidDataException(string.Format("Expected \"view\" ({0}), read \"{1}\" ({2}).", XmlNodeType.Element, xml.LocalName, xml.NodeType));
+
+                            var names = new List<string>();
+                            var types = new List<Type>();
+                            var fields = (XElement)XNode.ReadFrom(xml);
+                            foreach (XElement field in fields.DescendantNodes())
+                            {
+                                names.Add(field.Name.LocalName);
+                                types.Add(LuaType.GetType(field.Attribute("type").Value).Type);
+                            }
+
+                            if (names.Count < 1)
+                                throw new InvalidDataException("No header found.");
+
+                            columnNames = names.ToArray();
+                            columnTypes = types.ToArray();
+                            columnCount = columnNames.Length;
+
+                            if (xml.NodeType != XmlNodeType.Element || String.Compare(xml.LocalName, "rows", StringComparison.Ordinal) != 0)
+                                throw new InvalidDataException(string.Format("Expected \"rows\" ({0}), read \"{1}\" ({2}).", XmlNodeType.Element, xml.LocalName, xml.NodeType));
+
+                            if (xml.IsEmptyElement)
+                            {
+                                xml.Read();
+                                if (xml.NodeType != XmlNodeType.EndElement || String.Compare(xml.LocalName, "view", StringComparison.Ordinal) != 0)
+                                    throw new InvalidDataException(string.Format("Expected \"view\" ({0}), read \"{1}\" ({2}).", XmlNodeType.EndElement, xml.LocalName, xml.NodeType));
+
+                                xml.Read();
+                                if (!xml.EOF)
+                                    throw new InvalidDataException("Unexpected eof.");
+
+                                state = ReadingState.Complete;
+                                goto case ReadingState.Complete;
+                            }
+                            else
+                            {
+                                xml.Read();
+                                state = ReadingState.Partly;
+                                goto case ReadingState.Partly;
+                            }
+                        #endregion
+                        #region -- ReadingState.Partly --
+                        case ReadingState.Partly:
+                            if (xml.NodeType != XmlNodeType.Element || String.Compare(xml.LocalName, "r", StringComparison.Ordinal) != 0)
+                                throw new InvalidDataException(string.Format("Expected \"r\" ({0}), read \"{1}\" ({2}).", XmlNodeType.Element, xml.LocalName, xml.NodeType));
+
+                            var values = new object[columnCount];
+
+                            if (!xml.IsEmptyElement)
+                            {
+                                var rowData = (XElement)XNode.ReadFrom(xml);
+                                foreach (var column in rowData.DescendantNodes())
+                                {
+                                    if (column.NodeType != XmlNodeType.Element)
+                                        continue;
+
+                                    var element = (XElement)column;
+                                    if (element.IsEmpty)
+                                        continue;
+
+                                    var columnIndex = Array.FindIndex(columnNames, c => String.Compare(c, element.Name.LocalName, StringComparison.Ordinal) == 0);
+                                    if (columnIndex != -1)
+                                        values[columnIndex] = Procs.ChangeType(element.Value, columnTypes[columnIndex]);
+                                }
+                            } // if xml.IsEmptyElement
+                            else
+                                // Without a call to XNode.ReadFrom() it's necessary to read to the next node.
+                                xml.Read();
+
+                            currentRow = new ViewDataRow(this, values);
+
+                            if (xml.NodeType == XmlNodeType.Element && String.Compare(xml.LocalName, "r", StringComparison.Ordinal) == 0)
+                                return true;
+
+                            if (xml.NodeType != XmlNodeType.EndElement || String.Compare(xml.LocalName, "rows", StringComparison.Ordinal) != 0)
+                                throw new InvalidDataException(string.Format("Expected \"rows\" ({0}), read \"{1}\" ({2}).", XmlNodeType.EndElement, xml.LocalName, xml.NodeType));
+
+                            xml.Read();
+                            if (xml.NodeType != XmlNodeType.EndElement || String.Compare(xml.LocalName, "view", StringComparison.Ordinal) != 0)
+                                throw new InvalidDataException(string.Format("Expected \"view\" ({0}), read \"{1}\" ({2}).", XmlNodeType.EndElement, xml.LocalName, xml.NodeType));
+
+                            xml.Read();
+                            if (!xml.EOF)
+                                throw new InvalidDataException("Unexpected eof.");
+
+                            state = ReadingState.Complete;
+                            return true;
+                        #endregion
+                        case ReadingState.Complete:
+                            return false;
+                        default:
+                            throw new InvalidOperationException("The state of the object is invalid.");
+                    } // switch state
+                } // func MoveNext
+
+                void IEnumerator.Reset()
+                {
+                    if (state != ReadingState.Unread)
+                        throw new InvalidOperationException("The state of the object forbids the calling of this method.");
+                } // proc Reset
+
+                public IDataRow Current => currentRow;
+                object IEnumerator.Current => Current;
+
+                #endregion
+
+                #region -- IDataColumns -----------------------------------------------------------
+
+                public string[] ColumnNames => columnNames;
+                public Type[] ColumnTypes => columnTypes;
+                public int ColumnCount => columnCount;
+
+                #endregion
+            } // class ViewDataEnumerator
+
+            #endregion
+
+            private readonly BaseWebRequest owner;
+            private readonly string path;
+            private readonly string acceptedMimeType;
+
+            #region -- Ctor/Dtor --------------------------------------------------------------
+
+            public ViewDataReader(BaseWebRequest owner, string path, string acceptedMimeType = MimeTypes.Text.Xml)
+            {
+                this.owner = owner;
+                this.path = path;
+                this.acceptedMimeType = acceptedMimeType;
+            } // ctor
+
+            #endregion
+
+            #region -- IEnumerable ------------------------------------------------------------
+
+            public IEnumerator<IDataRow> GetEnumerator()
+                => new ViewDataEnumerator(owner, path, acceptedMimeType);
+
+            IEnumerator IEnumerable.GetEnumerator()
+                => GetEnumerator();
+
+            #endregion
+        } // class ViewDataReader
+
+        #endregion
+
+        public IEnumerable<IDataRow> CreateViewDataReader(string path, string acceptedMimeType = MimeTypes.Text.Xml)
+            => new ViewDataReader(this, path, acceptedMimeType);
+
+        #endregion
+
+        public Uri BaseUri => baseUri;
+        public Encoding DefaultEncoding => defaultEncoding;
+        public ICredentials Credentials => credentials;
 	} // class BaseWebReqeust
 
 	#endregion
