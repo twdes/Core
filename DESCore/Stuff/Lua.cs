@@ -28,9 +28,9 @@ namespace TecWare.DE.Stuff
 	/// <summary></summary>
 	public class LuaPropertiesTable : LuaTable
 	{
-		private PropertyDictionary properties;
+		private IPropertyReadOnlyDictionary properties;
 
-		public LuaPropertiesTable(PropertyDictionary properties)
+		public LuaPropertiesTable(IPropertyReadOnlyDictionary properties)
 		{
 			if (properties == null)
 				throw new ArgumentNullException("properties");
@@ -38,7 +38,8 @@ namespace TecWare.DE.Stuff
 			this.properties = properties;
 		} // ctor
 		
-		protected override object OnIndex(object key) => base.OnIndex(key) ?? properties?.GetProperty(key?.ToString(), null);
+		protected override object OnIndex(object key)
+			=> base.OnIndex(key) ?? properties?.GetProperty(key?.ToString(), null);
 	} // class LuaPropertiesTable
 
 	#endregion
