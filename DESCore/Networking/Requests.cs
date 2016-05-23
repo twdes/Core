@@ -207,6 +207,12 @@ namespace TecWare.DE.Networking
 
 		public async Task<XmlReader> GetXmlStreamAsync(string path, string acceptedMimeType = MimeTypes.Text.Xml, XmlReaderSettings settings = null)
 		{
+			using (var response = await GetResponseAsync(path))
+				return GetXmlStreamAsync(response, acceptedMimeType, settings);
+		} // func GetXmlStreamAsync
+
+		public XmlReader GetXmlStreamAsync(WebResponse response, string acceptedMimeType = MimeTypes.Text.Xml, XmlReaderSettings settings = null)
+		{
 			if (settings == null)
 			{
 				settings = new XmlReaderSettings();
@@ -214,8 +220,7 @@ namespace TecWare.DE.Networking
 				settings.IgnoreWhitespace = acceptedMimeType != MimeTypes.Application.Xaml;
 			}
 			settings.CloseInput = true;
-
-			var response = await GetResponseAsync(path);
+			
 			var baseUri = response.ResponseUri.GetComponents(UriComponents.Scheme | UriComponents.Host | UriComponents.Port | UriComponents.Path, UriFormat.SafeUnescaped);
 			var context = new XmlParserContext(null, null, null, null, null, null, baseUri, null, XmlSpace.Default);
 
