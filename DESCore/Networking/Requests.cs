@@ -207,8 +207,8 @@ namespace TecWare.DE.Networking
 
 		public async Task<XmlReader> GetXmlStreamAsync(string path, string acceptedMimeType = MimeTypes.Text.Xml, XmlReaderSettings settings = null)
 		{
-			using (var response = await GetResponseAsync(path))
-				return GetXmlStreamAsync(response, acceptedMimeType, settings);
+			var response = await GetResponseAsync(path); // todo: is disposed called?
+			return GetXmlStreamAsync(response, acceptedMimeType, settings);
 		} // func GetXmlStreamAsync
 
 		public XmlReader GetXmlStreamAsync(WebResponse response, string acceptedMimeType = MimeTypes.Text.Xml, XmlReaderSettings settings = null)

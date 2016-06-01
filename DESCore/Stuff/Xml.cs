@@ -71,16 +71,16 @@ namespace TecWare.DE.Stuff
 		/// <summary>Gibt den Inhalt eines Attributes zurück.</summary>
 		/// <param name="x">XElement, an dem das Attribut erwartet wird.</param>
 		/// <param name="attributeName">Name des Attributes.</param>
-		/// <param name="sDefault">Wird das Attribut nicht gefunden, wird dieser Wert zurück gegeben.</param>
+		/// <param name="default">Wird das Attribut nicht gefunden, wird dieser Wert zurück gegeben.</param>
 		/// <returns>Wert oder der default-Wert.</returns>
-		public static string GetAttribute(this XElement x, XName attributeName, string sDefault)
+		public static string GetAttribute(this XElement x, XName attributeName, string @default)
 		{
 			if (x == null)
-				return sDefault;
+				return @default;
 
 			XAttribute attr = x.Attribute(attributeName);
 			if (attr == null)
-				return sDefault;
+				return @default;
 			else
 				return attr.Value;
 		} // func GetAttribute
@@ -158,7 +158,7 @@ namespace TecWare.DE.Stuff
 			}
 
 			return null;
-		} // func XObjectFindAnnotation
+		} // func FindAnnotation
 
 		/// <summary>Kopiert die Annotationen</summary>
 		/// <param name="xSource"></param>
@@ -175,10 +175,10 @@ namespace TecWare.DE.Stuff
 				XCopyAnnonation(xSource, xDestination, typeLineInfoEndElementAnnotation, false);
 			}
 		} // proc XCopyAnnotations
-
-		private static void XCopyAnnonation(XElement xSource, XNode xDestination, Type typeAnnotation, bool lRecursive)
+		
+		private static void XCopyAnnonation(XElement xSource, XNode xDestination, Type typeAnnotation, bool recursive)
 		{
-			object baseUri = lRecursive ? xSource.FindAnnotation(typeAnnotation) : xSource.Annotation(typeAnnotation);
+			object baseUri = recursive ? xSource.FindAnnotation(typeAnnotation) : xSource.Annotation(typeAnnotation);
 			if (baseUri != null)
 			{
 				xDestination.RemoveAnnotations(typeAnnotation);
@@ -303,10 +303,10 @@ namespace TecWare.DE.Stuff
 
 		static Procs()
 		{
-			string sXObjectTypeName = typeof(XObject).AssemblyQualifiedName;
-			typeBaseUriAnnotation = Type.GetType(sXObjectTypeName.Replace("XObject", "BaseUriAnnotation"), false);
-			typeLineInfoAnnotation = Type.GetType(sXObjectTypeName.Replace("XObject", "LineInfoAnnotation"), false);
-			typeLineInfoEndElementAnnotation = Type.GetType(sXObjectTypeName.Replace("XObject", "LineInfoEndElementAnnotation"), false);
+			var xobjectTypeName = typeof(XObject).AssemblyQualifiedName;
+			typeBaseUriAnnotation = Type.GetType(xobjectTypeName.Replace("XObject", "BaseUriAnnotation"), false);
+			typeLineInfoAnnotation = Type.GetType(xobjectTypeName.Replace("XObject", "LineInfoAnnotation"), false);
+			typeLineInfoEndElementAnnotation = Type.GetType(xobjectTypeName.Replace("XObject", "LineInfoEndElementAnnotation"), false);
 		} // ctor
 	} // class Procs
 }
