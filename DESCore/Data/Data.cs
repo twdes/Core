@@ -24,20 +24,38 @@ namespace TecWare.DE.Data
 {
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
+	public interface IDataColumnAttributes : IPropertyReadOnlyDictionary, IEnumerable<PropertyValue>
+	{
+	} // interface IDataColumnAttributes
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public interface IDataColumn
+	{
+		/// <summary>Gets the name in this column.</summary>
+		string Name { get; }
+		/// <summary>Gets the type of data in this column.</summary>
+		Type DataType { get; }
+		/// <summary>Gets the attributes in this column.</summary>
+		IDataColumnAttributes Attributes { get; }
+	} // interface IDataColumn
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
 	public interface IDataColumns
 	{
-		/// <summary>Name of the columns</summary>
-		string[] ColumnNames { get; }
-		/// <summary></summary>
-		Type[] ColumnTypes { get; }
-		/// <summary>Number of columns</summary>
+		/// <summary>Gets the columns.</summary>
+		IDataColumn[] Columns { get; }
+		/// <summary>Gets the number of columns.</summary>
 		int ColumnCount { get; }
 	} // interface IDataColumns
 
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
 	public interface IDataValues
 	{
-		/// <summary>Get the value for the column by index</summary>
-		/// <param name="index"></param>
+		/// <summary>Gets the value for the column at the specified index.</summary>
+		/// <param name="index">The zero-based index of the column to get the value.</param>
 		/// <returns></returns>
 		object this[int index] { get; }
 	} // interface IDataValues
@@ -46,8 +64,8 @@ namespace TecWare.DE.Data
 	/// <summary></summary>
 	public interface IDataRow : IDataColumns, IDataValues, IPropertyReadOnlyDictionary
 	{
-		/// <summary>Get the value for the column by name</summary>
-		/// <param name="columnName"></param>
+		/// <summary>Gets the value for the column with the specified name.</summary>
+		/// <param name="columnName">The name of the column to get the value.</param>
 		/// <returns></returns>
 		object this[string columnName] { get; }
 	} // interface IDataRow

@@ -250,6 +250,87 @@ namespace TecWare.DE.Networking
 		/// <summary></summary>
 		public class ViewDataReader : IEnumerable<IDataRow>
 		{
+			#region -- class ViewDataColumnAttributes -----------------------------------------
+
+			///////////////////////////////////////////////////////////////////////////////
+			/// <summary></summary>
+			private sealed class ViewDataColumnAttributes : IDataColumnAttributes
+			{
+				private readonly PropertyValue[] attributes;
+
+				#region -- Ctor/Dtor --------------------------------------------------------------
+
+				public ViewDataColumnAttributes(PropertyValue[] attributes)
+				{
+					this.attributes = attributes;
+				} // ctor
+
+				#endregion
+
+				#region -- IDataColumnAttributes --------------------------------------------------
+
+				public bool TryGetProperty(string name, out object value)
+				{
+					value = null;
+
+					if (String.IsNullOrEmpty(name))
+						return false;
+
+					if (attributes == null)
+						return false;
+
+					var index = Array.FindIndex(attributes, c => String.Compare(c.Name, name, StringComparison.OrdinalIgnoreCase) == 0);
+					if (index == -1)
+						return false;
+
+					value = attributes[index];
+					return true;
+				} // func TryGetProperty
+
+				public IEnumerator<PropertyValue> GetEnumerator()
+					// todo: verify functionality
+					=> (IEnumerator<PropertyValue>)attributes.GetEnumerator();
+
+				IEnumerator IEnumerable.GetEnumerator()
+					=> GetEnumerator();
+
+				#endregion
+			} // class ViewDataColumnAttributes
+
+			#endregion
+
+			#region -- class ViewDataColumn ---------------------------------------------------
+
+			///////////////////////////////////////////////////////////////////////////////
+			/// <summary></summary>
+			private sealed class ViewDataColumn : IDataColumn
+			{
+				private readonly string name;
+				private readonly Type dataType;
+				private readonly IDataColumnAttributes attributes;
+
+				#region -- Ctor/Dtor --------------------------------------------------------------
+
+				public ViewDataColumn(string name, Type dataType, IDataColumnAttributes attributes)
+				{
+					this.name = name;
+					this.dataType = dataType;
+					this.attributes = attributes;
+				} // ctor
+
+				#endregion
+
+				#region -- IDataColumn ------------------------------------------------------------
+
+				public string Name => name;
+				public Type DataType => dataType;
+				public IDataColumnAttributes Attributes => attributes;
+
+				#endregion
+			} // class ViewDataColumn
+
+			#endregion
+
 			#region -- class ViewDataRow ------------------------------------------------------
 
 			///////////////////////////////////////////////////////////////////////////////
@@ -271,23 +352,23 @@ namespace TecWare.DE.Networking
 
 				#region -- IDataRow ---------------------------------------------------------------
 
-				public bool TryGetProperty(string name, out object value)
+				public bool TryGetProperty(string columnName, out object value)
 				{
 					value = null;
 
-					if (String.IsNullOrEmpty(name))
+					if (String.IsNullOrEmpty(columnName))
 						return false;
 
 					if (enumerator == null)
 						return false;
 
-					if (ColumnNames == null || ColumnNames.Length != ColumnCount)
+					if (Columns == null || Columns.Length != ColumnCount)
 						return false;
 
 					if (columnValues == null || columnValues.Length != ColumnCount)
 						return false;
 
-					var index = Array.FindIndex(ColumnNames, c => String.Compare(c, name, StringComparison.Ordinal) == 0);
+					var index = Array.FindIndex(Columns, c => String.Compare(c.Name, columnName, StringComparison.OrdinalIgnoreCase) == 0);
 					if (index == -1)
 						return false;
 
@@ -297,11 +378,19 @@ namespace TecWare.DE.Networking
 
 				public object this[int index] => columnValues[index];
 
-				public string[] ColumnNames => enumerator.ColumnNames;
-				public Type[] ColumnTypes => enumerator.ColumnTypes;
+				public IDataColumn[] Columns => enumerator.Columns;
 				public int ColumnCount => enumerator.ColumnCount;
 
-				public object this[string columnName] => Array.Find(ColumnNames, c => String.Compare(c, columnName, StringComparison.OrdinalIgnoreCase) == 0);
+				public object this[string columnName]
+				{
+					get
+					{
+						var index = Array.FindIndex(Columns, c => String.Compare(c.Name, columnName, StringComparison.OrdinalIgnoreCase) == 0);
+						if (index == -1)
+							throw new ArgumentException();
+						return columnValues[index];
+					}
+				} // prop this
 
 				#endregion
 
@@ -309,6 +398,7 @@ namespace TecWare.DE.Networking
 
 				public DynamicMetaObject GetMetaObject(Expression parameter)
 				{
+					// todo: Missing functionality!
 					throw new NotImplementedException();
 				} // func GetMetaObject
 
@@ -337,8 +427,7 @@ namespace TecWare.DE.Networking
 				#endregion
 
 				private readonly XmlReader xml;
-				private string[] columnNames;
-				private Type[] columnTypes;
+				private ViewDataColumn[] columns;
 				private int columnCount;
 				private ReadingState state;
 				private ViewDataRow currentRow;
@@ -380,21 +469,50 @@ namespace TecWare.DE.Networking
 							if (xml.NodeType != XmlNodeType.Element || String.Compare(xml.LocalName, "fields", StringComparison.Ordinal) != 0)
 								throw new InvalidDataException(string.Format("Expected \"view\" ({0}), read \"{1}\" ({2}).", XmlNodeType.Element, xml.LocalName, xml.NodeType));
 
-							var names = new List<string>();
-							var types = new List<Type>();
+							var viewColumns = new List<ViewDataColumn>();
 							var fields = (XElement)XNode.ReadFrom(xml);
-							foreach (XElement field in fields.DescendantNodes())
+							foreach (var field in fields.Elements())
 							{
-								names.Add(field.Name.LocalName);
-								types.Add(LuaType.GetType(field.Attribute("type").Value).Type);
-							}
+								var columnName = field.Name.LocalName;
+								var columnDataType = LuaType.GetType(field.Attribute("type").Value).Type;
+								var columnId = field.Attribute("field").Value;
 
-							if (names.Count < 1)
+								// hack: ignore type Guid till lua update, other types probably also not useable (cast problem in row data)
+								if (columnDataType == typeof(Guid))
+									continue;
+
+								var attributes = new List<PropertyValue>();
+								attributes.Add(new PropertyValue("field", columnId));
+
+								if (field.HasElements)
+								{
+									foreach (var c in field.Elements())
+									{
+										if (c.IsEmpty)
+											continue;
+
+										if (String.Compare(c.Name.LocalName, "attribute", StringComparison.Ordinal) != 0)
+											continue;
+
+										// todo: Use the "dataType" attribute of the "attribute" to determine the data type and convert the value. Cast in Type throws an exception at the moment.
+										//var attributeName = c.Attribute("name").Value;
+										//var attributeDataType = LuaType.GetType(c.Attribute("dataType").Value).Type;
+										//var attributeValue = c.Value.GetType() != attributeDataType ? Procs.ChangeType(c.Value, attributeDataType) : c.Value;
+										//attributes.Add(new PropertyValue(attributeName, attributeDataType, attributeValue));
+										var attributeName = c.Attribute("name").Value;
+										var attributeValue = c.Value;
+										attributes.Add(new PropertyValue(attributeName, attributeValue));
+									} // foreach c
+								} // if field.HasElements
+
+								viewColumns.Add(new ViewDataColumn(columnName, columnDataType, new ViewDataColumnAttributes(attributes.ToArray())));
+							} // foreach field
+
+							if (viewColumns.Count < 1)
 								throw new InvalidDataException("No header found.");
 
-							columnNames = names.ToArray();
-							columnTypes = types.ToArray();
-							columnCount = columnNames.Length;
+							columns = viewColumns.ToArray();
+							columnCount = columns.Length;
 
 							if (xml.NodeType != XmlNodeType.Element || String.Compare(xml.LocalName, "rows", StringComparison.Ordinal) != 0)
 								throw new InvalidDataException(string.Format("Expected \"rows\" ({0}), read \"{1}\" ({2}).", XmlNodeType.Element, xml.LocalName, xml.NodeType));
@@ -411,7 +529,7 @@ namespace TecWare.DE.Networking
 
 								state = ReadingState.Complete;
 								goto case ReadingState.Complete;
-							}
+							} // if xml.IsEmptyElement
 							else
 							{
 								xml.Read();
@@ -435,12 +553,9 @@ namespace TecWare.DE.Networking
 										continue;
 
 									var element = (XElement)column;
-									if (element.IsEmpty)
-										continue;
-
-									var columnIndex = Array.FindIndex(columnNames, c => String.Compare(c, element.Name.LocalName, StringComparison.Ordinal) == 0);
+									var columnIndex = Array.FindIndex(columns, c => String.Compare(c.Name, element.Name.LocalName, StringComparison.OrdinalIgnoreCase) == 0);
 									if (columnIndex != -1)
-										values[columnIndex] = Procs.ChangeType(element.Value, columnTypes[columnIndex]);
+										values[columnIndex] = Procs.ChangeType(element.Value, columns[columnIndex].DataType);
 								}
 							} // if xml.IsEmptyElement
 							else
@@ -486,8 +601,7 @@ namespace TecWare.DE.Networking
 
 				#region -- IDataColumns -----------------------------------------------------------
 
-				public string[] ColumnNames => columnNames;
-				public Type[] ColumnTypes => columnTypes;
+				public IDataColumn[] Columns => columns;
 				public int ColumnCount => columnCount;
 
 				#endregion
@@ -524,7 +638,7 @@ namespace TecWare.DE.Networking
 		#endregion
 
 		public IEnumerable<IDataRow> CreateViewDataReader(string path, string acceptedMimeType = MimeTypes.Text.Xml)
-				=> new ViewDataReader(this, path, acceptedMimeType);
+			=> new ViewDataReader(this, path, acceptedMimeType);
 
 		#endregion
 
