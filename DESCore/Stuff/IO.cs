@@ -63,14 +63,17 @@ namespace TecWare.DE.Stuff
 
 		#region -- ReadInArray ------------------------------------------------------------
 
-		/// <summary>Liest die Daten eines Streams in einer Array.</summary>
+		/// <summary>Liest die Daten eines Streams in ein Array.</summary>
 		/// <param name="src">Stream dessen Daten in ein Array gelesen werden sollen.</param>
 		/// <param name="bufferSize">Größe des Buffers, falls die Länge nicht ermittelt werden kann.</param>
-		/// <returns>Die gelesenen Daten.</returns>
+		/// <returns>Die gelesenen Daten oder null im Falle eines Streams ohne Daten.</returns>
 		public static byte[] ReadInArray(this Stream src, int bufferSize = 81920)
 		{
 			if (src is MemoryStream)
-				return ((MemoryStream)src).ToArray();
+			{
+				var tmp = (MemoryStream)src;
+				return tmp.Length == 0 ? null : tmp.ToArray();
+			}
 			else if (src.CanSeek)
 			{
 				if (src.Length == 0)
