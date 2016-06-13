@@ -387,7 +387,7 @@ namespace TecWare.DE.Networking
 					{
 						var index = Array.FindIndex(Columns, c => String.Compare(c.Name, columnName, StringComparison.OrdinalIgnoreCase) == 0);
 						if (index == -1)
-							throw new ArgumentException();
+							throw new ArgumentException(String.Format("Column with name \"{0}\" not found.", columnName ?? "null"));
 						return columnValues[index];
 					}
 				} // prop this
