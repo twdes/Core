@@ -338,14 +338,14 @@ namespace TecWare.DE.Networking
 			private sealed class ViewDataRow : IDataRow, IDynamicMetaObjectProvider
 			{
 				private readonly ViewDataEnumerator enumerator;
-				private readonly object[] columnValues;
+				private readonly object[] values;
 
 				#region -- Ctor/Dtor --------------------------------------------------------------
 
-				public ViewDataRow(ViewDataEnumerator enumerator, object[] columnValues)
+				public ViewDataRow(ViewDataEnumerator enumerator, object[] values)
 				{
 					this.enumerator = enumerator;
-					this.columnValues = columnValues;
+					this.values = values;
 				} // ctor
 
 				#endregion
@@ -365,18 +365,18 @@ namespace TecWare.DE.Networking
 					if (Columns == null || Columns.Length != ColumnCount)
 						return false;
 
-					if (columnValues == null || columnValues.Length != ColumnCount)
+					if (values == null || values.Length != ColumnCount)
 						return false;
 
 					var index = Array.FindIndex(Columns, c => String.Compare(c.Name, columnName, StringComparison.OrdinalIgnoreCase) == 0);
 					if (index == -1)
 						return false;
 
-					value = columnValues[index];
+					value = values[index];
 					return true;
 				} // func TryGetProperty
 
-				public object this[int index] => columnValues[index];
+				public object this[int index] => values[index];
 
 				public IDataColumn[] Columns => enumerator.Columns;
 				public int ColumnCount => enumerator.ColumnCount;
@@ -388,7 +388,7 @@ namespace TecWare.DE.Networking
 						var index = Array.FindIndex(Columns, c => String.Compare(c.Name, columnName, StringComparison.OrdinalIgnoreCase) == 0);
 						if (index == -1)
 							throw new ArgumentException(String.Format("Column with name \"{0}\" not found.", columnName ?? "null"));
-						return columnValues[index];
+						return values[index];
 					}
 				} // prop this
 
@@ -426,17 +426,18 @@ namespace TecWare.DE.Networking
 
 				#endregion
 
-				private readonly XmlReader xml;
-				private ViewDataColumn[] columns;
-				private int columnCount;
+				private bool disposed;
+				private readonly XmlReader reader;
 				private ReadingState state;
-				private ViewDataRow currentRow;
+				private IDataRow currentRow;
+				private IDataColumn[] columns;
+				private int columnCount;
 
 				#region -- Ctor/Dtor --------------------------------------------------------------
 
 				public ViewDataEnumerator(BaseWebRequest owner, string path, string acceptedMimeType)
 				{
-					xml = owner.GetXmlStreamAsync(path, acceptedMimeType).Result;
+					reader = owner.GetXmlStreamAsync(path, acceptedMimeType).Result;
 				} // ctor
 
 				public void Dispose()
@@ -444,33 +445,46 @@ namespace TecWare.DE.Networking
 
 				private void Dispose(bool disposing)
 				{
+					if (disposed)
+						return;
+
 					if (disposing)
-						xml?.Dispose();
+						reader?.Dispose();
+
+					disposed = true;
 				} // proc Dispose
 
 				#endregion
+
+				private void CheckDisposed()
+				{
+					if (disposed)
+						throw new ObjectDisposedException(typeof(ViewDataEnumerator).FullName);
+				} // proc CheckDisposed
 
 				#region -- IEnumerator ------------------------------------------------------------
 
 				public bool MoveNext()
 				{
+					CheckDisposed();
+
 					switch (state)
 					{
 						#region -- ReadingState.Unread --
 						case ReadingState.Unread:
-							xml.Read();
-							if (xml.NodeType == XmlNodeType.XmlDeclaration)
-								xml.Read();
+							reader.Read();
+							if (reader.NodeType == XmlNodeType.XmlDeclaration)
+								reader.Read();
 
-							if (xml.NodeType != XmlNodeType.Element || String.Compare(xml.LocalName, "view", StringComparison.Ordinal) != 0)
-								throw new InvalidDataException(string.Format("Expected \"view\" ({0}), read \"{1}\" ({2}).", XmlNodeType.Element, xml.LocalName, xml.NodeType));
+							if (reader.NodeType != XmlNodeType.Element || String.Compare(reader.LocalName, "view", StringComparison.Ordinal) != 0)
+								throw new InvalidDataException(String.Format("Expected \"view\" ({0}), read \"{1}\" ({2}).", XmlNodeType.Element, reader.LocalName, reader.NodeType));
 
-							xml.Read();
-							if (xml.NodeType != XmlNodeType.Element || String.Compare(xml.LocalName, "fields", StringComparison.Ordinal) != 0)
-								throw new InvalidDataException(string.Format("Expected \"view\" ({0}), read \"{1}\" ({2}).", XmlNodeType.Element, xml.LocalName, xml.NodeType));
+							reader.Read();
+							if (reader.NodeType != XmlNodeType.Element || String.Compare(reader.LocalName, "fields", StringComparison.Ordinal) != 0)
+								throw new InvalidDataException(String.Format("Expected \"fields\" ({0}), read \"{1}\" ({2}).", XmlNodeType.Element, reader.LocalName, reader.NodeType));
 
 							var viewColumns = new List<ViewDataColumn>();
-							var fields = (XElement)XNode.ReadFrom(xml);
+							var fields = (XElement)XNode.ReadFrom(reader);
 							foreach (var field in fields.Elements())
 							{
 								var columnName = field.Name.LocalName;
@@ -514,74 +528,72 @@ namespace TecWare.DE.Networking
 							columns = viewColumns.ToArray();
 							columnCount = columns.Length;
 
-							if (xml.NodeType != XmlNodeType.Element || String.Compare(xml.LocalName, "rows", StringComparison.Ordinal) != 0)
-								throw new InvalidDataException(string.Format("Expected \"rows\" ({0}), read \"{1}\" ({2}).", XmlNodeType.Element, xml.LocalName, xml.NodeType));
+							if (reader.NodeType != XmlNodeType.Element || String.Compare(reader.LocalName, "rows", StringComparison.Ordinal) != 0)
+								throw new InvalidDataException(String.Format("Expected \"rows\" ({0}), read \"{1}\" ({2}).", XmlNodeType.Element, reader.LocalName, reader.NodeType));
 
-							if (xml.IsEmptyElement)
+							if (reader.IsEmptyElement)
 							{
-								xml.Read();
-								if (xml.NodeType != XmlNodeType.EndElement || String.Compare(xml.LocalName, "view", StringComparison.Ordinal) != 0)
-									throw new InvalidDataException(string.Format("Expected \"view\" ({0}), read \"{1}\" ({2}).", XmlNodeType.EndElement, xml.LocalName, xml.NodeType));
+								reader.Read();
+								if (reader.NodeType != XmlNodeType.EndElement || String.Compare(reader.LocalName, "view", StringComparison.Ordinal) != 0)
+									throw new InvalidDataException(String.Format("Expected \"view\" ({0}), read \"{1}\" ({2}).", XmlNodeType.EndElement, reader.LocalName, reader.NodeType));
 
-								xml.Read();
-								if (!xml.EOF)
+								reader.Read();
+								if (!reader.EOF)
 									throw new InvalidDataException("Unexpected eof.");
 
 								state = ReadingState.Complete;
 								goto case ReadingState.Complete;
-							} // if xml.IsEmptyElement
-							else
-							{
-								xml.Read();
-								state = ReadingState.Partly;
-								goto case ReadingState.Partly;
-							}
+							} // if reader.IsEmptyElement
+
+							reader.Read();
+							state = ReadingState.Partly;
+							goto case ReadingState.Partly;
 						#endregion
 						#region -- ReadingState.Partly --
 						case ReadingState.Partly:
-							if (xml.NodeType != XmlNodeType.Element || String.Compare(xml.LocalName, "r", StringComparison.Ordinal) != 0)
-								throw new InvalidDataException(string.Format("Expected \"r\" ({0}), read \"{1}\" ({2}).", XmlNodeType.Element, xml.LocalName, xml.NodeType));
-
-							var values = new object[columnCount];
-
-							if (!xml.IsEmptyElement)
+							if (reader.NodeType == XmlNodeType.Element && String.Compare(reader.LocalName, "r", StringComparison.Ordinal) == 0)
 							{
-								var rowData = (XElement)XNode.ReadFrom(xml);
-								foreach (var column in rowData.DescendantNodes())
+								var values = new object[columnCount];
+
+								if (!reader.IsEmptyElement)
 								{
-									if (column.NodeType != XmlNodeType.Element)
-										continue;
+									var rowData = (XElement)XNode.ReadFrom(reader);
+									foreach (var column in rowData.DescendantNodes())
+									{
+										if (column.NodeType != XmlNodeType.Element)
+											continue;
 
-									var element = (XElement)column;
-									var columnIndex = Array.FindIndex(columns, c => String.Compare(c.Name, element.Name.LocalName, StringComparison.OrdinalIgnoreCase) == 0);
-									if (columnIndex != -1)
-										values[columnIndex] = Procs.ChangeType(element.Value, columns[columnIndex].DataType);
-								}
-							} // if xml.IsEmptyElement
-							else
-								// Without a call to XNode.ReadFrom() it's necessary to read to the next node.
-								xml.Read();
+										var element = (XElement)column;
+										var columnIndex = Array.FindIndex(columns, c => String.Compare(c.Name, element.Name.LocalName, StringComparison.OrdinalIgnoreCase) == 0);
+										if (columnIndex != -1)
+											values[columnIndex] = Procs.ChangeType(element.Value, columns[columnIndex].DataType);
+									}
+								} // if !reader.IsEmptyElement
+								else
+									// Without a call to XNode.ReadFrom() it's necessary to read to the next node.
+									reader.Read();
 
-							currentRow = new ViewDataRow(this, values);
-
-							if (xml.NodeType == XmlNodeType.Element && String.Compare(xml.LocalName, "r", StringComparison.Ordinal) == 0)
+								currentRow = new ViewDataRow(this, values);
 								return true;
+							}
+							else if (reader.NodeType == XmlNodeType.EndElement && String.Compare(reader.LocalName, "rows", StringComparison.Ordinal) == 0)
+							{
+								reader.Read();
+								if (reader.NodeType != XmlNodeType.EndElement || String.Compare(reader.LocalName, "view", StringComparison.Ordinal) != 0)
+									throw new InvalidDataException(String.Format("Expected \"view\" ({0}), read \"{1}\" ({2}).", XmlNodeType.EndElement, reader.LocalName, reader.NodeType));
 
-							if (xml.NodeType != XmlNodeType.EndElement || String.Compare(xml.LocalName, "rows", StringComparison.Ordinal) != 0)
-								throw new InvalidDataException(string.Format("Expected \"rows\" ({0}), read \"{1}\" ({2}).", XmlNodeType.EndElement, xml.LocalName, xml.NodeType));
+								reader.Read();
+								if (!reader.EOF)
+									throw new InvalidDataException("Unexpected eof.");
 
-							xml.Read();
-							if (xml.NodeType != XmlNodeType.EndElement || String.Compare(xml.LocalName, "view", StringComparison.Ordinal) != 0)
-								throw new InvalidDataException(string.Format("Expected \"view\" ({0}), read \"{1}\" ({2}).", XmlNodeType.EndElement, xml.LocalName, xml.NodeType));
-
-							xml.Read();
-							if (!xml.EOF)
-								throw new InvalidDataException("Unexpected eof.");
-
-							state = ReadingState.Complete;
-							return true;
+								state = ReadingState.Complete;
+								return false;
+							}
+							else
+								throw new InvalidDataException(String.Format("Expected \"r\" ({0}) or \"rows\" ({1}), read \"{2}\" ({3}).", XmlNodeType.Element, XmlNodeType.EndElement, reader.LocalName, reader.NodeType));
 						#endregion
 						case ReadingState.Complete:
+							currentRow = null;
 							return false;
 						default:
 							throw new InvalidOperationException("The state of the object is invalid.");
@@ -590,19 +602,53 @@ namespace TecWare.DE.Networking
 
 				void IEnumerator.Reset()
 				{
+					CheckDisposed();
 					if (state != ReadingState.Unread)
 						throw new InvalidOperationException("The state of the object forbids the calling of this method.");
 				} // proc Reset
 
-				public IDataRow Current => currentRow;
+				public IDataRow Current
+				{
+					get
+					{
+						CheckDisposed();
+						if (state != ReadingState.Partly)
+							throw new InvalidOperationException("The state of the object forbids the retrieval of this property.");
+						return currentRow;
+					}
+				} // prop Current
+
 				object IEnumerator.Current => Current;
 
 				#endregion
 
 				#region -- IDataColumns -----------------------------------------------------------
 
-				public IDataColumn[] Columns => columns;
-				public int ColumnCount => columnCount;
+				public IDataColumn[] Columns
+				{
+					get
+					{
+						CheckDisposed();
+
+						if (state == ReadingState.Unread)
+							MoveNext();
+
+						return columns;
+					}
+				} // prop Columns
+
+				public int ColumnCount
+				{
+					get
+					{
+						CheckDisposed();
+
+						if (state == ReadingState.Unread)
+							MoveNext();
+
+						return columnCount;
+					}
+				} // prop ColumnCount
 
 				#endregion
 			} // class ViewDataEnumerator
