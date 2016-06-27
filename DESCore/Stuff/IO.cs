@@ -41,7 +41,7 @@ namespace TecWare.DE.Stuff
 				else if (iReaded == 4 && bPreamble[0] == 0x00 && bPreamble[1] == 0x00 && bPreamble[2] == 0xFE && bPreamble[3] == 0xFF) // utf-32 EB
 				{
 					encodingSource = Encoding.GetEncoding("utf-32"); // is a EL codepage, but the StreamReader should switch to EB
-          detectEncoding = true;
+					detectEncoding = true;
 				}
 				else if (iReaded == 4 && bPreamble[0] == 0xFF && bPreamble[1] == 0xFE && bPreamble[2] == 0x00 && bPreamble[3] == 0x00) // utf-32 EL
 					encodingSource = Encoding.GetEncoding("utf-32");
