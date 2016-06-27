@@ -55,7 +55,7 @@ namespace TecWare.DE.Stuff
 
 	#endregion
 
-	#region -- class IPropertyReadOnlyDictionary ----------------------------------------
+	#region -- interface IPropertyReadOnlyDictionary ------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
@@ -70,25 +70,41 @@ namespace TecWare.DE.Stuff
 
 	#endregion
 
+	#region -- interface IPropertyEnumerableDictionary ----------------------------------
+
+	public interface IPropertyEnumerableDictionary : IPropertyReadOnlyDictionary, IEnumerable<PropertyValue>
+	{
+	} // interface IPropertyEnumerableDictionary
+
+	#endregion
+
 	#region -- class PropertyDictionary -------------------------------------------------
 
-	public sealed class PropertyDictionary : IPropertyReadOnlyDictionary, IEnumerable<PropertyValue>
+	public sealed class PropertyDictionary : IPropertyEnumerableDictionary, IPropertyReadOnlyDictionary, IEnumerable<PropertyValue>
 	{
 		#region -- class EmptyReadOnlyDictionary ------------------------------------------
 
 		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>
-		private sealed class EmptyReadOnlyDictionary : IPropertyReadOnlyDictionary
+		private sealed class EmptyReadOnlyDictionary : IPropertyEnumerableDictionary
 		{
 			public EmptyReadOnlyDictionary()
 			{
 			} // ctor
+
+			public IEnumerator<PropertyValue> GetEnumerator()
+			{
+				yield break;
+			} // func GetEnumerator
 
 			public bool TryGetProperty(string name, out object value)
 			{
 				value = null;
 				return false;
 			} // func TryGetProperty
+
+			IEnumerator IEnumerable.GetEnumerator()
+				=> GetEnumerator();
 		} //class EmptyReadOnlyDictionary
 
 		#endregion
@@ -363,7 +379,7 @@ namespace TecWare.DE.Stuff
 
 		#endregion
 
-		public static IPropertyReadOnlyDictionary EmptyReadOnly { get; } = new EmptyReadOnlyDictionary();
+		public static IPropertyEnumerableDictionary EmptyReadOnly { get; } = new EmptyReadOnlyDictionary();
 	} // class PropertyDictionary
 
 	#endregion

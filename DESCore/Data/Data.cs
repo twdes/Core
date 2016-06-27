@@ -14,20 +14,16 @@
 //
 #endregion
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using TecWare.DE.Stuff;
 
 namespace TecWare.DE.Data
 {
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
-	public interface IDataColumnAttributes : IPropertyReadOnlyDictionary, IEnumerable<PropertyValue>
-	{
-	} // interface IDataColumnAttributes
-
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public interface IDataColumn
@@ -37,7 +33,7 @@ namespace TecWare.DE.Data
 		/// <summary>Gets the type of data in this column.</summary>
 		Type DataType { get; }
 		/// <summary>Gets the attributes in this column.</summary>
-		IDataColumnAttributes Attributes { get; }
+		IPropertyEnumerableDictionary Attributes { get; }
 	} // interface IDataColumn
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -60,6 +56,8 @@ namespace TecWare.DE.Data
 		object this[int index] { get; }
 	} // interface IDataValues
 
+	#region -- interface IDataRow -------------------------------------------------------
+
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public interface IDataRow : IDataColumns, IDataValues, IPropertyReadOnlyDictionary
@@ -69,4 +67,158 @@ namespace TecWare.DE.Data
 		/// <returns></returns>
 		object this[string columnName] { get; }
 	} // interface IDataRow
+
+	#endregion
+
+	#region -- class GenericDataRowEnumerator<T> ----------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public sealed class GenericDataRowEnumerator<T> : IEnumerator<IDataRow>, IDataColumns
+	{
+		#region -- class PropertyColumnInfo -----------------------------------------------
+
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary></summary>
+		private sealed class PropertyColumnInfo : IDataColumn
+		{
+			private readonly PropertyInfo property;
+
+			public PropertyColumnInfo(PropertyInfo property)
+			{
+				this.property = property;
+			} // ctor
+
+			internal object GetValue(object current)
+				=> property.GetValue(current);
+
+			public string Name => property.Name;
+			public Type DataType => property.PropertyType;
+
+			public IPropertyEnumerableDictionary Attributes => PropertyDictionary.EmptyReadOnly;
+		} // class PropertyColumnInfo
+
+		#endregion
+
+		#region -- class PropertyDataRow --------------------------------------------------
+
+		private sealed class PropertyDataRow : IDataRow
+		{
+			private readonly GenericDataRowEnumerator<T> owner;
+			private readonly object current;
+
+			public PropertyDataRow(GenericDataRowEnumerator<T> owner, object current)
+			{
+				this.owner = owner;
+				this.current = current;
+			} // ctor
+
+			public bool TryGetProperty(string name, out object value)
+			{
+				var p = owner.GetProperty(name, false);
+				if (p != null)
+				{
+					value = p.GetValue(this.current);
+					return true;
+				}
+				else
+				{
+					value = null;
+					return false;
+				}
+			} // func TryGetProperty
+			
+			public object this[int index]
+				=> owner.properties[index].GetValue(current);
+
+			public object this[string columnName]
+				=> owner.GetProperty(columnName, true).GetValue(current);
+
+			public int ColumnCount => owner.properties.Length;
+
+			public IDataColumn[] Columns => owner.properties;
+		} // class PropertyDataRow
+
+		#endregion
+
+		private readonly IEnumerator<T> enumerator;
+		private readonly PropertyColumnInfo[] properties;
+
+		#region -- Ctor/Dtor --------------------------------------------------------------
+
+		public GenericDataRowEnumerator(IEnumerator<T> enumerator)
+		{
+			if (enumerator == null)
+				throw new ArgumentNullException();
+
+			this.enumerator = enumerator;
+			this.properties = typeof(T).GetRuntimeProperties()
+				.Where(pi => pi.CanRead && pi.GetMethod.IsPublic && !pi.GetMethod.IsStatic)
+				.Select(pi => new PropertyColumnInfo(pi)).ToArray();
+		} // ctor
+
+		public void Dispose()
+		{
+			enumerator.Dispose();
+		} // proc Dispose
+
+		#endregion
+
+		private PropertyColumnInfo GetProperty(string propertyName, bool throwException)
+		{
+			var property = Array.Find(properties, c => String.Compare(c.Name, propertyName, StringComparison.OrdinalIgnoreCase) == 0);
+			if (property == null)
+			{
+				if (throwException)
+					throw new ArgumentNullException("propertyName", $"Property '{propertyName}' not found.");
+			}
+			return property;
+		} // proc GetProperty
+
+		public void Reset()
+			=> enumerator.Reset();
+
+		public bool MoveNext()
+			=> enumerator.MoveNext();
+
+		public int ColumnCount => properties.Length;
+		public IDataColumn[] Columns => properties;
+
+		public IDataRow Current => new PropertyDataRow(this, enumerator.Current);
+
+		object IEnumerator.Current => Current;
+	} // class GenericDataRowEnumerator<T>
+
+	#endregion
+
+	#region -- class DataRowHelper-------------------------------------------------------
+
+	public static class DataRowHelper
+	{
+		public static int FindColumnIndex(this IEnumerator<IDataRow> columns, string columnName, bool throwException = false)
+			=> FindColumnIndex((IDataColumns)columns, columnName, throwException);
+
+		public static int FindColumnIndex(this IDataColumns columns, string columnName, bool throwException = false)
+		{
+			var index = Array.FindIndex(columns.Columns, c => String.Compare(c.Name, columnName, StringComparison.OrdinalIgnoreCase) == 0);
+			if (index == -1 && throwException)
+				throw new ArgumentOutOfRangeException(String.Format("Column '{0}' not found", columnName));
+			return index;
+		} // func FindColumnIndex
+
+		public static T GetValue<T>(this IEnumerator<IDataRow> items, int index, T @default)
+		{
+			if (index == -1)
+				return @default;
+
+			var value = items.Current[index];
+			if (value == null)
+				return @default;
+
+			return value.ChangeType<T>();
+		} // func GetValue
+
+	} // class DataRowHelper
+
+	#endregion
 }
