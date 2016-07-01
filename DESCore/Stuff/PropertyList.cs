@@ -51,6 +51,8 @@ namespace TecWare.DE.Stuff
 		public string Name => name;
 		public Type Type => type;
 		public object Value => value;
+
+		public static PropertyValue[] EmptyArray { get; } = new PropertyValue[0];
 	} // class PropertyValue
 
 	#endregion
@@ -374,8 +376,20 @@ namespace TecWare.DE.Stuff
 
 		#region -- IEnumerable Member -----------------------------------------------------
 
-		IEnumerator<PropertyValue> IEnumerable<PropertyValue>.GetEnumerator() => properties.Values.GetEnumerator();
-		System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => properties.Values.GetEnumerator();
+		IEnumerator<PropertyValue> IEnumerable<PropertyValue>.GetEnumerator()
+		{
+			foreach (var c in properties.Values)
+				yield return c;
+
+			if (parentDictionary != null)
+			{
+				foreach (var c in parentDictionary)
+					yield return c;
+			}
+		} // func GetEnumerator
+
+		System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
+			=> ((IEnumerable<PropertyValue>)this).GetEnumerator();
 
 		#endregion
 
@@ -418,6 +432,17 @@ namespace TecWare.DE.Stuff
 			T r;
 			return propertyDictionary.TryGetProperty(name, out r) ? r : @default;
 		} // func GetProperty
+
+		/// <summary>Gibt einen Parameter zurück.</summary>
+		/// <typeparam name="T">Rückgabewert.</typeparam>
+		/// <param name="name">Parametername.</param>
+		/// <param name="def">Defaultwert, falls der Wert nicht ermittelt werden konnte.</param>
+		/// <returns>Abgelegter Wert oder der Default-Wert.</returns>
+		public static T GetPropertyLate<T>(this IPropertyReadOnlyDictionary propertyDictionary, string name, Func<T> @default)
+		{
+			T r;
+			return propertyDictionary.TryGetProperty(name, out r) ? r : @default();
+		} // func GetPropertyLate
 
 		/// <summary>Versucht einen Paremter zurückzugeben.</summary>
 		/// <param name="name">Parametername.</param>

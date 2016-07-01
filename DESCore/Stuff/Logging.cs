@@ -440,7 +440,8 @@ namespace TecWare.DE.Stuff
 		public static void LogMsg(this ILogger logger, LogMsgType typ, string message, Exception e) => logger?.LogMsg(typ, message + Environment.NewLine + Environment.NewLine + e.GetMessageString());
 		public static void LogMsg(this ILogger logger, LogMsgType typ, Exception e) => LogMsg(logger, typ, e.Message, e);
 		public static LoggerProxy LogProxy(this IServiceProvider sp) => LoggerProxy.Create(sp?.GetService<ILogger>(false));
-  } // class Procs
+
+	} // class Procs
 
 	#endregion
 }

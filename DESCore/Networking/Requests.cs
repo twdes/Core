@@ -286,7 +286,7 @@ namespace TecWare.DE.Networking
 
 			///////////////////////////////////////////////////////////////////////////////
 			/// <summary></summary>
-			private sealed class ViewDataRow : IDataRow, IDynamicMetaObjectProvider
+			private sealed class ViewDataRow : DynamicDataRow
 			{
 				private readonly ViewDataEnumerator enumerator;
 				private readonly object[] columnValues;
@@ -303,55 +303,8 @@ namespace TecWare.DE.Networking
 
 				#region -- IDataRow ---------------------------------------------------------------
 
-				public bool TryGetProperty(string columnName, out object value)
-				{
-					value = null;
-
-					if (String.IsNullOrEmpty(columnName))
-						return false;
-
-					if (enumerator == null)
-						return false;
-
-					if (Columns == null || Columns.Length != ColumnCount)
-						return false;
-
-					if (columnValues == null || columnValues.Length != ColumnCount)
-						return false;
-
-					var index = Array.FindIndex(Columns, c => String.Compare(c.Name, columnName, StringComparison.OrdinalIgnoreCase) == 0);
-					if (index == -1)
-						return false;
-
-					value = columnValues[index];
-					return true;
-				} // func TryGetProperty
-
-				public object this[int index] => columnValues[index];
-
-				public IDataColumn[] Columns => enumerator.Columns;
-				public int ColumnCount => enumerator.ColumnCount;
-
-				public object this[string columnName]
-				{
-					get
-					{
-						var index = Array.FindIndex(Columns, c => String.Compare(c.Name, columnName, StringComparison.OrdinalIgnoreCase) == 0);
-						if (index == -1)
-							throw new ArgumentException();
-						return columnValues[index];
-					}
-				} // prop this
-
-				#endregion
-
-				#region -- IDynamicMetaObjectProvider ---------------------------------------------
-
-				public DynamicMetaObject GetMetaObject(Expression parameter)
-				{
-					// todo: Missing functionality!
-					throw new NotImplementedException();
-				} // func GetMetaObject
+				public override IReadOnlyList<IDataColumn> Columns => enumerator.Columns;
+				public override object this[int index] => columnValues[index];
 
 				#endregion
 			} // class ViewDataRow
@@ -563,7 +516,7 @@ namespace TecWare.DE.Networking
 
 				#region -- IDataColumns -----------------------------------------------------------
 
-				public IDataColumn[] Columns
+				public IReadOnlyList<IDataColumn> Columns
 				{
 					get
 					{
@@ -572,8 +525,6 @@ namespace TecWare.DE.Networking
 						return columns;
 					}
 				} // prop Columns
-
-				public int ColumnCount => Columns.Length;
 
 				#endregion
 			} // class ViewDataEnumerator
