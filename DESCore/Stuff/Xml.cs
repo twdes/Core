@@ -295,7 +295,108 @@ namespace TecWare.DE.Stuff
 
 		#endregion
 
-		 // -- Ctor ---------------------------------------------------------------
+		#region -- GetStrings -------------------------------------------------------------
+
+		private static string[] EmptyArray(string[] a, bool emptyArrayToNull)
+		{
+			if (a == null)
+				return emptyArrayToNull ? null : new string[0];
+			else if (a.Length == 0)
+				return emptyArrayToNull ? null : a;
+			else
+				return a;
+		} // func EmptyArray
+
+		public static string[] GetStrings(this XElement x, XName attribute, bool emptyArrayToNull = false)
+		{
+			var list = x?.GetAttribute(attribute, (string)null);
+			if (String.IsNullOrEmpty(list))
+				return EmptyArray(null, emptyArrayToNull);
+			else
+				return EmptyArray(list.Split(new char[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries), emptyArrayToNull);
+		} // func GetStrings
+
+		#endregion
+
+		#region -- GetPaths ---------------------------------------------------------------
+
+		public static IEnumerable<string> SplitPaths(string value)
+		{
+			if (value == null)
+				yield break;
+
+			var startAt = 0;
+			var pos = 0;
+			var inQuote = false;
+			while (pos < value.Length)
+			{
+				if (inQuote)
+				{
+					if (value[pos] == '"')
+					{
+						if (startAt < pos)
+							yield return value.Substring(startAt, pos - startAt);
+						startAt = pos + 1;
+						inQuote = false;
+					}
+				}
+				else
+				{
+					if (Char.IsWhiteSpace(value[pos]) || value[pos] == ';' || value[pos] == ',')
+					{
+						if (startAt < pos)
+							yield return value.Substring(startAt, pos - startAt);
+						startAt = pos + 1;
+					}
+					else if (value[pos] == '"')
+					{
+						if (startAt < pos)
+							yield return value.Substring(startAt, pos - startAt);
+
+						startAt = pos + 1;
+						inQuote = true;
+					}
+				}
+				pos++;
+			}
+
+			if (startAt < pos)
+				yield return value.Substring(startAt, pos - startAt);
+		} // func SplitPaths
+
+		public static string JoinPaths(IEnumerable<string> values)
+		{
+			var sb = new StringBuilder();
+
+			var f = true;
+			foreach (var c in values)
+			{
+				if (f)
+					f = false;
+				else
+					sb.Append(' ');
+
+				if (c.IndexOf(' ') >= 0)
+					sb.Append('"').Append(c).Append('"');
+				else
+					sb.Append(c);
+			}
+
+			return sb.ToString();
+		} // func JoinPaths
+
+		public static string[] GetPaths(this XElement x, XName attribute, bool emptyArrayToNull = false)
+		{
+			var value = x?.Attribute(attribute)?.Value;
+			if (String.IsNullOrEmpty(value))
+				return EmptyArray(null, emptyArrayToNull);
+			else
+				return EmptyArray(SplitPaths(value).ToArray(), emptyArrayToNull);
+		} // func GetPaths
+
+		#endregion
+
+		// -- Ctor ---------------------------------------------------------------
 
 		private static readonly Type typeBaseUriAnnotation;
 		private static readonly Type typeLineInfoAnnotation;
