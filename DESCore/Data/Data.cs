@@ -34,7 +34,7 @@ namespace TecWare.DE.Data
 		string Name { get; }
 		/// <summary>Gets the type of data in this column.</summary>
 		Type DataType { get; }
-		/// <summary>Gets the attributes in this column.</summary>
+		/// <summary>Extented attributes for the column.</summary>
 		IPropertyEnumerableDictionary Attributes { get; }
 	} // interface IDataColumn
 
@@ -128,6 +128,65 @@ namespace TecWare.DE.Data
 
 		#endregion
 	} // class DynamicDataRow
+
+	#endregion
+
+	#region -- class SimpleDataRow ------------------------------------------------------
+
+	public sealed class SimpleDataRow : IDataRow
+	{
+		private readonly object[] values;
+		private readonly SimpleDataColumn[] columns;
+
+		public SimpleDataRow(object[] values, SimpleDataColumn[] columns)
+		{
+			this.values = values;
+			this.columns = columns;
+		} // ctor
+
+		public SimpleDataRow(IDataRow row)
+		{
+			var length = row.Columns.Count;
+
+			this.values = new object[length];
+			this.columns = new SimpleDataColumn[length];
+
+			for (var i = 0; i < length; i++)
+			{
+				values[i] = row[i];
+				columns[i] = new SimpleDataColumn(row.Columns[i]);
+			}
+		} // ctor
+
+		public bool TryGetProperty(string name, out object value)
+		{
+			var index = Array.FindIndex(columns, c => String.Compare(c.Name, name, StringComparison.OrdinalIgnoreCase) == 0);
+			if (index == -1)
+			{
+				value = null;
+				return false;
+			}
+			else
+			{
+				value = values[index];
+				return true;
+			}
+		} // func TryGetProperty
+
+		public IReadOnlyList<IDataColumn> Columns => columns;
+
+		public object this[int index] => values[index];
+		public object this[string columnName]
+		{
+			get
+			{
+				object value;
+				if (TryGetProperty(columnName, out value))
+					return value;
+				return null;
+			}
+		} // prop this
+	} // class SimpleDataRow
 
 	#endregion
 
@@ -258,6 +317,11 @@ namespace TecWare.DE.Data
 		private readonly string name;
 		private readonly Type dataType;
 		private readonly IPropertyEnumerableDictionary attributes;
+
+		public SimpleDataColumn(IDataColumn column)
+			: this(column.Name, column.DataType, column.Attributes)
+		{
+		} // ctor
 
 		public SimpleDataColumn(string name, Type dataType, IPropertyEnumerableDictionary attributes = null)
 		{

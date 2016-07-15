@@ -19,6 +19,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Neo.IronLua;
+using TecWare.DE.Data;
 
 namespace TecWare.DE.Stuff
 {
@@ -46,6 +47,29 @@ namespace TecWare.DE.Stuff
 
 	public static partial class Procs
 	{
+		public static LuaTable CreateLuaTable(params PropertyValue[] values)
+		{
+			var t = new LuaTable();
+			foreach (var c in values)
+			{
+				if (c.Value != null)
+					t[c.Name] = c.Value;
+			}
+			return t;
+		} // func CreateTable
+
+		public static LuaTable CreateLuaTable(IDataRow values)
+		{
+			var t = new LuaTable();
+			for(var i=0;i<values.Columns.Count;i++)
+			{
+				var v = values[i];
+				if (v != null)
+					t[values.Columns[i].Name] = v;
+			}
+			return t;
+		} // func CreateTable
+		
 		public static int CompareStringKey(object key, string other)
 		{
 			if (key == null && other == null)

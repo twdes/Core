@@ -19,6 +19,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using Neo.IronLua;
 
 namespace TecWare.DE.Stuff
@@ -83,6 +84,8 @@ namespace TecWare.DE.Stuff
 			}
 			else if (typeTo == typeof(DateTimeOffset) && (value == null || value is string))
 				return value == null ? DateTimeOffset.MinValue : DateTimeOffset.Parse((string)value, CultureInfo.InvariantCulture);
+			else if (typeTo == typeof(XDocument) && (value == null || value is string))
+				return value == null ? null : XDocument.Parse((string)value);
 			else
 				return Lua.RtConvertValue(value, typeTo);
 		} // func ChangeType
