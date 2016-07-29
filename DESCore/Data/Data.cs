@@ -325,6 +325,11 @@ namespace TecWare.DE.Data
 
 		public SimpleDataColumn(string name, Type dataType, IPropertyEnumerableDictionary attributes = null)
 		{
+			if (String.IsNullOrEmpty(name))
+				throw new ArgumentNullException("name");
+			if (dataType == null)
+				throw new ArgumentNullException("dataType");
+
 			this.name = name;
 			this.dataType = dataType;
 			this.attributes = attributes ?? PropertyDictionary.EmptyReadOnly;
