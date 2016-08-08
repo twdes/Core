@@ -23,6 +23,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Net;
+using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
@@ -143,10 +144,7 @@ namespace TecWare.DE.Networking
 			return uri;
 		} // func GetFullUri
 
-		/// <summary></summary>
-		/// <param name="path"></param>
-		/// <returns></returns>
-		public async Task<WebResponse> GetResponseAsync(string path)
+		private WebRequest GetWebRequest(string path)
 		{
 			var request = WebRequest.Create(GetFullUri(path));
 
@@ -156,6 +154,16 @@ namespace TecWare.DE.Networking
 			// set network login information
 			if (credentials != null)
 				request.Credentials = credentials;
+
+			return request;
+		} // func GetWebRequest
+
+		/// <summary></summary>
+		/// <param name="path"></param>
+		/// <returns></returns>
+		public async Task<WebResponse> GetResponseAsync(string path)
+		{
+			var request = GetWebRequest(path);
 
 #if DEBUG
 			Debug.WriteLine($"Request: {path}");
@@ -172,6 +180,34 @@ namespace TecWare.DE.Networking
 			}
 #endif
 		} // func GetResponseAsync
+
+		public async Task<WebResponse> PutStreamResponseAsync(string path, Action<WebRequest, Stream> writeRequest)
+		{
+			var request = GetWebRequest(path);
+
+			// write request stream
+			request.Method = HttpMethod.Put.Method;
+			writeRequest(request, await request.GetRequestStreamAsync());
+
+			// get the response
+			return await request.GetResponseAsync();
+		} // proc PutStreamResponseAsync
+
+		public Task<WebResponse> PutTextResponseAsync(string path, string inputContentType, Action<TextWriter> writeRequest)
+		{
+			return PutStreamResponseAsync(path,
+				(r, dst) =>
+				{
+					// set header
+					r.ContentType = inputContentType+";charset="+defaultEncoding.WebName;
+					r.Headers[HttpRequestHeader.ContentEncoding] = "gzip";
+
+					// convert the text to bytes
+					using (var zip = new GZipStream(dst, CompressionMode.Compress))
+					using (var tw = new StreamWriter(zip, defaultEncoding))
+						writeRequest(tw);
+				});
+		} // func PutTextResponseAsync
 
 		/// <summary>Creates a plain Web-Request, special arguments are filled with IWebRequestCreate.</summary>
 		/// <param name="path">Resource</param>
