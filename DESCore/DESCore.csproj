@@ -45,6 +45,7 @@
     <Compile Include="Stuff\Exceptions.cs" />
     <Compile Include="Stuff\FileSize.cs" />
     <Compile Include="Stuff\IO.cs" />
+    <Compile Include="Stuff\Linq.cs" />
     <Compile Include="Stuff\Logging.cs" />
     <Compile Include="Stuff\Lua.cs" />
     <Compile Include="Stuff\Objects.cs" />

@@ -69,18 +69,70 @@ namespace TecWare.DE.Data
 	} // interface IDataRow
 
 	#endregion
-	
+
 	#region -- class DynamicDataRow -----------------------------------------------------
 
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
 	public abstract class DynamicDataRow : IDataRow, IDynamicMetaObjectProvider
 	{
+		#region -- class DynamicDataRowMetaObjectProvider ---------------------------------
+
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary></summary>
+		private sealed class DynamicDataRowMetaObjectProvider : DynamicMetaObject
+		{
+			public DynamicDataRowMetaObjectProvider(Expression expression, DynamicDataRow row)
+				: base(expression, BindingRestrictions.Empty, row)
+			{
+			} // ctor
+
+			public override DynamicMetaObject BindGetMember(GetMemberBinder binder)
+			{
+				if (binder.Name == nameof(DynamicDataRow.Columns))
+					return base.BindGetMember(binder);
+				else
+				{
+					var row = (DynamicDataRow)Value;
+					var restriction = row.GetRowBindingRestriction(Expression);
+					if (restriction != null) // there is a row restriction, use the this[int]
+					{
+						var column = row.FindColumnIndex(binder.Name);
+						if (column == -1) // column not found, return a null
+							return new DynamicMetaObject(Expression.Constant(null, typeof(object)), restriction);
+						else // the index of the column
+						{
+							return new DynamicMetaObject(
+								Expression.MakeIndex(
+									Expression.Convert(Expression, typeof(DynamicDataRow)),
+									thisIntPropertyInfo,
+									new Expression[] { Expression.Constant(column) }
+								),
+								restriction
+							);
+						}
+					}
+					else // use the this[string]
+					{
+						return new DynamicMetaObject(
+							Expression.MakeIndex(
+								Expression.Convert(Expression, typeof(DynamicDataRow)),
+								thisStringPropertyInfo,
+								new Expression[] { Expression.Constant(binder.Name) }
+							),
+							BindingRestrictions.GetExpressionRestriction(Expression.TypeIs(Expression, typeof(DynamicDataRow)))
+						);
+					}
+				}
+			} // func BindGetMember
+		} // class DynamicDataRowMetaObjectProvider
+
+		#endregion
+
 		#region -- IDynamicMetaObjectProvider ---------------------------------------------
 
 		public DynamicMetaObject GetMetaObject(Expression parameter)
-		{
-			// todo: Missing functionality!
-			throw new NotImplementedException();
-		} // func GetMetaObject
+			=> new DynamicDataRowMetaObjectProvider(parameter, this);
 
 		#endregion
 
@@ -122,18 +174,36 @@ namespace TecWare.DE.Data
 			}
 		} // prop this
 
+		/// <summary>Create a restriction to identify this datarow type.</summary>
+		/// <param name="expression">Expression to the DataRow (uncasted).</param>
+		/// <returns>Binding restriction, to check this DataRow-type.</returns>
+		protected virtual BindingRestrictions GetRowBindingRestriction(Expression expression)
+			=> null;
+
 		public abstract object this[int index] { get; }
 
 		public abstract IReadOnlyList<IDataColumn> Columns { get; }
 
 		#endregion
+
+		// -- Static --------------------------------------------------------------
+
+		private readonly static PropertyInfo thisStringPropertyInfo;
+		private readonly static PropertyInfo thisIntPropertyInfo;
+
+		static DynamicDataRow()
+		{
+			var ti = typeof(DynamicDataRow);
+			thisStringPropertyInfo = ti.GetProperty("Item", typeof(string));
+			thisIntPropertyInfo = ti.GetProperty("Item", typeof(int));
+		} // sctor
 	} // class DynamicDataRow
 
 	#endregion
 
 	#region -- class SimpleDataRow ------------------------------------------------------
 
-	public sealed class SimpleDataRow : IDataRow
+	public sealed class SimpleDataRow : DynamicDataRow
 	{
 		private readonly object[] values;
 		private readonly SimpleDataColumn[] columns;
@@ -158,34 +228,8 @@ namespace TecWare.DE.Data
 			}
 		} // ctor
 
-		public bool TryGetProperty(string name, out object value)
-		{
-			var index = Array.FindIndex(columns, c => String.Compare(c.Name, name, StringComparison.OrdinalIgnoreCase) == 0);
-			if (index == -1)
-			{
-				value = null;
-				return false;
-			}
-			else
-			{
-				value = values[index];
-				return true;
-			}
-		} // func TryGetProperty
-
-		public IReadOnlyList<IDataColumn> Columns => columns;
-
-		public object this[int index] => values[index];
-		public object this[string columnName]
-		{
-			get
-			{
-				object value;
-				if (TryGetProperty(columnName, out value))
-					return value;
-				return null;
-			}
-		} // prop this
+		public override object this[int index] => values[index];
+		public override IReadOnlyList<IDataColumn> Columns => columns;
 	} // class SimpleDataRow
 
 	#endregion
@@ -322,7 +366,7 @@ namespace TecWare.DE.Data
 			: this(column.Name, column.DataType, column.Attributes)
 		{
 		} // ctor
-
+		
 		public SimpleDataColumn(string name, Type dataType, IPropertyEnumerableDictionary attributes = null)
 		{
 			if (String.IsNullOrEmpty(name))
@@ -334,6 +378,9 @@ namespace TecWare.DE.Data
 			this.dataType = dataType;
 			this.attributes = attributes ?? PropertyDictionary.EmptyReadOnly;
 		} // ctor
+
+		public override string ToString()
+			=> $"Column: {name} ({dataType.Name})";
 
 		public string Name => name;
 		public Type DataType => dataType;
