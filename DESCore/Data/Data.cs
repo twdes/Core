@@ -87,44 +87,72 @@ namespace TecWare.DE.Data
 			{
 			} // ctor
 
+			private DynamicMetaObject BindMember(string name, bool throwException)
+			{
+				var row = (DynamicDataRow)Value;
+				var restriction = row.GetRowBindingRestriction(Expression);
+				if (restriction != null) // there is a row restriction, use the this[int]
+				{
+					var column = row.FindColumnIndex(name);
+					if (column == -1) // column not found, return a null
+					{
+						if (throwException)
+						{
+							return new DynamicMetaObject(
+								Expression.Throw(
+									Expression.New(Procs.ArgumentOutOfRangeConstructorInfo2,
+										new Expression[]
+										{
+											Expression.Constant(name),
+											Expression.Constant(String.Format("Could not resolve {0}.",name))
+										}
+									), typeof(object)
+								), restriction
+							);
+						}
+						else
+							return new DynamicMetaObject(Expression.Constant(null, typeof(object)), restriction);
+					}
+					else // the index of the column
+					{
+						return new DynamicMetaObject(
+							Expression.MakeIndex(
+								Expression.Convert(Expression, typeof(DynamicDataRow)),
+								thisIntPropertyInfo,
+								new Expression[] { Expression.Constant(column) }
+							),
+							restriction
+						);
+					}
+				}
+				else // use the this[string]
+				{
+					return new DynamicMetaObject(
+						Expression.MakeIndex(
+							Expression.Convert(Expression, typeof(DynamicDataRow)),
+							thisStringPropertyInfo,
+							new Expression[] { Expression.Constant(name), Expression.Constant(throwException) }
+						),
+						BindingRestrictions.GetExpressionRestriction(Expression.TypeIs(Expression, typeof(DynamicDataRow)))
+					);
+				}
+			} // func BindMember
+
 			public override DynamicMetaObject BindGetMember(GetMemberBinder binder)
 			{
 				if (binder.Name == nameof(DynamicDataRow.Columns))
 					return base.BindGetMember(binder);
 				else
-				{
-					var row = (DynamicDataRow)Value;
-					var restriction = row.GetRowBindingRestriction(Expression);
-					if (restriction != null) // there is a row restriction, use the this[int]
-					{
-						var column = row.FindColumnIndex(binder.Name);
-						if (column == -1) // column not found, return a null
-							return new DynamicMetaObject(Expression.Constant(null, typeof(object)), restriction);
-						else // the index of the column
-						{
-							return new DynamicMetaObject(
-								Expression.MakeIndex(
-									Expression.Convert(Expression, typeof(DynamicDataRow)),
-									thisIntPropertyInfo,
-									new Expression[] { Expression.Constant(column) }
-								),
-								restriction
-							);
-						}
-					}
-					else // use the this[string]
-					{
-						return new DynamicMetaObject(
-							Expression.MakeIndex(
-								Expression.Convert(Expression, typeof(DynamicDataRow)),
-								thisStringPropertyInfo,
-								new Expression[] { Expression.Constant(binder.Name) }
-							),
-							BindingRestrictions.GetExpressionRestriction(Expression.TypeIs(Expression, typeof(DynamicDataRow)))
-						);
-					}
-				}
+					return BindMember(binder.Name, false);
 			} // func BindGetMember
+
+			public override DynamicMetaObject BindInvokeMember(InvokeMemberBinder binder, DynamicMetaObject[] args)
+			{
+				if (args.Length == 0 || binder.Name == nameof(DynamicDataRow.Columns))
+					return base.BindInvokeMember(binder, args);
+				else
+					return BindMember(binder.Name, true);
+			} // func BindInvokeMember
 		} // class DynamicDataRowMetaObjectProvider
 
 		#endregion
@@ -162,8 +190,11 @@ namespace TecWare.DE.Data
 				return false;
 			} // catch
 		} // func TryGetProperty
-		
-		public virtual object this[string columnName]
+
+		public object this[string columnName]
+			=> this[columnName, false];
+
+		public virtual object this[string columnName, bool throwException]
 		{
 			get
 			{
@@ -194,7 +225,7 @@ namespace TecWare.DE.Data
 		static DynamicDataRow()
 		{
 			var ti = typeof(DynamicDataRow);
-			thisStringPropertyInfo = ti.GetProperty("Item", typeof(string));
+			thisStringPropertyInfo = ti.GetProperty("Item", typeof(string), typeof(bool));
 			thisIntPropertyInfo = ti.GetProperty("Item", typeof(int));
 		} // sctor
 	} // class DynamicDataRow

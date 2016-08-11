@@ -14,6 +14,16 @@ namespace TecWare.DE.Stuff
 	public static partial class Procs
 	{
 		private static Lazy<MethodInfo> objectGetTypeMethodInfo = new Lazy<MethodInfo>(() => GetMethod(typeof(object), "GetType"));
+		private static Lazy<ConstructorInfo> argumentOutOfRangeConstructorInfo =
+			new Lazy<ConstructorInfo>(
+				() =>
+					(
+						from ci in typeof(ArgumentOutOfRangeException).GetTypeInfo().DeclaredConstructors
+						let p = ci.GetParameters()
+						where p.Length == 2 && p[0].ParameterType == typeof(string) && p[1].ParameterType == typeof(string)
+						select ci
+				).First()
+		);
 
 		public static MethodInfo GetMethod(this Type type, string methodName, params Type[] parameters)
 		{
@@ -35,6 +45,16 @@ namespace TecWare.DE.Stuff
 			return pi;
 		} // func GetProperty
 
+		public static FieldInfo GetField(this Type type, string fieldName)
+		{
+			var fi =  type.GetRuntimeField(fieldName);
+
+			if (fi == null)
+				throw new ArgumentException($"Property {type.Name}.{fieldName} not resolved.");
+
+			return fi;
+		} // func GetField
+
 		private static bool CompareParameter(ParameterInfo[] parameterInfo, Type[] parameters)
 		{
 			if (parameterInfo.Length != parameters.Length)
@@ -46,8 +66,9 @@ namespace TecWare.DE.Stuff
 
 			return true;
 		} // func CompareParameter
-
+		
 		public static MethodInfo ObjectGetTypeMethodInfo => objectGetTypeMethodInfo.Value;
+		public static ConstructorInfo ArgumentOutOfRangeConstructorInfo2 => argumentOutOfRangeConstructorInfo.Value;
 	} // class Procs
 
 	#endregion
