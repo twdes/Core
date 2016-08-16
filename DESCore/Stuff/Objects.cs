@@ -86,6 +86,10 @@ namespace TecWare.DE.Stuff
 				return value == null ? DateTimeOffset.MinValue : DateTimeOffset.Parse((string)value, CultureInfo.InvariantCulture);
 			else if (typeTo == typeof(XDocument) && (value == null || value is string))
 				return value == null ? null : XDocument.Parse((string)value);
+			else if (typeTo == typeof(Type) && (value == null || value is string))
+				return value == null ? null : LuaType.GetType((string)value, lateAllowed: false).Type;
+			else if (typeTo == typeof(string) && value is Type)
+				return LuaType.GetType((Type)value).AliasOrFullName;
 			else
 				return Lua.RtConvertValue(value, typeTo);
 		} // func ChangeType
