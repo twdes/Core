@@ -200,7 +200,7 @@ namespace TecWare.DE.Data
 
 	#endregion
 
-	#region -- class TextFixedReader ----------------------------------------------------
+	#region -- class TextCsvReader ------------------------------------------------------
 
 	public sealed class TextCsvReader : TextCoreReader<TextCsvSettings>
 	{
@@ -386,6 +386,7 @@ namespace TecWare.DE.Data
 						{
 							charOffset--;
 							state = 0;
+							mode = CsvQuotation.Forced; // set quote to force, to ignore chars afterwards
 						}
 						break;
 					#endregion
