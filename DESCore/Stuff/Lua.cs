@@ -84,5 +84,28 @@ namespace TecWare.DE.Stuff
 			else
 				return -1;
 		} // CompareStringKey
+
+		public static T ReturnOptionalValue<T>(this LuaTable table, string name, T @default, bool ignoreCase = false, bool rawGet = false)
+		{
+			var value = table.GetMemberValue(name, ignoreCase, rawGet);
+			if (value == null)
+				return @default;
+			else
+			{
+				if (Lua.RtInvokeable(value))
+					value = new LuaResult(Lua.RtInvoke(value))[0];
+
+				if (value == null)
+					return @default;
+				try
+				{
+					return value.ChangeType<T>();
+				}
+				catch
+				{
+					return @default;
+				}
+			}
+		} // func ReturnOptionalValue
 	} // class Procs
 }
