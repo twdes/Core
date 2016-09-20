@@ -30,7 +30,7 @@ namespace TecWare.DE.Stuff
 
 		public static string UnescapeSpecialChars(this string value)
 		{
-			return value; // todo:
+			return value.Replace("\\n", "\n"); // todo:
 		} // func UnescapeSpecialChars
 	} // class Procs
 }
