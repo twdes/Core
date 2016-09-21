@@ -19,6 +19,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using Neo.IronLua;
@@ -46,6 +47,44 @@ namespace TecWare.DE.Stuff
 		{
 			Debug.WriteLine("Exception:\n{0}", e.GetMessageString());
 		} // proc DebugOut
+
+		/// <summary>.</summary>
+		/// <param name="condition"></param>
+		/// <param name="message"></param>
+		/// <param name="filePath"></param>
+		/// <param name="lineNumber"></param>
+		/// <param name="caller"></param>
+		[Conditional("DEBUG")]
+		public static void ThrowIf(bool condition, string message = null
+#if DEBUG
+			, [CallerFilePath] string filePath = null
+			, [CallerLineNumber] int lineNumber = 0
+			, [CallerMemberName] string caller = null
+#endif
+			)
+		{
+#if DEBUG
+			Debug.WriteLineIf(condition, $"Assert: {message ?? "no description"}, {filePath}:{lineNumber:N0} from {caller}");
+#endif
+			if (condition)
+				throw new ArgumentException(message);
+		} // proc ThrowIf
+
+		/// <summary></summary>
+		/// <param name="condition"></param>
+		/// <param name="message"></param>
+		/// <param name="filePath"></param>
+		/// <param name="lineNumber"></param>
+		/// <param name="caller"></param>
+		[Conditional("DEBUG")]
+		public static void ThrowIfNot(bool condition, string message = null
+#if DEBUG
+			, [CallerFilePath] string filePath = null
+			, [CallerLineNumber] int lineNumber = 0
+			, [CallerMemberName] string caller = null
+#endif
+			)
+			=> ThrowIf(condition, message, filePath, lineNumber, caller);
 	} // class Procs
 
 	#endregion
