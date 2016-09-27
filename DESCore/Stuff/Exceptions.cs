@@ -85,6 +85,21 @@ namespace TecWare.DE.Stuff
 #endif
 			)
 			=> ThrowIf(condition, message, filePath, lineNumber, caller);
+
+		public static Exception GetInnerException(this Exception e)
+		{
+			var te = e as TargetInvocationException;
+			if (te != null)
+				return te.InnerException.GetInnerException();
+			else
+			{
+				var ae = e as AggregateException;
+				if (ae != null && ae.InnerExceptions.Count == 1)
+					return ae.InnerException.GetInnerException();
+				else
+					return e;
+			}
+		} // func GetInnerException
 	} // class Procs
 
 	#endregion
