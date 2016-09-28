@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using Neo.IronLua;
 using TecWare.DE.Data;
 
@@ -45,8 +46,86 @@ namespace TecWare.DE.Stuff
 
 	#endregion
 
+	#region -- class Procs --------------------------------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
 	public static partial class Procs
 	{
+		private static void AddValue(object value, XElement c)
+		{
+			var t = value as LuaTable;
+			if (t != null)
+			{
+				c.Add(new XAttribute("t", "table"));
+				ToXml(t, c);
+			}
+			else if (value != null)
+			{
+				var type = value.GetType();
+				c.Add(new XAttribute("t", LuaType.GetType(type).AliasOrFullName));
+				c.Add(new XText(value.ChangeType<string>()));
+			}
+		} // proc AddValue
+
+		public static void ToXml(this LuaTable table, XElement xTarget)
+		{
+			// emit the members
+			foreach (var o in table.Members)
+			{
+				var c = new XElement("m", new XAttribute("n", o.Key));
+				AddValue(o.Value, c);
+				xTarget.Add(c);
+			}
+
+			// emit the the array elements
+			foreach (var o in table.ArrayList)
+			{
+				var c = new XElement("i");
+				AddValue(o, c);
+				xTarget.Add(c);
+			}
+		} // proc ToXml
+
+		public static XElement ToXml(this LuaTable table)
+		{
+			var x = new XElement("table");
+			ToXml(table, x);
+			return x;
+		} // func ToXml
+
+		private static object GetValue(XElement x)
+		{
+			var type = LuaType.GetType(x.Attribute("t")?.Value ?? "string", lateAllowed: false).Type;
+
+			if (type == typeof(LuaTable))
+				return CreateLuaTable(x);
+			else
+				return Procs.ChangeType(x.Value, type);
+		} // func GetValue
+		
+		public static LuaTable CreateLuaTable(XElement x)
+		{
+			var t = new LuaTable();
+
+			// ignore root element
+			foreach (var c in x.Elements())
+			{
+				if (c.Name == "m") // member
+				{
+					var name = c.Attribute("n")?.Value;
+					if (name != null)
+						t.SetMemberValue(name, GetValue(c), lRawSet: true);
+				}
+				else if (c.Name == "i")
+				{
+					t.ArrayList.Add(GetValue(c));
+				}
+			}
+
+			return t;
+		} // func CreateLuaTable
+
 		public static LuaTable CreateLuaTable(params PropertyValue[] values)
 		{
 			var t = new LuaTable();
@@ -108,4 +187,6 @@ namespace TecWare.DE.Stuff
 			}
 		} // func ReturnOptionalValue
 	} // class Procs
+
+	#endregion
 }
