@@ -84,7 +84,11 @@ namespace TecWare.DE.Stuff
 			, [CallerMemberName] string caller = null
 #endif
 			)
-			=> ThrowIf(condition, message, filePath, lineNumber, caller);
+			=> ThrowIf(!condition, message
+#if DEBUG
+				, filePath, lineNumber, caller
+#endif
+				);
 
 		public static Exception GetInnerException(this Exception e)
 		{

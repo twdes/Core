@@ -271,12 +271,28 @@ namespace TecWare.DE.Networking
 			if (document == null)
 				throw new ArgumentException("Keine Antwort vom Server.");
 
-			// Wurzelelement prüfen
+			CheckForExceptionResult(document.Root);
+			
+			// check root element
 			if (rootName != null && document.Root.Name != rootName)
 				throw new ArgumentException(String.Format("Wurzelelement erwartet '{0}', aber '{1}' vorgefunden.", document.Root.Name, rootName));
 
 			return document.Root;
 		} // func GetXmlAsync
+
+		private XElement CheckForExceptionResult(XElement x)
+		{
+			var xStatus= x.Attribute("status");
+			if (xStatus != null && xStatus.Value != "ok")
+			{
+				var xText = x.Attribute("text");
+				throw new ArgumentException(String.Format("Server returns an error: {0}", xText?.Value ?? "unknown"));
+			}
+			return x;
+		} // func CheckForExceptionResult
+
+		public async Task<LuaTable> GetTableAsync(string path, XName rootName = null)
+			=> Procs.CreateLuaTable(CheckForExceptionResult(await GetXmlAsync(path, rootName: (rootName ?? "return"))));
 
 		#region -- CreateViewDataReader ---------------------------------------------------
 
