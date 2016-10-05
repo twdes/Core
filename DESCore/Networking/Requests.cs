@@ -68,6 +68,105 @@ namespace TecWare.DE.Networking
 
 	#endregion
 
+	#region -- enum ClientAuthentificationType ------------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public enum ClientAuthentificationType
+	{
+		/// <summary>Unkown type.</summary>
+		Unknown = 0,
+		/// <summary>Normal unsecure web authentification.</summary>
+		Basic,
+		/// <summary>Windows/Kerberos authentification.</summary>
+		Ntlm
+	} // enum ClientAuthentificationType
+
+	#endregion
+
+	#region -- class ClientAuthentificationInformation ----------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public sealed class ClientAuthentificationInformation
+	{
+		private const string basicRealmProperty = "Basic realm=";
+		private const string integratedSecurity = "Integrated Security";
+
+		private readonly ClientAuthentificationType type;
+		private readonly string realm;
+		
+		private ClientAuthentificationInformation(string authenticate)
+		{
+			if (authenticate.StartsWith(basicRealmProperty, StringComparison.OrdinalIgnoreCase)) // basic network authentification
+			{
+				type = ClientAuthentificationType.Basic;
+				realm = authenticate.Substring(basicRealmProperty.Length);
+				if (!String.IsNullOrEmpty(realm) && realm[0] == '"')
+					realm = realm.Substring(1, realm.Length - 2);
+			}
+			else if (authenticate.IndexOf("NTLM", StringComparison.OrdinalIgnoreCase) >= 0) // Windows authentification
+			{
+				type = ClientAuthentificationType.Ntlm;
+				realm = integratedSecurity;
+			}
+			else
+			{
+				type = ClientAuthentificationType.Unknown;
+				realm = "Unknown";
+			}
+		} // ctor
+
+		private ClientAuthentificationInformation(ClientAuthentificationType type, string realm)
+		{
+			this.type = type;
+			this.realm = realm;
+		} // ctor
+
+		public ClientAuthentificationType Type => type;
+		public string Realm => realm;
+
+		public static ClientAuthentificationInformation Unknown { get; } = new ClientAuthentificationInformation(ClientAuthentificationType.Unknown, "Unknown");
+		public static ClientAuthentificationInformation Ntlm { get; } = new ClientAuthentificationInformation(ClientAuthentificationType.Ntlm, integratedSecurity);
+
+		public static bool TryGet(WebException e, ref ClientAuthentificationInformation info, bool autoDisposeResponse = true)
+		{
+			var t = Get(e);
+			if (t != null)
+			{
+				info = t;
+				return true;
+			}
+			else
+				return false;
+		} // func TryGet
+
+		public static ClientAuthentificationInformation Get(WebException e, bool autoDisposeResponse = true)
+		{
+			if (e.Response == null)
+				return null;
+
+			// get the response
+			var r = (HttpWebResponse)e.Response;
+			try
+			{
+				var code = r.StatusCode;
+
+				if (code == HttpStatusCode.Unauthorized)
+					return new ClientAuthentificationInformation(r.Headers["WWW-Authenticate"]);
+				else
+					return null;
+			}
+			finally
+			{
+				if (autoDisposeResponse)
+					r.Dispose();
+			}
+		} // func Get
+	} // class ClientAuthentificationInformation
+
+	#endregion
+
 	#region -- class BaseWebRequest -----------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -199,7 +298,7 @@ namespace TecWare.DE.Networking
 				(r, dst) =>
 				{
 					// set header
-					r.ContentType = inputContentType+";charset="+defaultEncoding.WebName;
+					r.ContentType = inputContentType + ";charset=" + defaultEncoding.WebName;
 					r.Headers[HttpRequestHeader.ContentEncoding] = "gzip";
 
 					// convert the text to bytes
@@ -256,7 +355,7 @@ namespace TecWare.DE.Networking
 				settings.IgnoreWhitespace = acceptedMimeType != MimeTypes.Application.Xaml;
 			}
 			settings.CloseInput = true;
-			
+
 			var baseUri = response.ResponseUri.GetComponents(UriComponents.Scheme | UriComponents.Host | UriComponents.Port | UriComponents.Path, UriFormat.SafeUnescaped);
 			var context = new XmlParserContext(null, null, null, null, null, null, baseUri, null, XmlSpace.Default);
 
@@ -272,7 +371,7 @@ namespace TecWare.DE.Networking
 				throw new ArgumentException("Keine Antwort vom Server.");
 
 			CheckForExceptionResult(document.Root);
-			
+
 			// check root element
 			if (rootName != null && document.Root.Name != rootName)
 				throw new ArgumentException(String.Format("Wurzelelement erwartet '{0}', aber '{1}' vorgefunden.", document.Root.Name, rootName));
@@ -282,7 +381,7 @@ namespace TecWare.DE.Networking
 
 		private XElement CheckForExceptionResult(XElement x)
 		{
-			var xStatus= x.Attribute("status");
+			var xStatus = x.Attribute("status");
 			if (xStatus != null && xStatus.Value != "ok")
 			{
 				var xText = x.Attribute("text");
