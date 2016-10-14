@@ -98,7 +98,12 @@ namespace TecWare.DE.Networking
 		
 		private ClientAuthentificationInformation(string authenticate)
 		{
-			if (authenticate.StartsWith(basicRealmProperty, StringComparison.OrdinalIgnoreCase)) // basic network authentification
+			if (authenticate == null)
+			{
+				type = ClientAuthentificationType.Unknown;
+				realm = "None";
+			}
+			else if (authenticate.StartsWith(basicRealmProperty, StringComparison.OrdinalIgnoreCase)) // basic network authentification
 			{
 				type = ClientAuthentificationType.Basic;
 				realm = authenticate.Substring(basicRealmProperty.Length);

@@ -24,7 +24,7 @@ using TecWare.DE.Data;
 
 namespace TecWare.DE.Stuff
 {
-	#region -- class LuaPropertiesTable --------------------------------------------------
+	#region -- class LuaPropertiesTable -------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
@@ -125,6 +125,14 @@ namespace TecWare.DE.Stuff
 
 			return t;
 		} // func CreateLuaTable
+
+		public static LuaTable CreateLuaArray(params object[] values)
+		{
+			var t = new LuaTable();
+			for (var i = 0; i < values.Length; i++)
+				t.SetArrayValue(i + 1, values[i]);
+			return t;
+		} // func CreateLuaArray
 
 		public static LuaTable CreateLuaTable(params PropertyValue[] values)
 		{
