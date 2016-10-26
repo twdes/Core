@@ -84,8 +84,12 @@ namespace TecWare.DE.Stuff
 			}
 			else if (typeTo == typeof(DateTimeOffset) && (value == null || value is string))
 				return value == null ? DateTimeOffset.MinValue : DateTimeOffset.Parse((string)value, CultureInfo.InvariantCulture);
+
 			else if (typeTo == typeof(XDocument) && (value == null || value is string))
 				return value == null ? null : XDocument.Parse((string)value);
+			else if (typeTo == typeof(string) && (value == null || value is XDocument))
+				return value == null ? null : value.ToString();
+
 			else if (typeTo == typeof(Type) && (value == null || value is string))
 				return value == null ? null : LuaType.GetType((string)value, lateAllowed: false).Type;
 			else if (typeTo == typeof(string) && value is Type)
@@ -99,9 +103,7 @@ namespace TecWare.DE.Stuff
 		/// <param name="value"></param>
 		/// <returns></returns>
 		public static T ChangeType<T>(this object value)
-		{
-			return (T)Procs.ChangeType(value, typeof(T));
-		} // func ChangeType
+			=> (T)Procs.ChangeType(value, typeof(T));
 		
 		#endregion
 

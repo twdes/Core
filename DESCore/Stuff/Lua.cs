@@ -115,7 +115,7 @@ namespace TecWare.DE.Stuff
 				{
 					var name = c.Attribute("n")?.Value;
 					if (name != null)
-						t.SetMemberValue(name, GetValue(c), lRawSet: true);
+						t.SetMemberValue(name, GetValue(c), rawSet: true);
 				}
 				else if (c.Name == "i")
 				{

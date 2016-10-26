@@ -384,7 +384,7 @@ namespace TecWare.DE.Networking
 			return document.Root;
 		} // func GetXmlAsync
 
-		private XElement CheckForExceptionResult(XElement x)
+		public XElement CheckForExceptionResult(XElement x)
 		{
 			var xStatus = x.Attribute("status");
 			if (xStatus != null && xStatus.Value != "ok")
