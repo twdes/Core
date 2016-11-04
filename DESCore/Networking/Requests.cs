@@ -462,6 +462,8 @@ namespace TecWare.DE.Networking
 				public override IReadOnlyList<IDataColumn> Columns => enumerator.Columns;
 				public override object this[int index] => columnValues[index];
 
+				public override bool IsDataOwner => true;
+
 				#endregion
 			} // class ViewDataRow
 

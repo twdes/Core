@@ -62,10 +62,12 @@ namespace TecWare.DE.Data
 	/// <summary></summary>
 	public interface IDataRow : IDataColumns, IDataValues, IPropertyReadOnlyDictionary
 	{
+		/// <summary><c>true</c>, if this objects holds the data. <c>false</c>, for a data window (the data changes on a move next).</summary>
+		bool IsDataOwner { get; }
 		/// <summary>Gets the value for the column with the specified name.</summary>
 		/// <param name="columnName">The name of the column to get the value.</param>
 		/// <returns></returns>
-		object this[string columnName] { get; }
+		object this[string columnName, bool throwException = true] { get; }
 	} // interface IDataRow
 
 	#endregion
@@ -200,7 +202,12 @@ namespace TecWare.DE.Data
 			{
 				var index = this.FindColumnIndex(columnName);
 				if (index == -1)
-					throw new ArgumentException(String.Format("Column with name \"{0}\" not found.", columnName ?? "null"));
+				{
+					if (throwException)
+						throw new ArgumentException(String.Format("Column with name \"{0}\" not found.", columnName ?? "null"));
+					else
+						return null;
+				}
 				return this[index];
 			}
 		} // prop this
@@ -212,6 +219,7 @@ namespace TecWare.DE.Data
 			=> null;
 
 		public abstract object this[int index] { get; }
+		public abstract bool IsDataOwner { get; }
 
 		public abstract IReadOnlyList<IDataColumn> Columns { get; }
 
@@ -260,6 +268,7 @@ namespace TecWare.DE.Data
 		} // ctor
 
 		public override object this[int index] => values[index];
+		public override bool IsDataOwner => true;
 		public override IReadOnlyList<IDataColumn> Columns => columns;
 	} // class SimpleDataRow
 
@@ -326,9 +335,10 @@ namespace TecWare.DE.Data
 			public object this[int index]
 				=> owner.properties[index].GetValue(current);
 
-			public object this[string columnName]
-				=> owner.GetProperty(columnName, true).GetValue(current);
-			
+			public object this[string columnName, bool throwException]
+				=> owner.GetProperty(columnName, throwException).GetValue(current);
+
+			public bool IsDataOwner => false;
 			public IReadOnlyList<IDataColumn> Columns => owner.properties;
 		} // class PropertyDataRow
 
