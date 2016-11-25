@@ -449,21 +449,22 @@ namespace TecWare.DE.Data
 			return -1;
 		} // func FindColumnIndex
 
-		public static T GetValue<T>(this IEnumerator<IDataRow> items, int index, T @default, Action<T> raiseCondition = null)
+		public static T GetValue<T>(this IDataRow row, int index, T @default, Action<T> raiseCondition = null)
 		{
 			if (index == -1)
 				return @default;
 
-			var value = items.Current[index];
+			var value = row[index];
 			if (value == null)
 				return @default;
 
 			var r = value.ChangeType<T>();
-			if (raiseCondition != null)
-				raiseCondition(r);
+			raiseCondition?.Invoke(r);
 			return r;
-		} // func GetValue
+		} // func GetGetValue
 
+		public static T GetValue<T>(this IEnumerator<IDataRow> items, int index, T @default, Action<T> raiseCondition = null)
+			=> GetValue<T>(items.Current, index, @default, raiseCondition);
 	} // class DataRowHelper
 
 	#endregion

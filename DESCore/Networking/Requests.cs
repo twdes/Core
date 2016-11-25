@@ -317,12 +317,12 @@ namespace TecWare.DE.Networking
 		/// <param name="path">Resource</param>
 		/// <param name="acceptedMimeType">Optional.</param>
 		/// <returns></returns>
-		public async Task<Stream> GetStreamAsync(string path, string acceptedMimeType)
+		public async Task<Stream> GetStreamAsync(string path, string acceptedMimeType = null)
 		{
 			return GetStreamAsync(await GetResponseAsync(path), acceptedMimeType);
 		} // func GetStreamAsync
 
-		public Stream GetStreamAsync(WebResponse response, string acceptedMimeType)
+		public Stream GetStreamAsync(WebResponse response, string acceptedMimeType = null)
 		{
 			CheckMimeType(response.ContentType, acceptedMimeType, false);
 			if (IsCompressed(response.Headers["Content-Encoding"]))

@@ -122,5 +122,8 @@ namespace TecWare.DE.Stuff
 		} // func FileFilterToRegex
 
 		#endregion
+
+		public static long GetSyncStamp()
+			=> DateTime.UtcNow.ToFileTime();
 	} // class Procs
 }
