@@ -124,6 +124,6 @@ namespace TecWare.DE.Stuff
 		#endregion
 
 		public static long GetSyncStamp()
-			=> DateTime.UtcNow.ToFileTime();
+			=> DateTime.Now.ToFileTimeUtc();
 	} // class Procs
 }
