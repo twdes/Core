@@ -285,6 +285,8 @@ namespace TecWare.DE.Networking
 #endif
 		} // func GetResponseAsync
 
+		#region -- Putxxxx ----------------------------------------------------------------
+
 		public async Task<WebResponse> PutStreamResponseAsync(string path, Action<WebRequest, Stream> writeRequest)
 		{
 			var request = GetWebRequest(path);
@@ -313,16 +315,24 @@ namespace TecWare.DE.Networking
 				});
 		} // func PutTextResponseAsync
 
-		/// <summary>Creates a plain Web-Request, special arguments are filled with IWebRequestCreate.</summary>
-		/// <param name="path">Resource</param>
-		/// <param name="acceptedMimeType">Optional.</param>
-		/// <returns></returns>
-		public async Task<Stream> GetStreamAsync(string path, string acceptedMimeType = null)
+		public Task<WebResponse> PutXmlResponseAsync(string path, string inputContentType, Action<XmlWriter> writeRequest)
 		{
-			return GetStreamAsync(await GetResponseAsync(path), acceptedMimeType);
-		} // func GetStreamAsync
+			return PutTextResponseAsync(path, inputContentType ?? MimeTypes.Text.Xml,
+				tw =>
+				{
+					using (var xml = XmlWriter.Create(tw, Procs.XmlWriterSettings))
+						writeRequest(xml);
+				});
+		} // func PutXmlResponseAsync
 
-		public Stream GetStreamAsync(WebResponse response, string acceptedMimeType = null)
+		public Task<WebResponse> PutTableResponseAsync(string path, LuaTable table)
+			=> PutXmlResponseAsync(path, MimeTypes.Text.Xml, xml => table.ToXml().WriteTo(xml));
+
+		#endregion
+
+		#region -- GetStream --------------------------------------------------------------
+
+		public Stream GetStream(WebResponse response, string acceptedMimeType = null)
 		{
 			CheckMimeType(response.ContentType, acceptedMimeType, false);
 			if (IsCompressed(response.Headers["Content-Encoding"]))
@@ -331,12 +341,18 @@ namespace TecWare.DE.Networking
 				return response.GetResponseStream();
 		} // func GetStreamAsync
 
-		public async Task<TextReader> GetTextReaderAsync(string path, string acceptedMimeType)
-		{
-			return GetTextReaderAsync(await GetResponseAsync(path), acceptedMimeType);
-		} // func GetTextReaderAsync
+		/// <summary>Creates a plain Web-Request, special arguments are filled with IWebRequestCreate.</summary>
+		/// <param name="path">Resource</param>
+		/// <param name="acceptedMimeType">Optional.</param>
+		/// <returns></returns>
+		public async Task<Stream> GetStreamAsync(string path, string acceptedMimeType = null)
+			=> GetStream(await GetResponseAsync(path), acceptedMimeType);
 
-		public TextReader GetTextReaderAsync(WebResponse response, string acceptedMimeType)
+		#endregion
+
+		#region -- GetTextReader ----------------------------------------------------------
+
+		public TextReader GetTextReader(WebResponse response, string acceptedMimeType)
 		{
 			var enc = CheckMimeType(response.ContentType, acceptedMimeType, true);
 			if (IsCompressed(response.Headers["Content-Encoding"]))
@@ -345,13 +361,14 @@ namespace TecWare.DE.Networking
 				return new StreamReader(response.GetResponseStream(), enc);
 		}// func GetTextReaderAsync
 
-		public async Task<XmlReader> GetXmlStreamAsync(string path, string acceptedMimeType = MimeTypes.Text.Xml, XmlReaderSettings settings = null)
-		{
-			var response = await GetResponseAsync(path); // todo: is disposed called?
-			return GetXmlStreamAsync(response, acceptedMimeType, settings);
-		} // func GetXmlStreamAsync
+		public async Task<TextReader> GetTextReaderAsync(string path, string acceptedMimeType)
+			=> GetTextReader(await GetResponseAsync(path), acceptedMimeType);
 
-		public XmlReader GetXmlStreamAsync(WebResponse response, string acceptedMimeType = MimeTypes.Text.Xml, XmlReaderSettings settings = null)
+		#endregion
+
+		#region -- GetXmlStream -----------------------------------------------------------
+
+		public XmlReader GetXmlStream(WebResponse response, string acceptedMimeType = MimeTypes.Text.Xml, XmlReaderSettings settings = null)
 		{
 			if (settings == null)
 			{
@@ -364,25 +381,18 @@ namespace TecWare.DE.Networking
 			var baseUri = response.ResponseUri.GetComponents(UriComponents.Scheme | UriComponents.Host | UriComponents.Port | UriComponents.Path, UriFormat.SafeUnescaped);
 			var context = new XmlParserContext(null, null, null, null, null, null, baseUri, null, XmlSpace.Default);
 
-			return XmlReader.Create(GetTextReaderAsync(response, acceptedMimeType), settings, context);
+			return XmlReader.Create(GetTextReader(response, acceptedMimeType), settings, context);
+		} // func GetXmlStream
+
+		public async Task<XmlReader> GetXmlStreamAsync(string path, string acceptedMimeType = MimeTypes.Text.Xml, XmlReaderSettings settings = null)
+		{
+			var response = await GetResponseAsync(path); // todo: is disposed called?
+			return GetXmlStream(response, acceptedMimeType, settings);
 		} // func GetXmlStreamAsync
 
-		public async Task<XElement> GetXmlAsync(string path, string acceptedMimeType = MimeTypes.Text.Xml, XName rootName = null)
-		{
-			XDocument document;
-			using (var xmlReader = await GetXmlStreamAsync(path))
-				document = XDocument.Load(xmlReader, LoadOptions.SetBaseUri);
-			if (document == null)
-				throw new ArgumentException("Keine Antwort vom Server.");
+		#endregion
 
-			CheckForExceptionResult(document.Root);
-
-			// check root element
-			if (rootName != null && document.Root.Name != rootName)
-				throw new ArgumentException(String.Format("Wurzelelement erwartet '{0}', aber '{1}' vorgefunden.", document.Root.Name, rootName));
-
-			return document.Root;
-		} // func GetXmlAsync
+		#region -- GetXml -----------------------------------------------------------------
 
 		public XElement CheckForExceptionResult(XElement x)
 		{
@@ -395,8 +405,39 @@ namespace TecWare.DE.Networking
 			return x;
 		} // func CheckForExceptionResult
 
+		public XElement GetXml(WebResponse response, string acceptedMimeType = MimeTypes.Text.Xml, XName rootName = null)
+		{
+			XDocument document;
+			using (var xml = GetXmlStream(response, acceptedMimeType, null))
+				document = XDocument.Load(xml, LoadOptions.SetBaseUri);
+			if (document == null)
+				throw new ArgumentException("Keine Antwort vom Server.");
+
+			CheckForExceptionResult(document.Root);
+
+			if (rootName != null && document.Root.Name != rootName)
+				throw new ArgumentException(String.Format("Wurzelelement erwartet '{0}', aber '{1}' vorgefunden.", document.Root.Name, rootName));
+
+			return document.Root;
+		} // func GetXml
+
+		public async Task<XElement> GetXmlAsync(string path, string acceptedMimeType = MimeTypes.Text.Xml, XName rootName = null)
+			=> GetXml(await GetResponseAsync(path), acceptedMimeType, rootName);
+
+		#endregion
+
+		#region -- GetTable ---------------------------------------------------------------
+
 		public async Task<LuaTable> GetTableAsync(string path, XName rootName = null)
-			=> Procs.CreateLuaTable(CheckForExceptionResult(await GetXmlAsync(path, rootName: (rootName ?? "return"))));
+			=> GetTable(await GetResponseAsync(path), rootName);
+
+		public LuaTable GetTable(WebResponse response, XName rootName = null)
+			=> Procs.CreateLuaTable(CheckForExceptionResult(GetXml(response, rootName: (rootName ?? "return"))));
+
+		public async Task<LuaTable> PutTableAsync(string path, LuaTable table, XName rootName = null)
+			=> GetTable(await PutTableResponseAsync(path, table), rootName);
+
+		#endregion
 
 		#region -- CreateViewDataReader ---------------------------------------------------
 
