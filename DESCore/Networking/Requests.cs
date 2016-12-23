@@ -432,7 +432,7 @@ namespace TecWare.DE.Networking
 			=> GetTable(await GetResponseAsync(path), rootName);
 
 		public LuaTable GetTable(WebResponse response, XName rootName = null)
-			=> Procs.CreateLuaTable(CheckForExceptionResult(GetXml(response, rootName: (rootName ?? "return"))));
+			=> Procs.CreateLuaTable(CheckForExceptionResult(GetXml(response, rootName: (rootName ?? "table"))));
 
 		public async Task<LuaTable> PutTableAsync(string path, LuaTable table, XName rootName = null)
 			=> GetTable(await PutTableResponseAsync(path, table), rootName);
