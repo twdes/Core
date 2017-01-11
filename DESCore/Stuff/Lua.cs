@@ -14,6 +14,7 @@
 //
 #endregion
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -43,6 +44,45 @@ namespace TecWare.DE.Stuff
 		protected override object OnIndex(object key)
 			=> base.OnIndex(key) ?? properties?.GetProperty(key?.ToString(), null);
 	} // class LuaPropertiesTable
+
+	#endregion
+
+	#region -- class LuaFunctionEnumerator ----------------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public sealed class LuaFunctionEnumerator : System.Collections.IEnumerable
+	{
+		private readonly object initialzer;		
+
+		/// <summary>the function returns on the first call three parameter (iterator, state, n).</summary>
+		/// <param name="func"></param>
+		public LuaFunctionEnumerator(object initialzer)
+		{
+			this.initialzer = initialzer;
+		} // ctor
+
+		public IEnumerator GetEnumerator()
+		{
+			// initialize the iterator
+			var r = new LuaResult(Lua.RtInvoke(initialzer));
+
+			var iterator = (Func<object, object, LuaResult>)r[0];
+			if (iterator == null)
+				yield break;
+
+			var state = r[1];
+			var next = r[2];
+
+			while (next != null)
+			{
+				var ir = iterator(state, next);
+				next = ir[0];
+				if (next != null)
+					yield return ir[1] ?? next;
+			}
+		} // func GetEnumerator
+	} // class LuaFunctionEnumerator
 
 	#endregion
 
