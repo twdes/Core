@@ -151,15 +151,16 @@ namespace TecWare.DE.Stuff
 			// ignore root element
 			foreach (var c in x.Elements())
 			{
-				if (c.Name == "m") // member
+				switch (c.Name.LocalName)
 				{
-					var name = c.Attribute("n")?.Value;
-					if (name != null)
-						t.SetMemberValue(name, GetValue(c), rawSet: true);
-				}
-				else if (c.Name == "i")
-				{
-					t.ArrayList.Add(GetValue(c));
+					case "m": // member
+						var name = c.Attribute("n")?.Value;
+						if (name != null)
+							t.SetMemberValue(name, GetValue(c), rawSet: true);
+						break;
+					case "i":
+						t.ArrayList.Add(GetValue(c));
+						break;
 				}
 			}
 
@@ -188,7 +189,7 @@ namespace TecWare.DE.Stuff
 		public static LuaTable CreateLuaTable(IDataRow values)
 		{
 			var t = new LuaTable();
-			for(var i=0;i<values.Columns.Count;i++)
+			for (var i = 0; i < values.Columns.Count; i++)
 			{
 				var v = values[i];
 				if (v != null)

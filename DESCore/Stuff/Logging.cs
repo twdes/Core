@@ -169,6 +169,13 @@ namespace TecWare.DE.Stuff
 			return this;
 		} // proc Write
 
+		public LogMessageScopeProxy WriteStopWatch()
+		{
+			if (stopWatch != null)
+				Write("[{0,7:N0}ms] ", stopWatch.ElapsedMilliseconds);
+			return this;
+		} // proc WriteStopWatch 
+
 		public LogMessageScopeProxy SetType(LogMsgType typ, bool force = false)
 		{
 			if (scope != null)

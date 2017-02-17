@@ -271,7 +271,7 @@ namespace TecWare.DE.Stuff
 				// Attribute
 				foreach (XAttribute attrA in a.Attributes())
 				{
-					XAttribute attrB = b.Attribute(attrA.Name);
+					var attrB = b.Attribute(attrA.Name);
 					if (attrB == null)
 						return false;
 					else if (attrA.Value != attrB.Value)
@@ -279,19 +279,48 @@ namespace TecWare.DE.Stuff
 				}
 
 				// Elemente
-				XElement[] elementsA = a.Elements().ToArray();
-				XElement[] elementsB = b.Elements().ToArray();
+				var elementsA = a.Elements().ToArray();
+				var elementsB = b.Elements().ToArray();
 
 				if (elementsA.Length != elementsB.Length)
 					return false;
 
-				for (int i = 0; i < elementsA.Length; i++)
+				for (var i = 0; i < elementsA.Length; i++)
+				{
 					if (!CompareNode(elementsA[i], elementsB[i]))
 						return false;
+				}
 
 				return true;
 			}
 		} // func CompareNode
+
+		#endregion
+
+		#region -- MergeAttributes -----------------------------------------------------------
+
+		/// <summary>Simple merge of two xml attributes.</summary>
+		/// <param name="xTarget"></param>
+		/// <param name="xSource"></param>
+		public static void MergeAttributes(XElement xTarget, XElement xSource, ref bool isChanged)
+		{
+			// merge attribues
+			foreach (var xSrcAttr in xSource.Attributes())
+			{
+				// check if the attribute exists
+				var xTargetAttr = xTarget.Attribute(xSrcAttr.Name);
+				if (xTargetAttr == null)
+				{
+					xTarget.Add(new XAttribute(xSrcAttr.Name, xSrcAttr.Value));
+					isChanged = true;
+				}
+				else if (!Object.Equals(xSrcAttr.Value, xTargetAttr.Value))
+				{
+					xTargetAttr.Value = xSrcAttr.Value;
+					isChanged = true;
+				}
+			}
+		} // proc MergeNodes
 
 		#endregion
 
