@@ -48,6 +48,9 @@ namespace TecWare.DE.Stuff
 			this.value = Procs.ChangeType(value, this.type);
 		} // ctor
 
+		public override string ToString()
+			=> $"{name}:{type.Name} = {value}";
+
 		public string Name => name;
 		public Type Type => type;
 		public object Value => value;

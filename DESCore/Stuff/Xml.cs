@@ -31,7 +31,7 @@ namespace TecWare.DE.Stuff
 	/// <summary></summary>
 	public static partial class Procs
 	{
-		#region -- ReaderSettings, WriterSettings -----------------------------------------
+		#region -- ReaderSettings, WriterSettings ---------------------------------------
 
 		/// <summary>Gibt Standard Settings zum Lesen von Xml-Dateien zurück</summary>
 		public static XmlReaderSettings XmlReaderSettings
@@ -66,7 +66,29 @@ namespace TecWare.DE.Stuff
 
 		#endregion
 
-		#region -- GetAttribute, CreateAttribute ------------------------------------------
+		#region -- GetAttribute, CreateAttribute ----------------------------------------
+
+		public static string GetAttribute(this XmlReader xml, XName attributeName, string @default)
+		{
+			if (xml == null)
+				return @default;
+
+
+			return xml.GetAttribute(attributeName.LocalName) ?? @default;
+		} // func GetAttribute
+
+		public static T GetAttribute<T>(this XmlReader xml, XName attributeName, T @default)
+		{
+			try
+			{
+				var value = xml.GetAttribute(attributeName.LocalName);
+				return value == null ? @default : value.ChangeType<T>();
+			}
+			catch
+			{
+				return @default;
+			}
+		} // func GetAttribute
 
 		/// <summary>Gibt den Inhalt eines Attributes zurück.</summary>
 		/// <param name="x">XElement, an dem das Attribut erwartet wird.</param>
@@ -175,7 +197,7 @@ namespace TecWare.DE.Stuff
 				XCopyAnnonation(xSource, xDestination, typeLineInfoEndElementAnnotation, false);
 			}
 		} // proc XCopyAnnotations
-		
+
 		private static void XCopyAnnonation(XElement xSource, XNode xDestination, Type typeAnnotation, bool recursive)
 		{
 			object baseUri = recursive ? xSource.FindAnnotation(typeAnnotation) : xSource.Annotation(typeAnnotation);
@@ -188,7 +210,7 @@ namespace TecWare.DE.Stuff
 
 		#endregion
 
-		#region -- GetNode ----------------------------------------------------------------
+		#region -- GetNode --------------------------------------------------------------
 
 		/// <summary></summary>
 		/// <param name="x"></param>
@@ -246,7 +268,7 @@ namespace TecWare.DE.Stuff
 
 		#endregion
 
-		#region -- CompareNode ------------------------------------------------------------
+		#region -- CompareNode ----------------------------------------------------------
 
 		/// <summary>Vergleicht zwei Xml-Knoten.</summary>
 		/// <param name="a"></param>
@@ -297,7 +319,7 @@ namespace TecWare.DE.Stuff
 
 		#endregion
 
-		#region -- MergeAttributes -----------------------------------------------------------
+		#region -- MergeAttributes ------------------------------------------------------
 
 		/// <summary>Simple merge of two xml attributes.</summary>
 		/// <param name="xTarget"></param>
@@ -324,7 +346,7 @@ namespace TecWare.DE.Stuff
 
 		#endregion
 
-		#region -- GetStrings -------------------------------------------------------------
+		#region -- GetStrings -----------------------------------------------------------
 
 		private static string[] EmptyArray(string[] a, bool emptyArrayToNull)
 		{
@@ -347,7 +369,7 @@ namespace TecWare.DE.Stuff
 
 		#endregion
 
-		#region -- GetPaths ---------------------------------------------------------------
+		#region -- GetPaths -------------------------------------------------------------
 
 		public static IEnumerable<string> SplitPaths(string value)
 		{
