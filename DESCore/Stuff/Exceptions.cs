@@ -92,17 +92,12 @@ namespace TecWare.DE.Stuff
 
 		public static Exception GetInnerException(this Exception e)
 		{
-			var te = e as TargetInvocationException;
-			if (te != null)
+			if (e is TargetInvocationException te)
 				return te.InnerException.GetInnerException();
+			else if (e is AggregateException ae && ae.InnerExceptions.Count == 1)
+				return ae.InnerException.GetInnerException();
 			else
-			{
-				var ae = e as AggregateException;
-				if (ae != null && ae.InnerExceptions.Count == 1)
-					return ae.InnerException.GetInnerException();
-				else
-					return e;
-			}
+				return e;
 		} // func GetInnerException
 	} // class Procs
 
@@ -273,7 +268,7 @@ namespace TecWare.DE.Stuff
 		public static object Format<T>(Exception exception)
 			where T : ExceptionFormatter
 		{
-			ExceptionFormatter formatter = (ExceptionFormatter)Activator.CreateInstance(typeof(T));
+			var formatter = (ExceptionFormatter)Activator.CreateInstance(typeof(T));
 			return formatter.Format(exception);
 		} // func Format
 
