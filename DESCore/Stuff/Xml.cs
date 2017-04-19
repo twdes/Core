@@ -68,6 +68,40 @@ namespace TecWare.DE.Stuff
 
 		#region -- GetAttribute, CreateAttribute ----------------------------------------
 
+		public static string GetElementContent(this XmlReader xml, string @default)
+		{
+			if (xml.HasValue)
+				return xml.ReadContentAsString();
+			else
+				return @default;
+		} // func GetElementContent
+
+		public static T GetElementContent<T>(this XmlReader xml, T @default)
+		{
+			try
+			{
+				var value = GetElementContent(xml, (string)null);
+				return value == null ? @default : value.ChangeType<T>();
+			}
+			catch
+			{
+				return @default;
+			}
+		} // func GetAttribute
+
+		public static T ReadElementContent<T>(this XmlReader xml, T @default)
+		{
+			try
+			{
+				var value = xml.ReadElementContentAsString();
+				return value == null ? @default : value.ChangeType<T>();
+			}
+			catch
+			{
+				return @default;
+			}
+		} // func GetAttribute
+
 		public static string GetAttribute(this XmlReader xml, XName attributeName, string @default)
 		{
 			if (xml == null)

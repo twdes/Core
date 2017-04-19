@@ -372,9 +372,11 @@ namespace TecWare.DE.Networking
 		{
 			if (settings == null)
 			{
-				settings = new XmlReaderSettings();
-				settings.IgnoreComments = acceptedMimeType != MimeTypes.Application.Xaml;
-				settings.IgnoreWhitespace = acceptedMimeType != MimeTypes.Application.Xaml;
+				settings = new XmlReaderSettings()
+				{
+					IgnoreComments = acceptedMimeType != MimeTypes.Application.Xaml,
+					IgnoreWhitespace = acceptedMimeType != MimeTypes.Application.Xaml
+				};
 			}
 			settings.CloseInput = true;
 
