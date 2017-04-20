@@ -21,8 +21,8 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
-using System.Threading.Tasks;
 using Neo.IronLua;
+using System.Collections;
 
 namespace TecWare.DE.Stuff
 {
@@ -150,7 +150,7 @@ namespace TecWare.DE.Stuff
 						{
 							if (stringValue.Contains('\n'))
 							{
-								var lines =stringValue.Replace("\r", "").Split('\n');
+								var lines = stringValue.Replace("\r", "").Split('\n');
 								sb.AppendLine();
 								foreach (var l in lines)
 									sb.Append("    ").AppendLine(l);
@@ -233,6 +233,17 @@ namespace TecWare.DE.Stuff
 						if (le != null)
 							for (int i = le.Length - 1; i >= 0; i--)
 								exceptions.Push(new KeyValuePair<string, Exception>(String.Format("LoaderException[{0}]: ", i), le[i]));
+					}
+					else if (pi.Name == "Data")
+					{
+						var dict = (IDictionary)pi.GetValue(e);
+						var sb = new StringBuilder();
+						foreach (var key in dict.Keys)
+						{
+							if (!(dict[key] is ILuaExceptionData))
+								sb.Append(key.ToString()).Append(" : ").Append(dict[key].ToString()).Append("\n");
+						}
+						AppendProperty("Data", typeof(String), () => sb.ToString().TrimEnd('\n'));
 					}
 					else
 						AppendProperty(pi.Name, pi.PropertyType, () => pi.GetValue(e));
