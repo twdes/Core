@@ -410,20 +410,14 @@ namespace TecWare.DE.Stuff
 		/// <param name="default">Defaultwert, falls der Wert nicht ermittelt werden konnte.</param>
 		/// <returns>Abgelegter Wert oder der Default-Wert.</returns>
 		public static object GetProperty(this IPropertyReadOnlyDictionary propertyDictionary, string name, object @default)
-		{
-			object r;
-			return propertyDictionary.TryGetProperty(name, out r) ? r : @default;
-		} // func GetProperty
+			=> propertyDictionary.TryGetProperty(name, out var r) ? r : @default;
 
 		/// <summary>Gibt einen Parameter zurück.</summary>
 		/// <param name="name">Parametername.</param>
 		/// <param name="default">Defaultwert, falls der Wert nicht ermittelt werden konnte.</param>
 		/// <returns>Abgelegter Wert oder der Default-Wert.</returns>
 		public static string GetProperty(this IPropertyReadOnlyDictionary propertyDictionary, string name, string @default)
-		{
-			string r;
-			return propertyDictionary.TryGetProperty(name, out r) ? r : @default;
-		} // func GetProperty
+			=> propertyDictionary.TryGetProperty(name, out string r) ? r : @default;
 
 		/// <summary>Gibt einen Parameter zurück.</summary>
 		/// <typeparam name="T">Rückgabewert.</typeparam>
@@ -431,10 +425,7 @@ namespace TecWare.DE.Stuff
 		/// <param name="def">Defaultwert, falls der Wert nicht ermittelt werden konnte.</param>
 		/// <returns>Abgelegter Wert oder der Default-Wert.</returns>
 		public static T GetProperty<T>(this IPropertyReadOnlyDictionary propertyDictionary, string name, T @default)
-		{
-			T r;
-			return propertyDictionary.TryGetProperty(name, out r) ? r : @default;
-		} // func GetProperty
+			=> propertyDictionary.TryGetProperty(name, out T r) ? r : @default;
 
 		/// <summary>Gibt einen Parameter zurück.</summary>
 		/// <typeparam name="T">Rückgabewert.</typeparam>
@@ -442,10 +433,7 @@ namespace TecWare.DE.Stuff
 		/// <param name="def">Defaultwert, falls der Wert nicht ermittelt werden konnte.</param>
 		/// <returns>Abgelegter Wert oder der Default-Wert.</returns>
 		public static T GetPropertyLate<T>(this IPropertyReadOnlyDictionary propertyDictionary, string name, Func<T> @default)
-		{
-			T r;
-			return propertyDictionary.TryGetProperty(name, out r) ? r : @default();
-		} // func GetPropertyLate
+			=> propertyDictionary.TryGetProperty(name, out T r) ? r : @default();
 
 		/// <summary>Versucht einen Paremter zurückzugeben.</summary>
 		/// <param name="name">Parametername.</param>
@@ -453,8 +441,7 @@ namespace TecWare.DE.Stuff
 		/// <returns><c>true</c>, wenn ein Wert gefunden wurde.</returns>
 		public static bool TryGetProperty(this IPropertyReadOnlyDictionary propertyDictionary, string name, out string value)
 		{
-			object ret;
-			if (propertyDictionary.TryGetProperty(name, out ret) && ret != null)
+			if (propertyDictionary.TryGetProperty(name, out var ret) && ret != null)
 			{
 				value = ret.ToString();
 				return true;
@@ -473,8 +460,7 @@ namespace TecWare.DE.Stuff
 		/// <returns><c>true</c>, wenn ein Wert gefunden wurde.</returns>
 		public static bool TryGetProperty<T>(this IPropertyReadOnlyDictionary propertyDictionary, string name, out T value)
 		{
-			object ret;
-			if (propertyDictionary.TryGetProperty(name, out ret) && ret != null)
+			if (propertyDictionary.TryGetProperty(name, out var ret) && ret != null)
 			{
 				try
 				{

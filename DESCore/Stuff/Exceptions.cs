@@ -193,14 +193,14 @@ namespace TecWare.DE.Stuff
 		} // ctor
 
 		/// <summary>Wird geschrieben, wenn eine neue Exception begonnen wird.</summary>
-		/// <param name="lFirst">Handelt es sich um die erste Sektion</param>
-		/// <param name="sSectionName"></param>
-		protected abstract void AppendSection(bool lFirst, string sSectionName);
+		/// <param name="isFirst">Handelt es sich um die erste Sektion</param>
+		/// <param name="sectionName"></param>
+		protected abstract void AppendSection(bool isFirst, string sectionName);
 		/// <summary>Schreibt eine Eigenschaft</summary>
-		/// <param name="sName"></param>
+		/// <param name="name"></param>
 		/// <param name="type"></param>
 		/// <param name="value"></param>
-		protected abstract void AppendProperty(string sName, Type type, Func<object> value);
+		protected abstract void AppendProperty(string name, Type type, Func<object> value);
 
 		/// <summary>Schließt die Verarbeitung ab.</summary>
 		/// <returns></returns>
@@ -237,13 +237,30 @@ namespace TecWare.DE.Stuff
 					else if (pi.Name == "Data")
 					{
 						var dict = (IDictionary)pi.GetValue(e);
-						var sb = new StringBuilder();
 						foreach (var key in dict.Keys)
 						{
-							if (!(dict[key] is ILuaExceptionData))
-								sb.Append(key.ToString()).Append(" : ").Append(dict[key].ToString()).Append("\n");
+							var value = dict[key];
+							if(value != null 
+								&& !(value is ILuaExceptionData))
+							{
+								string GetNiceKeyName()
+								{
+									switch(key)
+									{
+										case int i:
+											return $"Idx{i}";
+										case string s:
+											return s;
+										case null:
+											return "<null>";
+										default:
+											return key.ToString();
+									}
+								} // func GetNiceKeyName
+
+								AppendProperty(GetNiceKeyName(), value.GetType(), () => value);
+							}
 						}
-						AppendProperty("Data", typeof(String), () => sb.ToString().TrimEnd('\n'));
 					}
 					else
 						AppendProperty(pi.Name, pi.PropertyType, () => pi.GetValue(e));

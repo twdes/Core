@@ -197,6 +197,10 @@ namespace TecWare.DE.Stuff
 			}
 			return t;
 		} // func CreateTable
+
+		[Obsolete("Remove on NeoLua 1.2.20")]
+		public static void Add(this LuaTable t, object key, object value)
+			=> t.SetValue(key, value, true);
 		
 		public static int CompareStringKey(object key, string other)
 		{
