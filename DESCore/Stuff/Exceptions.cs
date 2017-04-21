@@ -122,9 +122,9 @@ namespace TecWare.DE.Stuff
 				this.sb = sb;
 			} // ctor
 
-			protected override void AppendSection(bool lFirst, string sSectionName)
+			protected override void AppendSection(bool first, string sectionName, Exception ex)
 			{
-				sb.WriteSeperator(sSectionName);
+				sb.WriteSeperator(sectionName + ": " + ex.GetType().Name);
 			} // proc AppendSection
 
 			private static string ReplaceNoneVisibleChars(string value)
@@ -132,9 +132,9 @@ namespace TecWare.DE.Stuff
 						.Replace("\r", "\\r")
 						.Replace("\t", "\\t");
 
-			protected override void AppendProperty(string sName, Type type, Func<object> value)
+			protected override void AppendProperty(string name, Type type, Func<object> value)
 			{
-				sb.Append((sName + ":").PadRight(20, ' ')).Append(' ');
+				sb.Append((name + ":").PadRight(20, ' ')).Append(' ');
 				try
 				{
 					object v = value();
@@ -195,7 +195,9 @@ namespace TecWare.DE.Stuff
 		/// <summary>Wird geschrieben, wenn eine neue Exception begonnen wird.</summary>
 		/// <param name="isFirst">Handelt es sich um die erste Sektion</param>
 		/// <param name="sectionName"></param>
-		protected abstract void AppendSection(bool isFirst, string sectionName);
+		/// <param name="ex"></param>
+		protected abstract void AppendSection(bool isFirst, string sectionName, Exception ex);
+
 		/// <summary>Schreibt eine Eigenschaft</summary>
 		/// <param name="name"></param>
 		/// <param name="type"></param>
@@ -217,22 +219,24 @@ namespace TecWare.DE.Stuff
 			var exceptions = new Stack<KeyValuePair<string, Exception>>();
 
 			// Exception Titel
-			AppendSection(true, e.GetType().Name);
+			AppendSection(true, e.GetType().Name, e);
 
 			while (true)
 			{
 				// Eigenschaften ausgeben 
-				foreach (PropertyInfo pi in e.GetType().GetRuntimeProperties())
+				foreach (var pi in e.GetType().GetRuntimeProperties())
 					if (pi.Name == "StackTrace")
 						continue;
 					else if (pi.Name == "InnerException")
 						continue;
 					else if (pi.Name == "LoaderExceptions")
 					{
-						Exception[] le = (Exception[])pi.GetValue(e);
+						var le = (Exception[])pi.GetValue(e);
 						if (le != null)
-							for (int i = le.Length - 1; i >= 0; i--)
-								exceptions.Push(new KeyValuePair<string, Exception>(String.Format("LoaderException[{0}]: ", i), le[i]));
+						{
+							for (var i = le.Length - 1; i >= 0; i--)
+								exceptions.Push(new KeyValuePair<string, Exception>($"LoaderException[{i}]", le[i]));
+						}
 					}
 					else if (pi.Name == "Data")
 					{
@@ -266,16 +270,15 @@ namespace TecWare.DE.Stuff
 						AppendProperty(pi.Name, pi.PropertyType, () => pi.GetValue(e));
 
 				// LuaStackFrame
-				var data = e.Data[LuaRuntimeException.ExceptionDataKey] as ILuaExceptionData;
-				if (data != null && data.Count > 0)
-					AppendProperty("LuaStackTrace:", typeof(string), () => data.FormatStackTrace(skipSClrFrame: false));
+				if (e.Data[LuaRuntimeException.ExceptionDataKey] is ILuaExceptionData data && data.Count > 0)
+					AppendProperty("LuaStackTrace", typeof(string), () => data.FormatStackTrace(skipSClrFrame: false));
 
 				// Stacktrace
 				AppendProperty("StackTrace", typeof(string), () => e.StackTrace);
 
 				// InnerException
 				if (e.InnerException != null)
-					exceptions.Push(new KeyValuePair<string, Exception>("InnerException: ", e.InnerException));
+					exceptions.Push(new KeyValuePair<string, Exception>("InnerException", e.InnerException));
 
 				// Hole nächste Exception an
 				if (exceptions.Count == 0)
@@ -283,7 +286,7 @@ namespace TecWare.DE.Stuff
 
 				var n = exceptions.Pop();
 				e = n.Value;
-				AppendSection(false, n.Key + " " + n.Value.GetType().Name);
+				AppendSection(false, n.Key, n.Value);
 			}
 
 			return Compile();
