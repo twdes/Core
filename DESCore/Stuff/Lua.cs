@@ -35,14 +35,30 @@ namespace TecWare.DE.Stuff
 
 		public LuaPropertiesTable(IPropertyReadOnlyDictionary properties)
 		{
-			if (properties == null)
-				throw new ArgumentNullException("properties");
-
 			this.properties = properties;
 		} // ctor
 		
 		protected override object OnIndex(object key)
 			=> base.OnIndex(key) ?? properties?.GetProperty(key?.ToString(), null);
+	} // class LuaPropertiesTable
+
+	#endregion
+
+	#region -- class LuaTableProperties -------------------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public class LuaTableProperties : IPropertyReadOnlyDictionary
+	{
+		private LuaTable table;
+
+		public LuaTableProperties(LuaTable table)
+		{
+			this.table = table;
+		} // ctor
+
+		public bool TryGetProperty(string name, out object value)
+			=> (value = table?.GetMemberValue(name, true)) != null;
 	} // class LuaPropertiesTable
 
 	#endregion
@@ -134,6 +150,12 @@ namespace TecWare.DE.Stuff
 			return x;
 		} // func ToXml
 
+		public static IPropertyReadOnlyDictionary ToProperties(this LuaTable table)
+			=> table == null ? null : new LuaTableProperties(table);
+
+		public static LuaTable ToTable(this IPropertyReadOnlyDictionary properties)
+			=> properties == null ? null : new LuaPropertiesTable(properties);
+
 		private static object GetValue(XElement x)
 		{
 			var type = LuaType.GetType(x.Attribute("t")?.Value ?? "string", lateAllowed: false).Type;
@@ -167,6 +189,31 @@ namespace TecWare.DE.Stuff
 			return t;
 		} // func CreateLuaTable
 
+		public static bool TryGetValue(this LuaTable t, object key, out object value, bool rawGet = false)
+			=> (value = t.GetValue(key, rawGet)) != null;
+
+		public static bool TryGetValue<T>(this LuaTable t, object key, out T value, bool rawGet = false)
+		{
+			try
+			{
+				if (TryGetValue(t, key, out var v, rawGet))
+				{
+					value = v.ChangeType<T>();
+					return true;
+				}
+				else
+				{
+					value = default(T);
+					return false;
+				}
+			}
+			catch 
+			{
+				value = default(T);
+				return false;
+			}
+		} // func TryGetValue
+
 		public static LuaTable CreateLuaArray(params object[] values)
 		{
 			var t = new LuaTable();
@@ -197,10 +244,6 @@ namespace TecWare.DE.Stuff
 			}
 			return t;
 		} // func CreateTable
-
-		[Obsolete("Remove on NeoLua 1.2.20")]
-		public static void Add(this LuaTable t, object key, object value)
-			=> t.SetValue(key, value, true);
 		
 		public static int CompareStringKey(object key, string other)
 		{

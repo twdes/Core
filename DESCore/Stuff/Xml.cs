@@ -112,15 +112,25 @@ namespace TecWare.DE.Stuff
 		} // func GetAttribute
 
 		public static T GetAttribute<T>(this XmlReader xml, XName attributeName, T @default)
+			=> TryGetAttribute<T>(xml, attributeName, out var t) ? t : @default;
+
+		public static bool TryGetAttribute<T>(this XmlReader xml, XName attributeName, out T value)
 		{
 			try
 			{
-				var value = xml.GetAttribute(attributeName.LocalName);
-				return value == null ? @default : value.ChangeType<T>();
+				var valueString = xml.GetAttribute(attributeName.LocalName);
+				if (valueString == null)
+				{
+					value = default(T);
+					return false;
+				}
+				value = valueString.ChangeType<T>();
+				return true;
 			}
 			catch
 			{
-				return @default;
+				value = default(T);
+				return false;
 			}
 		} // func GetAttribute
 
@@ -148,20 +158,29 @@ namespace TecWare.DE.Stuff
 		/// <param name="default">Defaultwert, falls das Attribut nicht vorhanden ist oder der Wert nicht in den Typ konvertiert werden konnte.</param>
 		/// <returns>Wert oder der default-Wert.</returns>
 		public static T GetAttribute<T>(this XElement x, XName attributeName, T @default)
+			=> TryGetAttribute<T>(x, attributeName, out var t) ? t : @default;
+
+		public static bool TryGetAttribute<T>(this XElement x, XName attributeName, out T value)
 		{
 			try
 			{
-				string sValue = GetAttribute(x, attributeName, (string)null);
-				if (sValue == null)
-					return @default;
+				var valueString = GetAttribute(x, attributeName, (string)null);
+				if (valueString == null)
+				{
+					value = default(T);
+					return false;
+				}
 
-				return Procs.ChangeType<T>(sValue);
+				value = Procs.ChangeType<T>(valueString);
+				return true;
 			}
 			catch
 			{
-				return @default;
+				value = default(T);
+				return false;
 			}
-		} // func GetAttribute
+
+		} // func TryGetAttribute
 
 		/// <summary>Erzeugt ein Attribut für ein XElement.</summary>
 		/// <typeparam name="T">Datentyp von dem Konvertiert werden soll.</typeparam>

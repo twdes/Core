@@ -31,7 +31,7 @@ namespace TecWare.DE.Stuff
 			if (mi == null)
 				throw new ArgumentException($"Method {type.Name}.{methodName} not resolved.");
 			return mi;
-		} // func FindMethod
+		} // func GetMethod
 
 		public static PropertyInfo GetProperty(this Type type, string propertyName, params Type[] parameters)
 		{

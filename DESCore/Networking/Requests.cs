@@ -194,7 +194,7 @@ namespace TecWare.DE.Networking
 			string mimeType;
 
 			// Lese den MimeType
-			int iPos = contentType.IndexOf(';');
+			var iPos = contentType.IndexOf(';');
 			if (iPos == -1)
 				mimeType = contentType.Trim();
 			else
@@ -206,7 +206,7 @@ namespace TecWare.DE.Networking
 
 			if (charset)
 			{
-				int startAt = contentType.IndexOf("charset=");
+				var startAt = contentType.IndexOf("charset=");
 				if (startAt >= 0)
 				{
 					startAt += 8;
@@ -214,7 +214,7 @@ namespace TecWare.DE.Networking
 					if (endAt == -1)
 						endAt = contentType.Length;
 
-					string charSet = contentType.Substring(startAt, endAt - startAt);
+					var charSet = contentType.Substring(startAt, endAt - startAt);
 					return Encoding.GetEncoding(charSet);
 				}
 				else

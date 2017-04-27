@@ -465,6 +465,9 @@ namespace TecWare.DE.Data
 
 		public static T GetValue<T>(this IEnumerator<IDataRow> items, int index, T @default, Action<T> raiseCondition = null)
 			=> GetValue<T>(items.Current, index, @default, raiseCondition);
+
+		public static IDataRow ToMyData(this IDataRow row)
+			=> row.IsDataOwner ? row : new SimpleDataRow(row);
 	} // class DataRowHelper
 
 	#endregion
