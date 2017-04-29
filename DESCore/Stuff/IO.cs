@@ -22,6 +22,116 @@ using System.Threading.Tasks;
 
 namespace TecWare.DE.Stuff
 {
+	#region -- class WindowStream -------------------------------------------------------
+
+	public sealed class WindowStream : Stream
+	{
+		private readonly Stream baseStream;
+		private readonly long offset;
+		private readonly bool writeAble;
+		private readonly bool leaveOpen;
+
+		private long position = 0;
+		private long length;
+
+		public WindowStream(Stream baseStream, long offset, long length, bool writeAble, bool leaveOpen)
+		{
+			this.baseStream = baseStream;
+			if (offset < 0 && offset > baseStream.Length)
+				throw new ArgumentOutOfRangeException(nameof(offset));
+
+			this.offset = offset;
+			this.length = length;
+			this.writeAble = writeAble;
+			this.leaveOpen = leaveOpen;
+			this.position = 0;
+
+			if (CanSeek)
+				Seek(0, SeekOrigin.Begin);
+		} // ctor
+
+		protected override void Dispose(bool disposing)
+		{
+			if (disposing)
+			{
+				if (leaveOpen)
+					baseStream.Flush();
+				else
+					baseStream.Dispose();
+			}
+			base.Dispose(disposing);
+		} // proc Dispose
+
+
+		public override void Flush()
+			=> baseStream.Flush();
+
+		public override int Read(byte[] buffer, int offset, int count)
+		{
+			var length = Length;
+			if (count + position > length)
+				count = unchecked((int)(length - position));
+
+			if (count > 0)
+			{
+				var r = baseStream.Read(buffer, offset, count);
+				position += r;
+				return r;
+			}
+			else
+				return 0;
+		} // func Read
+
+		public override long Seek(long offset, SeekOrigin origin)
+		{
+			long newPosition;
+			switch(origin)
+			{
+				case SeekOrigin.Begin:
+					newPosition = offset;
+					break;
+				case SeekOrigin.Current:
+					newPosition = position + offset;
+					break;
+				case SeekOrigin.End:
+					newPosition = Length - offset;
+					break;
+				default:
+					throw new ArgumentOutOfRangeException(nameof(origin));
+			}
+
+			if (newPosition < 0 || newPosition > Length)
+				throw new ArgumentOutOfRangeException(nameof(offset));
+
+			// update position
+			baseStream.Seek(this.offset + newPosition, SeekOrigin.Begin);
+			return position = newPosition;
+		} // func Seek
+
+		public override void SetLength(long value)
+			=> this.length = value;
+
+		public override void Write(byte[] buffer, int offset, int count)
+		{
+			if (!CanWrite)
+				throw new NotSupportedException();
+
+			if (length >= 0 && count + position > length)
+				throw new ArgumentOutOfRangeException(nameof(count));
+
+			baseStream.Write(buffer, offset, count);
+		} // proc Write
+
+		public override bool CanRead => baseStream.CanRead;
+		public override bool CanSeek => baseStream.CanSeek;
+		public override bool CanWrite => writeAble && baseStream.CanWrite;
+
+		public override long Length => length < 0 ? baseStream.Length - offset : length;
+		public override long Position { get => position; set => Seek(value, SeekOrigin.Begin); }
+	} // class WindowStream
+
+	#endregion
+
 	public static partial class Procs
 	{
 		#region -- OpenStreamReader -------------------------------------------------------

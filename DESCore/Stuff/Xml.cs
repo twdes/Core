@@ -38,10 +38,12 @@ namespace TecWare.DE.Stuff
 		{
 			get
 			{
-				var settings = new XmlReaderSettings();
-				settings.IgnoreComments = true;
-				settings.IgnoreWhitespace = true;
-				settings.CloseInput = true;
+				var settings = new XmlReaderSettings()
+				{
+					IgnoreComments = true,
+					IgnoreWhitespace = true,
+					CloseInput = true
+				};
 				return settings;
 			}
 		} // prop ReadSettings
@@ -51,15 +53,17 @@ namespace TecWare.DE.Stuff
 		{
 			get
 			{
-				XmlWriterSettings settings = new XmlWriterSettings();
-				settings.CloseOutput = true;
-				settings.CheckCharacters = true;
-				settings.Encoding = Encoding.UTF8;
-				settings.Indent = true;
-				settings.IndentChars = "  ";
-				settings.NewLineChars = Environment.NewLine;
-				settings.NewLineHandling = NewLineHandling.Entitize;
-				settings.NewLineOnAttributes = false;
+				var settings = new XmlWriterSettings()
+				{
+					CloseOutput = true,
+					CheckCharacters = true,
+					Encoding = Encoding.UTF8,
+					Indent = true,
+					IndentChars = "  ",
+					NewLineChars = Environment.NewLine,
+					NewLineHandling = NewLineHandling.Entitize,
+					NewLineOnAttributes = false
+				};
 				return settings;
 			}
 		} // prop WriterSettings
