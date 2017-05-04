@@ -17,6 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace TecWare.DE.Stuff
@@ -24,13 +25,9 @@ namespace TecWare.DE.Stuff
 	public static partial class Procs
 	{
 		public static string EscapeSpecialChars(this string value)
-		{
-			return value; // todo: escape \n \r \t
-		} // proc EscapeSpecialChars
+			=> Regex.Replace(value, @"\r\n?|\n|\t", m => m.Value == "\t" ? "\\t" : "\\n");
 
 		public static string UnescapeSpecialChars(this string value)
-		{
-			return value.Replace("\\n", "\n"); // todo:
-		} // func UnescapeSpecialChars
+			=> Regex.Replace(value, @"\\n|\\t", m => m.Value == @"\t" ? "\t" : "\n");
 	} // class Procs
 }

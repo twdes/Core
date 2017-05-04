@@ -20,6 +20,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 
 namespace TecWare.DE.Stuff
 {
@@ -398,6 +399,33 @@ namespace TecWare.DE.Stuff
 
 		public static IPropertyEnumerableDictionary EmptyReadOnly { get; } = new EmptyReadOnlyDictionary();
 	} // class PropertyDictionary
+
+	#endregion
+
+	#region -- class XAttributesPropertyDictionary --------------------------------------
+
+	public sealed class XAttributesPropertyDictionary : IPropertyReadOnlyDictionary
+	{
+		private readonly XElement x;
+
+		public XAttributesPropertyDictionary(XElement x)
+			=> this.x = x;
+
+		public bool TryGetProperty(string name, out object value)
+		{
+			var a = x.Attribute(name);
+			if(a != null && a.Value != null)
+			{
+				value = a.Value;
+				return true;
+			}
+			else
+			{
+				value = null;
+				return false;
+			}
+		} // func TryGetProperty
+	} // class XAttributesPropertyDictionary
 
 	#endregion
 

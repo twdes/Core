@@ -49,6 +49,7 @@ namespace TecWare.DE.Networking
 			public const string Html = "text/html";
 			public const string Lua = "text/x-lua";
 			public const string Json = "text/json";
+			public const string DataSet = "text/dataset";
 		} // class Text
 
 		public static class Image
