@@ -173,15 +173,42 @@ namespace TecWare.DE.Stuff
 
 		#region -- ReadInArray ------------------------------------------------------------
 
+		public static async Task<byte[]> ReadInArrayAsync(this Stream src, int bufferSize = 81920)
+		{
+			if (src is MemoryStream tmp)
+			{
+				return tmp.Length == 0 ? null : tmp.ToArray();
+			}
+			else if (src.CanSeek)
+			{
+				if (src.Length == 0)
+					return null;
+				else
+				{
+					var buffer = new byte[src.Length];
+					src.Position = 0;
+					await src.ReadAsync(buffer, 0, (int)src.Length);
+					return buffer;
+				}
+			}
+			else
+			{
+				using (var dst = new MemoryStream(bufferSize))
+				{
+					await src.CopyToAsync(dst, bufferSize);
+					return dst.Length == 0 ? null : dst.ToArray();
+				}
+			}
+		} // func ReadInArrayAsync
+
 		/// <summary>Liest die Daten eines Streams in ein Array.</summary>
 		/// <param name="src">Stream dessen Daten in ein Array gelesen werden sollen.</param>
 		/// <param name="bufferSize">Größe des Buffers, falls die Länge nicht ermittelt werden kann.</param>
 		/// <returns>Die gelesenen Daten oder null im Falle eines Streams ohne Daten.</returns>
 		public static byte[] ReadInArray(this Stream src, int bufferSize = 81920)
 		{
-			if (src is MemoryStream)
+			if (src is MemoryStream tmp)
 			{
-				var tmp = (MemoryStream)src;
 				return tmp.Length == 0 ? null : tmp.ToArray();
 			}
 			else if (src.CanSeek)
@@ -197,11 +224,13 @@ namespace TecWare.DE.Stuff
 				}
 			}
 			else
-				using (MemoryStream dst = new MemoryStream(bufferSize))
+			{
+				using (var dst = new MemoryStream(bufferSize))
 				{
 					src.CopyTo(dst, bufferSize);
 					return dst.Length == 0 ? null : dst.ToArray();
 				}
+			}
 		} // func ReadInArray
 
 		#endregion
