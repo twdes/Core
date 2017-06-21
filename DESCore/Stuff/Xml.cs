@@ -348,7 +348,7 @@ namespace TecWare.DE.Stuff
 					return false;
 
 				// Attribute
-				foreach (XAttribute attrA in a.Attributes())
+				foreach (var attrA in a.Attributes())
 				{
 					var attrB = b.Attribute(attrA.Name);
 					if (attrB == null)

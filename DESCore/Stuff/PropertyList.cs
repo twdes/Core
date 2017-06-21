@@ -278,8 +278,7 @@ namespace TecWare.DE.Stuff
 		/// <returns><c>true</c>, wenn ein Wert gefunden wurde.</returns>
 		public bool TryGetProperty(string name, out string value)
 		{
-			object ret;
-			if (TryGetProperty(name, out ret) && ret != null)
+			if (TryGetProperty(name, out object ret) && ret != null)
 			{
 				value = ret.ToString();
 				return true;
@@ -298,8 +297,7 @@ namespace TecWare.DE.Stuff
 		/// <returns><c>true</c>, wenn ein Wert gefunden wurde.</returns>
 		public bool TryGetProperty<T>(string name, out T value)
 		{
-			object ret;
-			if (TryGetProperty(name, out ret) && ret != null)
+			if (TryGetProperty(name, out object ret) && ret != null)
 			{
 				try
 				{
