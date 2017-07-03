@@ -14,11 +14,7 @@
 //
 #endregion
 using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Xml.Linq;
 using Neo.IronLua;
 
@@ -30,7 +26,7 @@ namespace TecWare.DE.Stuff
 	/// <summary></summary>
 	public sealed class DisposableScope : IDisposable
 	{
-		private Action dispose;
+		private readonly Action dispose;
 
 		public DisposableScope(Action dispose)
 		{
