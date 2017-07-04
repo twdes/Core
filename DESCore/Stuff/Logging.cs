@@ -33,7 +33,9 @@ namespace TecWare.DE.Stuff
 		/// <summary>Warning message.</summary>
 		Warning,
 		/// <summary>Error message.</summary>
-		Error
+		Error,
+		/// <summary>Debug message, will not be posted in the log.</summary>
+		Debug
 	} // enum LogMsgType
 
 	#endregion
@@ -104,7 +106,7 @@ namespace TecWare.DE.Stuff
 		/// <summary></summary>
 		/// <remarks>Upgrades the scope type to an higher level (info->warn->error)</remarks>
 		LogMsgType Typ { get; }
-  } // interface ILogMessageScope
+	} // interface ILogMessageScope
 
 	#endregion
 
@@ -136,7 +138,7 @@ namespace TecWare.DE.Stuff
 				{
 					this.NewLine()
 						.WriteLine("=== Dauer = {0:N0}ms, {1:N0}ticks ===", stopWatch.ElapsedMilliseconds, stopWatch.ElapsedTicks);
-        }
+				}
 				scope?.Dispose();
 			}
 		} // proc Dispose
@@ -220,13 +222,13 @@ namespace TecWare.DE.Stuff
 		{
 			private LogMessageScope owner;
 			private IndentationScope parent;
-			
+
 			public IndentationScope(LogMessageScope owner, string indentation)
 			{
 				this.owner = owner;
 				this.parent = owner.currentIndentation;
 				this.Indentation = parent == null ? indentation : parent.Indentation + indentation;
-      } // ctor
+			} // ctor
 
 			public void Dispose()
 			{
@@ -241,13 +243,13 @@ namespace TecWare.DE.Stuff
 
 		#endregion
 
-		private ILogger log;
+		private readonly ILogger log;
 
 		private LogMsgType typ;
 		private bool autoFlush;
 		private bool startIndent = false;
 		private IndentationScope currentIndentation = null;
-		private StringBuilder sb = new StringBuilder();
+		private readonly StringBuilder sb = new StringBuilder();
 
 		public LogMessageScope(ILogger log, LogMsgType typ, bool autoFlush)
 		{
@@ -261,7 +263,7 @@ namespace TecWare.DE.Stuff
 		{
 			if (autoFlush)
 				Flush();
-    } // proc Dispose
+		} // proc Dispose
 
 		public void Flush()
 		{
@@ -283,10 +285,8 @@ namespace TecWare.DE.Stuff
 		} // func AutoFlush
 
 		public IDisposable Indent(string indentation = "  ")
-		{
-			return currentIndentation = new IndentationScope(this, indentation);
-		} // proc Indent
-		
+			=> currentIndentation = new IndentationScope(this, indentation);
+
 		private void AppendLine(string text, int startAt, int endAt)
 		{
 			if (startIndent)
