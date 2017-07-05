@@ -22,11 +22,13 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using TecWare.DE.Stuff;
 
 namespace TecWare.DE.Data
 {
-	///////////////////////////////////////////////////////////////////////////////
+	#region -- interface IDataColumn ----------------------------------------------------
+
 	/// <summary></summary>
 	public interface IDataColumn
 	{
@@ -38,7 +40,10 @@ namespace TecWare.DE.Data
 		IPropertyEnumerableDictionary Attributes { get; }
 	} // interface IDataColumn
 
-	///////////////////////////////////////////////////////////////////////////////
+	#endregion
+
+	#region -- interface IDataColumns ---------------------------------------------------
+
 	/// <summary></summary>
 	public interface IDataColumns
 	{
@@ -46,7 +51,10 @@ namespace TecWare.DE.Data
 		IReadOnlyList<IDataColumn> Columns { get; }
 	} // interface IDataColumns
 
-	///////////////////////////////////////////////////////////////////////////////
+	#endregion
+
+	#region -- interface IDataValues ----------------------------------------------------
+
 	/// <summary></summary>
 	public interface IDataValues
 	{
@@ -56,9 +64,10 @@ namespace TecWare.DE.Data
 		object this[int index] { get; }
 	} // interface IDataValues
 
+	#endregion
+
 	#region -- interface IDataRow -------------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public interface IDataRow : IDataColumns, IDataValues, IPropertyReadOnlyDictionary
 	{
@@ -74,8 +83,7 @@ namespace TecWare.DE.Data
 
 	#region -- class DynamicDataRow -----------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Implements the dynamic access of the IDataRow members.</summary>
 	public abstract class DynamicDataRow : IDataRow, IDynamicMetaObjectProvider
 	{
 		#region -- class DynamicDataRowMetaObjectProvider ---------------------------------
@@ -242,6 +250,7 @@ namespace TecWare.DE.Data
 
 	#region -- class SimpleDataRow ------------------------------------------------------
 
+	/// <summary>Simple implementation for the DynamicDataRow</summary>
 	public sealed class SimpleDataRow : DynamicDataRow
 	{
 		private readonly object[] values;
@@ -276,8 +285,7 @@ namespace TecWare.DE.Data
 
 	#region -- class GenericDataRowEnumerator<T> ----------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>IDataRow implementation for an type.</summary>
 	public sealed class GenericDataRowEnumerator<T> : IEnumerator<IDataRow>, IDataColumns
 	{
 		#region -- class PropertyColumnInfo -----------------------------------------------
@@ -395,8 +403,7 @@ namespace TecWare.DE.Data
 
 	#region -- class SimpleDataColumn ---------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Simple column implementation.</summary>
 	public class SimpleDataColumn : IDataColumn
 	{
 		private readonly string name;
@@ -462,7 +469,7 @@ namespace TecWare.DE.Data
 			raiseCondition?.Invoke(r);
 			return r;
 		} // func GetGetValue
-
+		
 		public static T GetValue<T>(this IEnumerator<IDataRow> items, int index, T @default, Action<T> raiseCondition = null)
 			=> GetValue<T>(items.Current, index, @default, raiseCondition);
 
