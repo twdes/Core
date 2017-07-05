@@ -54,6 +54,7 @@ namespace TecWare.DE.Networking
 
 		public static class Image
 		{
+			public const string Bmp = "image/bmp";
 			public const string Png = "image/png";
 			public const string Jpeg = "image/jpeg";
 			public const string Gif = "image/gif";
