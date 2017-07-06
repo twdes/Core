@@ -100,8 +100,9 @@ namespace TecWare.DE.Stuff
 		IDisposable Indent(string indentation = "  ");
 
 		/// <summary>Activates the automatisch flush on dispose.</summary>
+		/// <param name="autoFlush"></param>
 		/// <returns></returns>
-		ILogMessageScope AutoFlush();
+		ILogMessageScope AutoFlush(bool autoFlush = true);
 
 		/// <summary></summary>
 		/// <remarks>Upgrades the scope type to an higher level (info->warn->error)</remarks>
@@ -147,9 +148,9 @@ namespace TecWare.DE.Stuff
 
 		#region -- Write ------------------------------------------------------------------
 
-		public LogMessageScopeProxy AutoFlush()
+		public LogMessageScopeProxy AutoFlush(bool autoFlush = true)
 		{
-			scope?.AutoFlush();
+			scope?.AutoFlush(autoFlush);
 			return this;
 		} // func AutoFlush
 
@@ -278,9 +279,9 @@ namespace TecWare.DE.Stuff
 			return this;
 		} // proc SetType
 
-		public ILogMessageScope AutoFlush()
+		public ILogMessageScope AutoFlush(bool autoFlush = true)
 		{
-			autoFlush = true;
+			this.autoFlush = autoFlush;
 			return this;
 		} // func AutoFlush
 
