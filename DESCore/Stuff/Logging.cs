@@ -399,8 +399,7 @@ namespace TecWare.DE.Stuff
 
 		public LogMessageScopeProxy GetScope(LogMsgType typ = LogMsgType.Information, bool autoFlush = true, bool stopTime = false)
 		{
-			var logger2 = logger as ILogger2;
-			if (logger2 != null)
+			if (logger is ILogger2 logger2)
 				return new LogMessageScopeProxy(logger2.GetScope(typ, autoFlush), stopTime);
 
 			return new LogMessageScopeProxy(new LogMessageScope(this, typ, autoFlush), stopTime);
@@ -408,8 +407,7 @@ namespace TecWare.DE.Stuff
 
 		public LogMessageScopeProxy CreateScope(LogMsgType typ = LogMsgType.Information, bool autoFlush = true, bool stopTime = false)
 		{
-			var logger2 = logger as ILogger2;
-			if (logger2 != null)
+			if (logger is ILogger2 logger2)
 				return new LogMessageScopeProxy(logger2.CreateScope(typ, autoFlush), stopTime);
 
 			return new LogMessageScopeProxy(new LogMessageScope(this, typ, autoFlush), stopTime);
