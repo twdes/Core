@@ -24,7 +24,6 @@ namespace TecWare.DE.Stuff
 {
 	#region -- enum LogMsgType ----------------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Art der Log-Nachricht</summary>
 	public enum LogMsgType
 	{
@@ -42,7 +41,6 @@ namespace TecWare.DE.Stuff
 
 	#region -- interface ILogger --------------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Simple interface to the log-file.</summary>
 	public interface ILogger
 	{
@@ -76,7 +74,6 @@ namespace TecWare.DE.Stuff
 
 	#region -- interface ILogMessageScope -----------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public interface ILogMessageScope : IDisposable
 	{
@@ -211,7 +208,6 @@ namespace TecWare.DE.Stuff
 
 	#region -- class LogMessageScope ----------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public sealed class LogMessageScope : ILogMessageScope
 	{
@@ -339,7 +335,6 @@ namespace TecWare.DE.Stuff
 
 	#region -- class LoggerProxy --------------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Extensions for the Logger-Interface.</summary>
 	public abstract class LoggerProxy : ILogger
 	{
@@ -440,7 +435,6 @@ namespace TecWare.DE.Stuff
 
 	#region -- class Procs --------------------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public static partial class Procs
 	{
