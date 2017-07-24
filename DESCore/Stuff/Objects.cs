@@ -75,8 +75,15 @@ namespace TecWare.DE.Stuff
 		{
 			if (typeTo == typeof(bool) && value is string)
 			{
+				long number;
+				if (Int64.TryParse((string)value, out number))
+					return number != 0;
 				var t = (string)value;
-				return t == "1" || String.Compare(t, Boolean.TrueString, StringComparison.OrdinalIgnoreCase) == 0;
+				if (String.Compare(t, "t", StringComparison.OrdinalIgnoreCase) * String.Compare(t, "true", StringComparison.OrdinalIgnoreCase) * String.Compare(t, Boolean.TrueString, StringComparison.OrdinalIgnoreCase) == 0)
+					return true;
+				if (String.Compare(t, "f", StringComparison.OrdinalIgnoreCase) * String.Compare(t, "false", StringComparison.OrdinalIgnoreCase) * String.Compare(t, Boolean.FalseString, StringComparison.OrdinalIgnoreCase) == 0)
+					return false;
+				throw new ArgumentException(String.Format("Text '{0}' is neither False nor True.", t));
 			}
 			else if (typeTo == typeof(DateTimeOffset) && (value == null || value is string))
 				return value == null ? DateTimeOffset.MinValue : DateTimeOffset.Parse((string)value, CultureInfo.InvariantCulture);
