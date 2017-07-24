@@ -419,11 +419,9 @@ namespace TecWare.DE.Data
 		{
 			if (String.IsNullOrEmpty(name))
 				throw new ArgumentNullException("name");
-			if (dataType == null)
-				throw new ArgumentNullException("dataType");
 
 			this.name = name;
-			this.dataType = dataType;
+			this.dataType = dataType ?? throw new ArgumentNullException("dataType");
 			this.attributes = attributes ?? PropertyDictionary.EmptyReadOnly;
 		} // ctor
 
