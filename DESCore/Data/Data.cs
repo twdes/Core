@@ -258,8 +258,8 @@ namespace TecWare.DE.Data
 
 		public SimpleDataRow(object[] values, SimpleDataColumn[] columns)
 		{
-			this.values = values;
-			this.columns = columns;
+			this.values = values ?? throw new ArgumentNullException(nameof(values));
+			this.columns = columns ?? throw new ArgumentNullException(nameof(values));
 		} // ctor
 
 		public SimpleDataRow(IDataRow row)
@@ -434,6 +434,22 @@ namespace TecWare.DE.Data
 		public Type DataType => dataType;
 		public IPropertyEnumerableDictionary Attributes => attributes;
 	} // class SimpleDataColumn
+
+	#endregion
+
+	#region -- class SimpleDataColumns --------------------------------------------------
+
+	public class SimpleDataColumns : IDataColumns
+	{
+		private readonly IDataColumn[] columns;
+
+		public SimpleDataColumns(params IDataColumn[] columns)
+		{
+			this.columns = columns ?? throw new ArgumentNullException(nameof(columns));
+		} // ctor
+
+		public IReadOnlyList<IDataColumn> Columns => columns;
+	} // class SimpleDataColumns
 
 	#endregion
 
