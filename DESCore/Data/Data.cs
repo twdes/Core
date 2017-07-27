@@ -394,7 +394,8 @@ namespace TecWare.DE.Data
 
 		public IReadOnlyList<IDataColumn> Columns => properties;
 
-		public IDataRow Current => new PropertyDataRow(this, enumerator.Current);
+		public IDataRow Current => new PropertyDataRow(this, BaseCurrent);
+		public T BaseCurrent => enumerator.Current;
 
 		object IEnumerator.Current => Current;
 	} // class GenericDataRowEnumerator<T>
