@@ -87,7 +87,8 @@ namespace TecWare.DE.Stuff
 			}
 			else if (typeTo == typeof(DateTimeOffset) && (value == null || value is string))
 				return value == null ? DateTimeOffset.MinValue : DateTimeOffset.Parse((string)value, CultureInfo.InvariantCulture);
-
+			else if (typeTo == typeof(DateTime) && (value == null || value is string))
+				return value == null ? DateTime.MinValue : DateTime.Parse((string)value, CultureInfo.InvariantCulture);
 			else if (typeTo == typeof(XDocument) && (value == null || value is string))
 				return value == null ? null : XDocument.Parse((string)value);
 			else if (typeTo == typeof(string) && (value == null || value is XDocument))
