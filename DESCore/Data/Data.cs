@@ -471,7 +471,7 @@ namespace TecWare.DE.Data
 			return -1;
 		} // func FindColumnIndex
 
-		public static T GetValue<T>(this IDataRow row, int index, T @default, Action<T> raiseCondition = null)
+		public static T GetValue<T>(this IDataValues row, int index, T @default, Action<T> raiseCondition = null)
 		{
 			if (index == -1)
 				return @default;
