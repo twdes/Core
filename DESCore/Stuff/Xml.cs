@@ -288,18 +288,15 @@ namespace TecWare.DE.Stuff
 		/// <summary>Gibt den Inhalt eines direkt untergeordneten Elementes zurück typiriesiert zurück.</summary>
 		/// <param name="x">XElement, an dem das Attribut erwartet wird.</param>
 		/// <param name="elementName">Name des Elementes.</param>
-		/// <param name="sDefault">Wird das Element nicht gefunden, wird dieser Wert zurück gegeben.</param>
+		/// <param name="default">Wird das Element nicht gefunden, wird dieser Wert zurück gegeben.</param>
 		/// <returns>Wert oder der default-Wert.</returns>
-		public static string GetNode(this XElement x, XName elementName, string sDefault)
+		public static string GetNode(this XElement x, XName elementName, string @default)
 		{
 			if (x == null)
-				return sDefault;
+				return @default;
 
-			XElement attr = x.Element(elementName);
-			if (attr == null)
-				return sDefault;
-			else
-				return attr.Value;
+			var attr = x.Element(elementName);
+			return attr?.Value ?? @default;
 		} // func GetNode
 
 		/// <summary>Gibt den Inhalt eines direkt untergeordneten Elementes zurück typiriesiert zurück.</summary>

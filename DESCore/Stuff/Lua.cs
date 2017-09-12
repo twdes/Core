@@ -75,7 +75,7 @@ namespace TecWare.DE.Stuff
 		/// <param name="func"></param>
 		public LuaFunctionEnumerator(object initialzer)
 		{
-			this.initialzer = initialzer;
+			this.initialzer = initialzer ?? throw new ArgumentNullException(nameof(initialzer));
 		} // ctor
 
 		public IEnumerator GetEnumerator()
