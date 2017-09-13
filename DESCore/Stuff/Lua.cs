@@ -15,10 +15,6 @@
 #endregion
 using System;
 using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Xml.Linq;
 using Neo.IronLua;
 using TecWare.DE.Data;
@@ -94,8 +90,9 @@ namespace TecWare.DE.Stuff
 			{
 				var ir = iterator(state, next);
 				next = ir[0];
-				if (next != null)
-					yield return ir[1] ?? next;
+				var value = ir[1] ?? next;
+				if (value != null)
+					yield return value;
 			}
 		} // func GetEnumerator
 	} // class LuaFunctionEnumerator
