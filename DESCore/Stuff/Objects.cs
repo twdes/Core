@@ -15,6 +15,7 @@
 #endregion
 using System;
 using System.Globalization;
+using System.Text;
 using System.Xml.Linq;
 using Neo.IronLua;
 
@@ -172,6 +173,52 @@ namespace TecWare.DE.Stuff
 
 			return true;
 		} // func CompareBytesIntern
+
+		#endregion
+
+		#region -- Convert Bytes --------------------------------------------------------
+
+		public static byte[] ConvertToBytes(string bytes)
+			=> ConvertToBytes(bytes, 0, bytes.Length);
+
+		public static byte[] ConvertToBytes(string bytes, int ofs, int len)
+		{
+			if (ofs + len > bytes.Length)
+				throw new ArgumentOutOfRangeException(nameof(len));
+
+			// move ofs for 0x
+			if (len > 2 && bytes[ofs] == '0' && (bytes[ofs + 1] == 'x' || bytes[ofs + 1] == 'X'))
+			{
+				ofs += 2;
+				len -= 2;
+			}
+
+			if ((len & 1) != 0) // even number expected
+				throw new ArgumentException("invalid bytes", nameof(bytes));
+
+			var data = new byte[(len >> 1) - 1];
+			var j = 0;
+			while (ofs < len)
+			{
+				data[j] = Byte.Parse(bytes.Substring(ofs, 2), NumberStyles.AllowHexSpecifier);
+				ofs += 2;
+				j++;
+			}
+
+			return data;
+		} // func ConvertToString
+
+		public static string ConvertToString(byte[] bytes)
+			=> ConvertToString(bytes, 0, bytes.Length);
+
+		public static string ConvertToString(byte[] bytes, int ofs, int len)
+		{
+			var sb = new StringBuilder(len << 1);
+			var end = ofs + len;
+			while (ofs < end)
+				sb.Append(bytes[ofs++].ToString("X2"));
+			return sb.ToString();
+		} // func ConvertToString
 
 		#endregion
 
