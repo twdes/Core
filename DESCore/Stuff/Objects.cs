@@ -116,10 +116,8 @@ namespace TecWare.DE.Stuff
 		
 		public static T GetService<T>(this IServiceProvider sp, bool throwException = false)
 			where T : class
-		{
-			return GetService<T>(sp, typeof(T), throwException);
-		} // func GetService
-
+			=> GetService<T>(sp, typeof(T), throwException);
+		
 		public static T GetService<T>(this IServiceProvider sp, Type serviceType, bool throwException = false)
 			where T : class
 		{
