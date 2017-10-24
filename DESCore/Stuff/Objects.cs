@@ -76,8 +76,7 @@ namespace TecWare.DE.Stuff
 		{
 			if (typeTo == typeof(bool) && value is string)
 			{
-				long number;
-				if (Int64.TryParse((string)value, out number))
+				if (Int64.TryParse((string)value, out var number))
 					return number != 0;
 				var t = (string)value;
 				if (String.Compare(t, "t", StringComparison.OrdinalIgnoreCase) * String.Compare(t, "true", StringComparison.OrdinalIgnoreCase) * String.Compare(t, Boolean.TrueString, StringComparison.OrdinalIgnoreCase) == 0)

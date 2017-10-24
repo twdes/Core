@@ -15,6 +15,7 @@
 #endregion
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -29,6 +30,31 @@ namespace TecWare.DE.Stuff
 
 		public static string UnescapeSpecialChars(this string value)
 			=> Regex.Replace(value, @"\\n|\\t", m => m.Value == @"\t" ? "\t" : "\n");
+
+		public static bool TrySplitLanguage(string language, out string languagePart, out string countryPart)
+		{
+			if (String.IsNullOrEmpty(language))
+				goto failed;
+
+			var p = language.IndexOf('-');
+			if (p == -1 && language.Length == 2)
+			{
+				languagePart = language;
+				countryPart = null;
+				return true;
+			}
+			else if (p == 2 && language.Length == 5)
+			{
+				languagePart = language.Substring(0, 2);
+				countryPart = language.Substring(3, 2);
+				return true;
+			}
+
+			failed:
+			languagePart = null;
+			countryPart = null;
+			return false;
+		} // func SplitLanguage
 
 		#region -- Filter -----------------------------------------------------------------
 
