@@ -153,8 +153,23 @@ namespace TecWare.DE.Data
 					return BindMember(binder.Name, false);
 			} // func BindGetMember
 
+			private static bool IsPublicMember(Type type, string name)
+			{
+				return (
+					from mi in type.GetRuntimeMethods()
+					where mi.IsPublic && !mi.IsStatic
+					select mi.Name
+				).Union(
+					from pi in type.GetRuntimeProperties()
+					where pi.GetMethod != null && pi.GetMethod.IsPublic && !pi.GetMethod.IsStatic
+					select pi.Name
+				).Contains(name);
+			} // proc IsPublicMember
+
 			public override DynamicMetaObject BindInvokeMember(InvokeMemberBinder binder, DynamicMetaObject[] args)
-				=> binder.Name == nameof(DynamicDataRow.Columns)
+				=> args.Length > 0  // optimization: arguments should be a method call, we only add properties dynamic
+				|| binder.Name == nameof(DynamicDataRow.Columns) // optimization: columns is a known public properties
+				|| IsPublicMember(LimitType, binder.Name) // test for non-dynamic members (methods, properties)
 					? base.BindInvokeMember(binder, args)
 					: BindMember(binder.Name, true);
 		} // class DynamicDataRowMetaObjectProvider
@@ -353,10 +368,7 @@ namespace TecWare.DE.Data
 
 		public GenericDataRowEnumerator(IEnumerator<T> enumerator)
 		{
-			if (enumerator == null)
-				throw new ArgumentNullException();
-
-			this.enumerator = enumerator;
+			this.enumerator = enumerator ?? throw new ArgumentNullException();
 			this.properties = typeof(T).GetRuntimeProperties()
 				.Where(pi => pi.CanRead && pi.GetMethod.IsPublic && !pi.GetMethod.IsStatic)
 				.Select(pi => new PropertyColumnInfo(pi)).ToArray();
