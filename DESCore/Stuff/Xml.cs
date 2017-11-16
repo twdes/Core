@@ -72,39 +72,64 @@ namespace TecWare.DE.Stuff
 
 		#region -- GetAttribute, CreateAttribute ----------------------------------------
 
-		public static string GetElementContent(this XmlReader xml, string @default)
+		private static T ConvertXmlContent<T>(object value, T @default)
 		{
-			if (xml.HasValue)
-				return xml.ReadContentAsString();
-			else
+			try
+			{
+				return value == null ? @default : value.ChangeType<T>();
+			}
+			catch
+			{
 				return @default;
-		} // func GetElementContent
+			}
+		} // func ConvertXmlContent
+
+		public static string GetElementContent(this XmlReader xml, string @default)
+			=> xml.HasValue
+				? xml.ReadContentAsString()
+				: @default;
+
+		public static Task<string> GetElementContentAsync(this XmlReader xml, string @default)
+			=> xml.HasValue
+				? xml.ReadContentAsStringAsync()
+				: Task.FromResult(@default);
 
 		public static T GetElementContent<T>(this XmlReader xml, T @default)
-		{
-			try
-			{
-				var value = GetElementContent(xml, (string)null);
-				return value == null ? @default : value.ChangeType<T>();
-			}
-			catch
-			{
-				return @default;
-			}
-		} // func GetAttribute
+			=> ConvertXmlContent(GetElementContent(xml, (string)null), @default);
+
+		public static async Task<T> GetElementContentAsync<T>(this XmlReader xml, T @default)
+			=> ConvertXmlContent(await GetElementContentAsync(xml, (string)null), @default);
 
 		public static T ReadElementContent<T>(this XmlReader xml, T @default)
+			=> ConvertXmlContent(xml.ReadElementContentAsString(), @default);
+
+		public static async Task<T> ReadElementContentAsync<T>(this XmlReader xml, T @default)
+			=> ConvertXmlContent(await xml.ReadElementContentAsStringAsync(), @default);
+
+		public static XmlException CreateXmlException(string message, Exception innerException, IXmlLineInfo lineInfo)
+			=> new XmlException(message, innerException, lineInfo?.LineNumber ?? 0, lineInfo?.LinePosition ?? 0);
+
+		public static async Task MoveToContentAsync(this XmlReader xml, XmlNodeType expectedNodeType)
 		{
-			try
-			{
-				var value = xml.ReadElementContentAsString();
-				return value == null ? @default : value.ChangeType<T>();
-			}
-			catch
-			{
-				return @default;
-			}
-		} // func GetAttribute
+			if (await xml.MoveToContentAsync() != expectedNodeType)
+				throw CreateXmlException(String.Format("Invalid node type (expected: {0}, found: {1})", expectedNodeType, xml.NodeType), null, xml as IXmlLineInfo);
+		} // proc MoveToContentAsync
+
+		public static async Task ReadStartElementAsync(this XmlReader xml, string name)
+		{
+			await MoveToContentAsync(xml, XmlNodeType.Element);
+
+			if(xml.Name != name)
+				throw CreateXmlException(String.Format("Element not found (expected: {0}, found: {1})", name, xml.Name), null, xml as IXmlLineInfo);
+
+			await xml.ReadAsync();
+		} // proc ReadStartElementAsync
+
+		public static async Task ReadEndElementAsync(this XmlReader xml)
+		{
+			await MoveToContentAsync(xml, XmlNodeType.EndElement);
+			await xml.ReadAsync();
+		} // proc ReadEndElementAsync
 
 		public static string GetAttribute(this XmlReader xml, XName attributeName, string @default)
 		{
