@@ -250,8 +250,8 @@ namespace TecWare.DE.Data
 		static DynamicDataRow()
 		{
 			var ti = typeof(DynamicDataRow);
-			thisStringPropertyInfo = ti.GetProperty("Item", typeof(string), typeof(bool));
-			thisIntPropertyInfo = ti.GetProperty("Item", typeof(int));
+			thisStringPropertyInfo = ti.GetProperty("Item", new Type[] { typeof(string), typeof(bool) });
+			thisIntPropertyInfo = ti.GetProperty("Item", new Type[] { typeof(int) });
 		} // sctor
 	} // class DynamicDataRow
 
