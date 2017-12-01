@@ -68,6 +68,7 @@
     <Compile Include="Stuff\PropertyList.cs" />
     <Compile Include="Stuff\StringBuilder.cs" />
     <Compile Include="Stuff\Strings.cs" />
+    <Compile Include="Stuff\Threading.cs" />
     <Compile Include="Stuff\Uri.cs" />
     <Compile Include="Stuff\Xml.cs" />
   </ItemGroup>
