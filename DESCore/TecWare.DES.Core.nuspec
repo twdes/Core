@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+	<metadata>
+		<id>TecWare.DES.Core</id>
+		<version>$version$</version>
+		<title>TecWare.DES.Core</title>
+		<authors>TecWare</authors>
+		<owners>TecWare</owners>
+		<projectUrl>https://github.com/twdes/des</projectUrl>
+		<requireLicenseAcceptance>false</requireLicenseAcceptance>
+		<description>Basic contracts and helper to build a server or client application for the data exchange server.</description>
+		<releaseNotes>todo.</releaseNotes>
+		<copyright>$copyright$</copyright>
+
+		<dependencies>
+			<dependency id="NeoLua" version="1.2.23" />
+		</dependencies>
+	</metadata>
+
+	<files>
+		<file src="bin\Release\DES.Core.dll" target="lib\net47" />
+		<file src="bin\Release\DES.Core.pdb" target="lib\net47" />
+		<file src="bin\Release\DES.Core.xml" target="lib\net47" />
+	</files>
+</package>
