@@ -14,17 +14,14 @@
 //
 #endregion
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace TecWare.DE.Networking
 {
+	/// <summary>Credential implementation to support different authentfication types</summary>
 	public class UserCredential : ICredentials
 	{
-		#region -- class CredentialWrapper ----------------------------------------------
+		#region -- class CredentialWrapper --------------------------------------------
 
 		private sealed class CredentialWrapper : ICredentials
 		{
@@ -57,6 +54,11 @@ namespace TecWare.DE.Networking
 		private readonly string userName;
 		private readonly string password;
 
+		/// <summary></summary>
+		/// <param name="authType"></param>
+		/// <param name="domain"></param>
+		/// <param name="userName"></param>
+		/// <param name="password"></param>
 		public UserCredential(string authType, string domain, string userName, string password)
 		{
 			this.authType = authType;
@@ -65,6 +67,10 @@ namespace TecWare.DE.Networking
 			this.password = password;
 		} // ctor
 
+		/// <summary>GetCredential implementation, that compares the authentification type, too.</summary>
+		/// <param name="uri"></param>
+		/// <param name="authType"></param>
+		/// <returns></returns>
 		public NetworkCredential GetCredential(Uri uri, string authType)
 		{
 			if (String.Compare(authType, this.authType, StringComparison.OrdinalIgnoreCase) == 0)
@@ -73,11 +79,18 @@ namespace TecWare.DE.Networking
 				return null;
 		} // func GetCredential
 
+		/// <summary>Authentification type</summary>
 		public string AuthType => authType;
+		/// <summary>Domain</summary>
 		public string Domain => domain;
+		/// <summary>User name</summary>
 		public string UserName => userName;
+		/// <summary>Password</summary>
 		public string Password => password;
 
+		/// <summary>Wrap network credentials to compare also the authentification type.</summary>
+		/// <param name="userInfo"></param>
+		/// <returns></returns>
 		public static ICredentials Wrap(NetworkCredential userInfo)
 			=> new CredentialWrapper(userInfo);
 	} // class UserCredential
