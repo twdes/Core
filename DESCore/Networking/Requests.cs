@@ -17,11 +17,8 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Dynamic;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
-using System.Linq.Expressions;
 using System.Net;
 using System.Net.Http;
 using System.Text;
@@ -34,45 +31,61 @@ using TecWare.DE.Stuff;
 
 namespace TecWare.DE.Networking
 {
-	#region -- class MimeTypes ----------------------------------------------------------
+	#region -- class MimeTypes --------------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public static class MimeTypes
 	{
+		/// <summary></summary>
 		public static class Text
 		{
+			/// <summary></summary>
 			public const string Plain = "text/plain";
+			/// <summary></summary>
 			public const string Xml = "text/xml";
+			/// <summary></summary>
 			public const string JavaScript = "text/javascript";
+			/// <summary></summary>
 			public const string Css = "text/css";
+			/// <summary></summary>
 			public const string Html = "text/html";
+			/// <summary></summary>
 			public const string Lua = "text/x-lua";
+			/// <summary></summary>
 			public const string Json = "text/json";
+			/// <summary></summary>
 			public const string DataSet = "text/dataset";
 		} // class Text
 
+		/// <summary></summary>
 		public static class Image
 		{
+			/// <summary></summary>
 			public const string Bmp = "image/bmp";
+			/// <summary></summary>
 			public const string Png = "image/png";
+			/// <summary></summary>
 			public const string Jpeg = "image/jpeg";
+			/// <summary></summary>
 			public const string Gif = "image/gif";
+			/// <summary></summary>
 			public const string Icon = "image/x-icon";
 		} // class Image
 
+		/// <summary></summary>
 		public static class Application
 		{
+			/// <summary></summary>
 			public const string Xaml = "application/xaml+xml";
+			/// <summary></summary>
 			public const string OctetStream = "application/octet-stream";
 		} // class Application
 	} // class MimeTypes
 
 	#endregion
 
-	#region -- enum ClientAuthentificationType ------------------------------------------
+	#region -- enum ClientAuthentificationType ----------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public enum ClientAuthentificationType
 	{
@@ -86,10 +99,9 @@ namespace TecWare.DE.Networking
 
 	#endregion
 
-	#region -- class ClientAuthentificationInformation ----------------------------------
+	#region -- class ClientAuthentificationInformation --------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Parse the client authentificate property.</summary>
 	public sealed class ClientAuthentificationInformation
 	{
 		private const string basicRealmProperty = "Basic realm=";
@@ -97,7 +109,7 @@ namespace TecWare.DE.Networking
 
 		private readonly ClientAuthentificationType type;
 		private readonly string realm;
-		
+
 		private ClientAuthentificationInformation(string authenticate)
 		{
 			if (authenticate == null)
@@ -130,12 +142,20 @@ namespace TecWare.DE.Networking
 			this.realm = realm;
 		} // ctor
 
+		/// <summary></summary>
 		public ClientAuthentificationType Type => type;
+		/// <summary></summary>
 		public string Realm => realm;
 
+		/// <summary></summary>
 		public static ClientAuthentificationInformation Unknown { get; } = new ClientAuthentificationInformation(ClientAuthentificationType.Unknown, "Unknown");
+		/// <summary></summary>
 		public static ClientAuthentificationInformation Ntlm { get; } = new ClientAuthentificationInformation(ClientAuthentificationType.Ntlm, integratedSecurity);
 
+		/// <summary></summary>
+		/// <param name="e">
+		/// <param name="info"></param>
+		/// <param name="autoDisposeResponse"></param>
 		public static bool TryGet(WebException e, ref ClientAuthentificationInformation info, bool autoDisposeResponse = true)
 		{
 			var t = Get(e);
@@ -148,6 +168,10 @@ namespace TecWare.DE.Networking
 				return false;
 		} // func TryGet
 
+		/// <summary></summary>
+		/// <param name="e"></param>
+		/// <param name="autoDisposeResponse"></param>
+		/// <returns></returns>
 		public static ClientAuthentificationInformation Get(WebException e, bool autoDisposeResponse = true)
 		{
 			if (e.Response == null)
@@ -174,16 +198,19 @@ namespace TecWare.DE.Networking
 
 	#endregion
 
-	#region -- class BaseWebRequest -----------------------------------------------------
+	#region -- class BaseWebRequest ---------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public sealed class BaseWebRequest
 	{
-		private Uri baseUri;
-		private Encoding defaultEncoding;
-		private ICredentials credentials;
+		private readonly Uri baseUri;
+		private readonly Encoding defaultEncoding;
+		private readonly ICredentials credentials;
 
+		/// <summary></summary>
+		/// <param name="baseUri"></param>
+		/// <param name="defaultEncoding"></param>
+		/// <param name="credentials"></param>
 		public BaseWebRequest(Uri baseUri, Encoding defaultEncoding, ICredentials credentials = null)
 		{
 			this.baseUri = baseUri;
@@ -196,11 +223,11 @@ namespace TecWare.DE.Networking
 			string mimeType;
 
 			// Lese den MimeType
-			var iPos = contentType.IndexOf(';');
-			if (iPos == -1)
+			var pos = contentType.IndexOf(';');
+			if (pos == -1)
 				mimeType = contentType.Trim();
 			else
-				mimeType = contentType.Substring(0, iPos).Trim();
+				mimeType = contentType.Substring(0, pos).Trim();
 
 			// Prüfe den MimeType
 			if (acceptedMimeType != null && !mimeType.StartsWith(acceptedMimeType))
@@ -212,7 +239,7 @@ namespace TecWare.DE.Networking
 				if (startAt >= 0)
 				{
 					startAt += 8;
-					int endAt = contentType.IndexOf(';', startAt);
+					var endAt = contentType.IndexOf(';', startAt);
 					if (endAt == -1)
 						endAt = contentType.Length;
 
@@ -227,10 +254,11 @@ namespace TecWare.DE.Networking
 		} // func CheckMimeType
 
 		private bool IsCompressed(string contentEncoding)
-		{
-			return contentEncoding != null && contentEncoding.IndexOf("gzip") >= 0;
-		} // func IsCompressed
+			=> contentEncoding != null && contentEncoding.IndexOf("gzip") >= 0;
 
+		/// <summary></summary>
+		/// <param name="path"></param>
+		/// <returns></returns>
 		public Uri GetFullUri(string path)
 		{
 			Uri uri;
@@ -287,8 +315,12 @@ namespace TecWare.DE.Networking
 #endif
 		} // func GetResponseAsync
 
-		#region -- Putxxxx ----------------------------------------------------------------
+		#region -- Putxxxx ------------------------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="path"></param>
+		/// <param name="writeRequest"></param>
+		/// <returns></returns>
 		public async Task<WebResponse> PutStreamResponseAsync(string path, Action<WebRequest, Stream> writeRequest)
 		{
 			var request = GetWebRequest(path);
@@ -301,6 +333,11 @@ namespace TecWare.DE.Networking
 			return await request.GetResponseAsync();
 		} // proc PutStreamResponseAsync
 
+		/// <summary></summary>
+		/// <param name="path"></param>
+		/// <param name="inputContentType"></param>
+		/// <param name="writeRequest"></param>
+		/// <returns></returns>
 		public Task<WebResponse> PutTextResponseAsync(string path, string inputContentType, Action<TextWriter> writeRequest)
 		{
 			return PutStreamResponseAsync(path,
@@ -317,30 +354,40 @@ namespace TecWare.DE.Networking
 				});
 		} // func PutTextResponseAsync
 
+		/// <summary></summary>
+		/// <param name="path"></param>
+		/// <param name="inputContentType"></param>
+		/// <param name="writeRequest"></param>
+		/// <returns></returns>
 		public Task<WebResponse> PutXmlResponseAsync(string path, string inputContentType, Action<XmlWriter> writeRequest)
-		{
-			return PutTextResponseAsync(path, inputContentType ?? MimeTypes.Text.Xml,
+			=> PutTextResponseAsync(path, inputContentType ?? MimeTypes.Text.Xml,
 				tw =>
 				{
 					using (var xml = XmlWriter.Create(tw, Procs.XmlWriterSettings))
 						writeRequest(xml);
 				});
-		} // func PutXmlResponseAsync
 
+		/// <summary></summary>
+		/// <param name="path"></param>
+		/// <param name="table"></param>
+		/// <returns></returns>
 		public Task<WebResponse> PutTableResponseAsync(string path, LuaTable table)
 			=> PutXmlResponseAsync(path, MimeTypes.Text.Xml, xml => table.ToXml().WriteTo(xml));
 
 		#endregion
 
-		#region -- GetStream --------------------------------------------------------------
+		#region -- GetStream ----------------------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="response"></param>
+		/// <param name="acceptedMimeType"></param>
+		/// <returns></returns>
 		public Stream GetStream(WebResponse response, string acceptedMimeType = null)
 		{
 			CheckMimeType(response.ContentType, acceptedMimeType, false);
-			if (IsCompressed(response.Headers["Content-Encoding"]))
-				return new GZipStream(response.GetResponseStream(), CompressionMode.Decompress, false);
-			else
-				return response.GetResponseStream();
+			return IsCompressed(response.Headers["Content-Encoding"])
+				? new GZipStream(response.GetResponseStream(), CompressionMode.Decompress, false)
+				: response.GetResponseStream();
 		} // func GetStreamAsync
 
 		/// <summary>Creates a plain Web-Request, special arguments are filled with IWebRequestCreate.</summary>
@@ -352,8 +399,12 @@ namespace TecWare.DE.Networking
 
 		#endregion
 
-		#region -- GetTextReader ----------------------------------------------------------
+		#region -- GetTextReader ------------------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="response"></param>
+		/// <param name="acceptedMimeType"></param>
+		/// <returns></returns>
 		public TextReader GetTextReader(WebResponse response, string acceptedMimeType)
 		{
 			var enc = CheckMimeType(response.ContentType, acceptedMimeType, true);
@@ -363,13 +414,22 @@ namespace TecWare.DE.Networking
 				return new StreamReader(response.GetResponseStream(), enc);
 		}// func GetTextReaderAsync
 
+		/// <summary></summary>
+		/// <param name="path"></param>
+		/// <param name="acceptedMimeType"></param>
+		/// <returns></returns>
 		public async Task<TextReader> GetTextReaderAsync(string path, string acceptedMimeType)
 			=> GetTextReader(await GetResponseAsync(path), acceptedMimeType);
 
 		#endregion
 
-		#region -- GetXmlStream -----------------------------------------------------------
+		#region -- GetXmlStream -------------------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="response"></param>
+		/// <param name="acceptedMimeType"></param>
+		/// <param name="settings"></param>
+		/// <returns></returns>
 		public XmlReader GetXmlStream(WebResponse response, string acceptedMimeType = MimeTypes.Text.Xml, XmlReaderSettings settings = null)
 		{
 			if (settings == null)
@@ -388,6 +448,11 @@ namespace TecWare.DE.Networking
 			return XmlReader.Create(GetTextReader(response, acceptedMimeType), settings, context);
 		} // func GetXmlStream
 
+		/// <summary></summary>
+		/// <param name="path"></param>
+		/// <param name="acceptedMimeType"></param>
+		/// <param name="settings"></param>
+		/// <returns></returns>
 		public async Task<XmlReader> GetXmlStreamAsync(string path, string acceptedMimeType = MimeTypes.Text.Xml, XmlReaderSettings settings = null)
 		{
 			var response = await GetResponseAsync(path); // todo: is disposed called?
@@ -396,8 +461,11 @@ namespace TecWare.DE.Networking
 
 		#endregion
 
-		#region -- GetXml -----------------------------------------------------------------
+		#region -- GetXml -------------------------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="x"></param>
+		/// <returns></returns>
 		public XElement CheckForExceptionResult(XElement x)
 		{
 			var xStatus = x.Attribute("status");
@@ -409,6 +477,11 @@ namespace TecWare.DE.Networking
 			return x;
 		} // func CheckForExceptionResult
 
+		/// <summary></summary>
+		/// <param name="response"></param>
+		/// <param name="acceptedMimeType"></param>
+		/// <param name="rootName"></param>
+		/// <returns></returns>
 		public XElement GetXml(WebResponse response, string acceptedMimeType = MimeTypes.Text.Xml, XName rootName = null)
 		{
 			XDocument document;
@@ -425,35 +498,51 @@ namespace TecWare.DE.Networking
 			return document.Root;
 		} // func GetXml
 
+		/// <summary></summary>
+		/// <param name="path"></param>
+		/// <param name="acceptedMimeType"></param>
+		/// <param name="rootName"></param>
+		/// <returns></returns>
 		public async Task<XElement> GetXmlAsync(string path, string acceptedMimeType = MimeTypes.Text.Xml, XName rootName = null)
 			=> GetXml(await GetResponseAsync(path), acceptedMimeType, rootName);
 
 		#endregion
 
-		#region -- GetTable ---------------------------------------------------------------
+		#region -- GetTable -----------------------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="path"></param>
+		/// <param name="rootName"></param>
+		/// <returns></returns>
 		public async Task<LuaTable> GetTableAsync(string path, XName rootName = null)
 			=> GetTable(await GetResponseAsync(path), rootName);
 
+		/// <summary></summary>
+		/// <param name="response"></param>
+		/// <param name="rootName"></param>
+		/// <returns></returns>
 		public LuaTable GetTable(WebResponse response, XName rootName = null)
 			=> Procs.CreateLuaTable(CheckForExceptionResult(GetXml(response, rootName: (rootName ?? "table"))));
 
+		/// <summary></summary>
+		/// <param name="path"></param>
+		/// <param name="table"></param>
+		/// <param name="rootName"></param>
+		/// <returns></returns>
 		public async Task<LuaTable> PutTableAsync(string path, LuaTable table, XName rootName = null)
 			=> GetTable(await PutTableResponseAsync(path, table), rootName);
 
 		#endregion
 
-		#region -- CreateViewDataReader ---------------------------------------------------
+		#region -- CreateViewDataReader -----------------------------------------------
 
-		#region -- class ViewDataReader ---------------------------------------------------
+		#region -- class ViewDataReader -----------------------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>
 		public class ViewDataReader : IEnumerable<IDataRow>
 		{
-			#region -- class ViewDataColumn ---------------------------------------------------
+			#region -- class ViewDataColumn -------------------------------------------
 
-			///////////////////////////////////////////////////////////////////////////////
 			/// <summary></summary>
 			private sealed class ViewDataColumn : IDataColumn
 			{
@@ -461,7 +550,7 @@ namespace TecWare.DE.Networking
 				private readonly Type dataType;
 				private readonly PropertyDictionary attributes;
 
-				#region -- Ctor/Dtor --------------------------------------------------------------
+				#region -- Ctor/Dtor --------------------------------------------------
 
 				public ViewDataColumn(string name, Type dataType, PropertyDictionary attributes)
 				{
@@ -472,7 +561,7 @@ namespace TecWare.DE.Networking
 
 				#endregion
 
-				#region -- IDataColumn ------------------------------------------------------------
+				#region -- IDataColumn ------------------------------------------------
 
 				public string Name => name;
 				public Type DataType => dataType;
@@ -483,7 +572,7 @@ namespace TecWare.DE.Networking
 
 			#endregion
 
-			#region -- class ViewDataRow ------------------------------------------------------
+			#region -- class ViewDataRow ----------------------------------------------
 
 			///////////////////////////////////////////////////////////////////////////////
 			/// <summary></summary>
@@ -492,7 +581,7 @@ namespace TecWare.DE.Networking
 				private readonly ViewDataEnumerator enumerator;
 				private readonly object[] columnValues;
 
-				#region -- Ctor/Dtor --------------------------------------------------------------
+				#region -- Ctor/Dtor --------------------------------------------------
 
 				public ViewDataRow(ViewDataEnumerator enumerator, object[] columnValues)
 				{
@@ -502,7 +591,7 @@ namespace TecWare.DE.Networking
 
 				#endregion
 
-				#region -- IDataRow ---------------------------------------------------------------
+				#region -- IDataRow ---------------------------------------------------
 
 				public override IReadOnlyList<IDataColumn> Columns => enumerator.Columns;
 				public override object this[int index] => columnValues[index];
@@ -514,15 +603,13 @@ namespace TecWare.DE.Networking
 
 			#endregion
 
-			#region -- class ViewDataEnumerator -----------------------------------------------
+			#region -- class ViewDataEnumerator ---------------------------------------
 
-			///////////////////////////////////////////////////////////////////////////////
 			/// <summary></summary>
 			private sealed class ViewDataEnumerator : IEnumerator<IDataRow>, IDataColumns
 			{
-				#region -- enum ReadingState ------------------------------------------------------
+				#region -- enum ReadingState ------------------------------------------
 
-				///////////////////////////////////////////////////////////////////////////////
 				/// <summary></summary>
 				private enum ReadingState
 				{
@@ -549,7 +636,7 @@ namespace TecWare.DE.Networking
 				private ReadingState state;
 				private ViewDataRow currentRow;
 
-				#region -- Ctor/Dtor --------------------------------------------------------------
+				#region -- Ctor/Dtor --------------------------------------------------
 
 				public ViewDataEnumerator(ViewDataReader owner)
 				{
@@ -567,7 +654,7 @@ namespace TecWare.DE.Networking
 
 				#endregion
 
-				#region -- IEnumerator ------------------------------------------------------------
+				#region -- IEnumerator ------------------------------------------------
 
 				private bool MoveNext(bool headerOnly)
 				{
@@ -717,7 +804,7 @@ namespace TecWare.DE.Networking
 
 				#endregion
 
-				#region -- IDataColumns -----------------------------------------------------------
+				#region -- IDataColumns -----------------------------------------------
 
 				public IReadOnlyList<IDataColumn> Columns
 				{
@@ -738,8 +825,12 @@ namespace TecWare.DE.Networking
 			private readonly string path;
 			private readonly string acceptedMimeType;
 
-			#region -- Ctor/Dtor --------------------------------------------------------------
+			#region -- Ctor/Dtor ------------------------------------------------------
 
+			/// <summary></summary>
+			/// <param name="request"></param>
+			/// <param name="path"></param>
+			/// <param name="acceptedMimeType"></param>
 			public ViewDataReader(BaseWebRequest request, string path, string acceptedMimeType = MimeTypes.Text.Xml)
 			{
 				this.request = request;
@@ -749,8 +840,10 @@ namespace TecWare.DE.Networking
 
 			#endregion
 
-			#region -- IEnumerable ------------------------------------------------------------
+			#region -- IEnumerable ----------------------------------------------------
 
+			/// <summary></summary>
+			/// <returns></returns>
 			public IEnumerator<IDataRow> GetEnumerator()
 				=> new ViewDataEnumerator(this);
 
@@ -762,13 +855,20 @@ namespace TecWare.DE.Networking
 
 		#endregion
 
+		/// <summary></summary>
+		/// <param name="path"></param>
+		/// <param name="acceptedMimeType"></param>
+		/// <returns></returns>
 		public IEnumerable<IDataRow> CreateViewDataReader(string path, string acceptedMimeType = MimeTypes.Text.Xml)
 			=> new ViewDataReader(this, path, acceptedMimeType);
 
 		#endregion
 
+		/// <summary></summary>
 		public Uri BaseUri => baseUri;
+		/// <summary></summary>
 		public Encoding DefaultEncoding => defaultEncoding;
+		/// <summary></summary>
 		public ICredentials Credentials => credentials;
 	} // class BaseWebReqeust
 
