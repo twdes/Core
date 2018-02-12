@@ -21,59 +21,69 @@ using TecWare.DE.Data;
 
 namespace TecWare.DE.Stuff
 {
-	#region -- class LuaPropertiesTable -------------------------------------------------
+	#region -- class LuaPropertiesTable -----------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Wrapter for <c>IPropertyReadOnlyDictionary</c> to an lua table.</summary>
 	public class LuaPropertiesTable : LuaTable
 	{
-		private IPropertyReadOnlyDictionary properties;
+		private readonly IPropertyReadOnlyDictionary properties;
 
+		/// <summary></summary>
+		/// <param name="properties"></param>
 		public LuaPropertiesTable(IPropertyReadOnlyDictionary properties)
 		{
 			this.properties = properties;
 		} // ctor
 		
+		/// <summary></summary>
+		/// <param name="key"></param>
+		/// <returns></returns>
 		protected override object OnIndex(object key)
 			=> base.OnIndex(key) ?? properties?.GetProperty(key?.ToString(), null);
 	} // class LuaPropertiesTable
 
 	#endregion
 
-	#region -- class LuaTableProperties -------------------------------------------------
+	#region -- class LuaTableProperties -----------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Wrapper for LuaTable to <c>IPropertyReadOnlyDictionary</c>.</summary>
 	public class LuaTableProperties : IPropertyReadOnlyDictionary
 	{
-		private LuaTable table;
+		private readonly LuaTable table;
 
+		/// <summary></summary>
+		/// <param name="table"></param>
 		public LuaTableProperties(LuaTable table)
 		{
 			this.table = table;
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="name"></param>
+		/// <param name="value"></param>
+		/// <returns></returns>
 		public bool TryGetProperty(string name, out object value)
 			=> (value = table?.GetMemberValue(name, true)) != null;
 	} // class LuaPropertiesTable
 
 	#endregion
 
-	#region -- class LuaFunctionEnumerator ----------------------------------------------
+	#region -- class LuaFunctionEnumerator --------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Wrapper for a Lua enumeration function to <c>IEnumerable</c></summary>
 	public sealed class LuaFunctionEnumerator : System.Collections.IEnumerable
 	{
-		private readonly object initialzer;		
+		private readonly object initialzer;
 
 		/// <summary>the function returns on the first call three parameter (iterator, state, n).</summary>
-		/// <param name="func"></param>
+		/// <param name="initialzer"></param>
 		public LuaFunctionEnumerator(object initialzer)
 		{
 			this.initialzer = initialzer ?? throw new ArgumentNullException(nameof(initialzer));
 		} // ctor
 
+		/// <summary></summary>
+		/// <returns></returns>
 		public IEnumerator GetEnumerator()
 		{
 			// initialize the iterator
@@ -99,9 +109,8 @@ namespace TecWare.DE.Stuff
 
 	#endregion
 
-	#region -- class Procs --------------------------------------------------------------
+	#region -- class Procs ------------------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public static partial class Procs
 	{
@@ -121,6 +130,9 @@ namespace TecWare.DE.Stuff
 			}
 		} // proc AddValue
 
+		/// <summary>Persist a table to xml.</summary>
+		/// <param name="table"></param>
+		/// <param name="xTarget"></param>
 		public static void ToXml(this LuaTable table, XElement xTarget)
 		{
 			// emit the members
@@ -140,6 +152,9 @@ namespace TecWare.DE.Stuff
 			}
 		} // proc ToXml
 
+		/// <summary>Persist a table to xml.</summary>
+		/// <param name="table"></param>
+		/// <returns></returns>
 		public static XElement ToXml(this LuaTable table)
 		{
 			var x = new XElement("table");
@@ -147,9 +162,15 @@ namespace TecWare.DE.Stuff
 			return x;
 		} // func ToXml
 
+		/// <summary>LuaTable to <c>IPropertyReadOnlyDictionary</c>.</summary>
+		/// <param name="table"></param>
+		/// <returns></returns>
 		public static IPropertyReadOnlyDictionary ToProperties(this LuaTable table)
 			=> table == null ? null : new LuaTableProperties(table);
 
+		/// <summary><c>IPropertyReadOnlyDictionary</c> to table.</summary>
+		/// <param name="properties"></param>
+		/// <returns></returns>
 		public static LuaTable ToTable(this IPropertyReadOnlyDictionary properties)
 			=> properties == null ? null : new LuaPropertiesTable(properties);
 
@@ -163,6 +184,9 @@ namespace TecWare.DE.Stuff
 				return Procs.ChangeType(x.Value, type);
 		} // func GetValue
 		
+		/// <summary>Create a LuaTable from a xml definition.</summary>
+		/// <param name="x"></param>
+		/// <returns></returns>
 		public static LuaTable CreateLuaTable(XElement x)
 		{
 			var t = new LuaTable();
@@ -186,9 +210,22 @@ namespace TecWare.DE.Stuff
 			return t;
 		} // func CreateLuaTable
 
+		/// <summary></summary>
+		/// <param name="t"></param>
+		/// <param name="key"></param>
+		/// <param name="value"></param>
+		/// <param name="rawGet"></param>
+		/// <returns></returns>
 		public static bool TryGetValue(this LuaTable t, object key, out object value, bool rawGet = false)
 			=> (value = t.GetValue(key, rawGet)) != null;
 
+		/// <summary></summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="t"></param>
+		/// <param name="key"></param>
+		/// <param name="value"></param>
+		/// <param name="rawGet"></param>
+		/// <returns></returns>
 		public static bool TryGetValue<T>(this LuaTable t, object key, out T value, bool rawGet = false)
 		{
 			try
@@ -211,6 +248,9 @@ namespace TecWare.DE.Stuff
 			}
 		} // func TryGetValue
 
+		/// <summary>Create Lua table from array.</summary>
+		/// <param name="values"></param>
+		/// <returns></returns>
 		public static LuaTable CreateLuaArray(params object[] values)
 		{
 			var t = new LuaTable();
@@ -219,6 +259,9 @@ namespace TecWare.DE.Stuff
 			return t;
 		} // func CreateLuaArray
 
+		/// <summary>Create Lua table from Property values.</summary>
+		/// <param name="values"></param>
+		/// <returns></returns>
 		public static LuaTable CreateLuaTable(params PropertyValue[] values)
 		{
 			var t = new LuaTable();
@@ -230,6 +273,9 @@ namespace TecWare.DE.Stuff
 			return t;
 		} // func CreateTable
 
+		/// <summary>Create a Lua table from data row.</summary>
+		/// <param name="values"></param>
+		/// <returns></returns>
 		public static LuaTable CreateLuaTable(IDataRow values)
 		{
 			var t = new LuaTable();
@@ -242,6 +288,10 @@ namespace TecWare.DE.Stuff
 			return t;
 		} // func CreateTable
 		
+		/// <summary></summary>
+		/// <param name="key"></param>
+		/// <param name="other"></param>
+		/// <returns></returns>
 		public static int CompareStringKey(object key, string other)
 		{
 			if (key == null && other == null)
@@ -257,6 +307,14 @@ namespace TecWare.DE.Stuff
 				return -1;
 		} // CompareStringKey
 
+		/// <summary></summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="table"></param>
+		/// <param name="name"></param>
+		/// <param name="default"></param>
+		/// <param name="ignoreCase"></param>
+		/// <param name="rawGet"></param>
+		/// <returns></returns>
 		public static T ReturnOptionalValue<T>(this LuaTable table, string name, T @default, bool ignoreCase = false, bool rawGet = false)
 		{
 			var value = table.GetMemberValue(name, ignoreCase, rawGet);

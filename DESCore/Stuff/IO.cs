@@ -14,16 +14,15 @@
 //
 #endregion
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace TecWare.DE.Stuff
 {
-	#region -- class WindowStream -------------------------------------------------------
+	#region -- class WindowStream -----------------------------------------------------
 
+	/// <summary>Special stream, the uses only an window of the base stream.</summary>
 	public sealed class WindowStream : Stream
 	{
 		private readonly Stream baseStream;
@@ -34,6 +33,14 @@ namespace TecWare.DE.Stuff
 		private long position = 0;
 		private long length;
 
+		#region -- Ctor/Dtor ----------------------------------------------------------
+
+		/// <summary></summary>
+		/// <param name="baseStream"></param>
+		/// <param name="offset"></param>
+		/// <param name="length"></param>
+		/// <param name="writeAble"></param>
+		/// <param name="leaveOpen"></param>
 		public WindowStream(Stream baseStream, long offset, long length, bool writeAble, bool leaveOpen)
 		{
 			this.baseStream = baseStream;
@@ -50,6 +57,8 @@ namespace TecWare.DE.Stuff
 				Seek(0, SeekOrigin.Begin);
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="disposing"></param>
 		protected override void Dispose(bool disposing)
 		{
 			if (disposing)
@@ -62,10 +71,17 @@ namespace TecWare.DE.Stuff
 			base.Dispose(disposing);
 		} // proc Dispose
 
+		#endregion
 
+		/// <summary></summary>
 		public override void Flush()
 			=> baseStream.Flush();
 
+		/// <summary></summary>
+		/// <param name="buffer"></param>
+		/// <param name="offset"></param>
+		/// <param name="count"></param>
+		/// <returns></returns>
 		public override int Read(byte[] buffer, int offset, int count)
 		{
 			var length = Length;
@@ -82,6 +98,10 @@ namespace TecWare.DE.Stuff
 				return 0;
 		} // func Read
 
+		/// <summary></summary>
+		/// <param name="offset"></param>
+		/// <param name="origin"></param>
+		/// <returns></returns>
 		public override long Seek(long offset, SeekOrigin origin)
 		{
 			long newPosition;
@@ -108,9 +128,15 @@ namespace TecWare.DE.Stuff
 			return position = newPosition;
 		} // func Seek
 
+		/// <summary></summary>
+		/// <param name="value"></param>
 		public override void SetLength(long value)
 			=> this.length = value;
 
+		/// <summary></summary>
+		/// <param name="buffer"></param>
+		/// <param name="offset"></param>
+		/// <param name="count"></param>
 		public override void Write(byte[] buffer, int offset, int count)
 		{
 			if (!CanWrite)
@@ -122,20 +148,30 @@ namespace TecWare.DE.Stuff
 			baseStream.Write(buffer, offset, count);
 		} // proc Write
 
+		/// <summary></summary>
 		public override bool CanRead => baseStream.CanRead;
+		/// <summary></summary>
 		public override bool CanSeek => baseStream.CanSeek;
+		/// <summary></summary>
 		public override bool CanWrite => writeAble && baseStream.CanWrite;
 
+		/// <summary></summary>
 		public override long Length => length < 0 ? baseStream.Length - offset : length;
+		/// <summary></summary>
 		public override long Position { get => position; set => Seek(value, SeekOrigin.Begin); }
 	} // class WindowStream
 
 	#endregion
 
+	/// <summary></summary>
 	public static partial class Procs
 	{
-		#region -- OpenStreamReader -------------------------------------------------------
+		#region -- OpenStreamReader ---------------------------------------------------
 
+		/// <summary>Open a stream read and detect encoding.,</summary>
+		/// <param name="src"></param>
+		/// <param name="default"></param>
+		/// <returns></returns>
 		public static StreamReader OpenStreamReader(Stream src, Encoding @default)
 		{
 			// Ermittle die Codierung
@@ -171,8 +207,12 @@ namespace TecWare.DE.Stuff
 
 		#endregion
 
-		#region -- ReadInArray ------------------------------------------------------------
+		#region -- ReadInArray --------------------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="src"></param>
+		/// <param name="bufferSize"></param>
+		/// <returns></returns>
 		public static async Task<byte[]> ReadInArrayAsync(this Stream src, int bufferSize = 81920)
 		{
 			if (src is MemoryStream tmp)
@@ -235,8 +275,11 @@ namespace TecWare.DE.Stuff
 
 		#endregion
 
-		#region -- FileFilterToRegex ------------------------------------------------------
+		#region -- FileFilterToRegex --------------------------------------------------
 
+		/// <summary>Simple filter to regex.</summary>
+		/// <param name="filter"></param>
+		/// <returns></returns>
 		public static string FileFilterToRegex(string filter)
 		{
 			if (String.IsNullOrEmpty(filter))

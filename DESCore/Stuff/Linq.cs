@@ -1,15 +1,26 @@
-﻿using System;
-using System.Collections.Generic;
+﻿#region -- copyright --
+//
+// Licensed under the EUPL, Version 1.1 or - as soon they will be approved by the
+// European Commission - subsequent versions of the EUPL(the "Licence"); You may
+// not use this work except in compliance with the Licence.
+//
+// You may obtain a copy of the Licence at:
+// http://ec.europa.eu/idabc/eupl
+//
+// Unless required by applicable law or agreed to in writing, software distributed
+// under the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR
+// CONDITIONS OF ANY KIND, either express or implied. See the Licence for the
+// specific language governing permissions and limitations under the Licence.
+//
+#endregion
+using System;
 using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace TecWare.DE.Stuff
 {
-	#region -- class Procs --------------------------------------------------------------
+	#region -- class Procs ------------------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public static partial class Procs
 	{
@@ -25,6 +36,11 @@ namespace TecWare.DE.Stuff
 				).First()
 		);
 
+		/// <summary></summary>
+		/// <param name="type"></param>
+		/// <param name="methodName"></param>
+		/// <param name="parameters"></param>
+		/// <returns></returns>
 		public static MethodInfo GetMethod(this Type type, string methodName, params Type[] parameters)
 		{
 			var mi = type.GetRuntimeMethod(methodName, parameters);
@@ -33,6 +49,11 @@ namespace TecWare.DE.Stuff
 			return mi;
 		} // func GetMethod
 
+		/// <summary></summary>
+		/// <param name="type"></param>
+		/// <param name="propertyName"></param>
+		/// <param name="parameters"></param>
+		/// <returns></returns>
 		public static PropertyInfo GetProperty(this Type type, string propertyName, params Type[] parameters)
 		{
 			var pi = parameters.Length == 0 ?
@@ -45,6 +66,10 @@ namespace TecWare.DE.Stuff
 			return pi;
 		} // func GetProperty
 
+		/// <summary></summary>
+		/// <param name="type"></param>
+		/// <param name="fieldName"></param>
+		/// <returns></returns>
 		public static FieldInfo GetField(this Type type, string fieldName)
 		{
 			var fi =  type.GetRuntimeField(fieldName);
@@ -67,7 +92,9 @@ namespace TecWare.DE.Stuff
 			return true;
 		} // func CompareParameter
 		
+		/// <summary></summary>
 		public static MethodInfo ObjectGetTypeMethodInfo => objectGetTypeMethodInfo.Value;
+		/// <summary></summary>
 		public static ConstructorInfo ArgumentOutOfRangeConstructorInfo2 => argumentOutOfRangeConstructorInfo.Value;
 	} // class Procs
 
