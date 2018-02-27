@@ -16,17 +16,14 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using System.Xml.Linq;
 
 namespace TecWare.DE.Stuff
 {
-	#region -- class PropertyValue ------------------------------------------------------
+	#region -- class PropertyValue ----------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public sealed class PropertyValue
 	{
@@ -34,11 +31,18 @@ namespace TecWare.DE.Stuff
 		private readonly Type type;
 		private readonly object value;
 
+		/// <summary></summary>
+		/// <param name="name"></param>
+		/// <param name="value"></param>
 		public PropertyValue(string name, object value)
 			: this(name, value?.GetType(), value)
 		{
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="name"></param>
+		/// <param name="type"></param>
+		/// <param name="value"></param>
 		public PropertyValue(string name, Type type, object value)
 		{
 			if (String.IsNullOrEmpty(name))
@@ -49,21 +53,26 @@ namespace TecWare.DE.Stuff
 			this.value = Procs.ChangeType(value, this.type);
 		} // ctor
 
+		/// <summary></summary>
+		/// <returns></returns>
 		public override string ToString()
 			=> $"{name}:{type.Name} = {value}";
 
+		/// <summary>Property name.</summary>
 		public string Name => name;
+		/// <summary>Type of the property value.</summary>
 		public Type Type => type;
+		/// <summary>Value</summary>
 		public object Value => value;
 
-		public static PropertyValue[] EmptyArray { get; } = new PropertyValue[0];
+		/// <summary></summary>
+		public static PropertyValue[] EmptyArray { get; } = Array.Empty<PropertyValue>();
 	} // class PropertyValue
 
 	#endregion
 
-	#region -- interface IPropertyReadOnlyDictionary ------------------------------------
+	#region -- interface IPropertyReadOnlyDictionary ----------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public interface IPropertyReadOnlyDictionary
 	{
@@ -76,22 +85,22 @@ namespace TecWare.DE.Stuff
 
 	#endregion
 
-	#region -- interface IPropertyEnumerableDictionary ----------------------------------
+	#region -- interface IPropertyEnumerableDictionary --------------------------------
 
+	/// <summary></summary>
 	public interface IPropertyEnumerableDictionary : IPropertyReadOnlyDictionary, IEnumerable<PropertyValue>
 	{
 	} // interface IPropertyEnumerableDictionary
 
 	#endregion
 
-	#region -- class PropertyDictionary -------------------------------------------------
+	#region -- class PropertyDictionary -----------------------------------------------
 
+	/// <summary></summary>
 	public sealed class PropertyDictionary : IPropertyEnumerableDictionary, IPropertyReadOnlyDictionary, IEnumerable<PropertyValue>
 	{
-		#region -- class EmptyReadOnlyDictionary ------------------------------------------
+		#region -- class EmptyReadOnlyDictionary --------------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
 		private sealed class EmptyReadOnlyDictionary : IPropertyEnumerableDictionary
 		{
 			public EmptyReadOnlyDictionary()
@@ -118,7 +127,7 @@ namespace TecWare.DE.Stuff
 		private PropertyDictionary parentDictionary = null;
 		private Dictionary<string, PropertyValue> properties = new Dictionary<string, PropertyValue>(StringComparer.OrdinalIgnoreCase);
 
-		#region -- Ctor -------------------------------------------------------------------
+		#region -- Ctor ---------------------------------------------------------------
 
 		/// <summary>Erzeugt ein leeres Dictionary</summary>
 		public PropertyDictionary()
@@ -133,7 +142,7 @@ namespace TecWare.DE.Stuff
 		} // ctor
 
 		/// <summary>Erzeugt ein Dictionary.</summary>
-		/// <param name="sParameterList">Parameterliste als Zeichenfolge konvertiert.</param>
+		/// <param name="parameterList">Parameterliste als Zeichenfolge konvertiert.</param>
 		public PropertyDictionary(string parameterList)
 		{
 			AddRange(Procs.SplitPropertyList(parameterList));
@@ -162,17 +171,31 @@ namespace TecWare.DE.Stuff
 
 		#endregion
 
-		#region -- SetProperty, AddRange --------------------------------------------------
+		#region -- SetProperty, AddRange ----------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="value"></param>
 		public void SetProperty(PropertyValue value)
 		{
 			lock (properties)
 				properties[value.Name] = value;
 		} // proc SetProperty
 
-		public void SetProperty(string name, object value) => SetProperty(new PropertyValue(name, null, value));
-		public void SetProperty(string name, Type type, object value) => SetProperty(new PropertyValue(name, type, value));
+		/// <summary></summary>
+		/// <param name="name"></param>
+		/// <param name="value"></param>
+		public void SetProperty(string name, object value) 
+			=> SetProperty(new PropertyValue(name, null, value));
 
+		/// <summary></summary>
+		/// <param name="name"></param>
+		/// <param name="type"></param>
+		/// <param name="value"></param>
+		public void SetProperty(string name, Type type, object value)
+			=> SetProperty(new PropertyValue(name, type, value));
+
+		/// <summary></summary>
+		/// <param name="args"></param>
 		public void AddRange(IEnumerable<KeyValuePair<string, string>> args)
 		{
 			if (args != null)
@@ -182,6 +205,8 @@ namespace TecWare.DE.Stuff
 			}
 		} // proc AddRange
 
+		/// <summary></summary>
+		/// <param name="args"></param>
 		public void AddRange(IEnumerable<KeyValuePair<string, object>> args)
 		{
 			if (args != null)
@@ -191,6 +216,8 @@ namespace TecWare.DE.Stuff
 			}
 		} // proc AddRange
 
+		/// <summary></summary>
+		/// <param name="args"></param>
 		public void AddRange(IEnumerable<PropertyValue> args)
 		{
 			if (args != null)
@@ -202,39 +229,30 @@ namespace TecWare.DE.Stuff
 
 		#endregion
 
-		#region -- GetProperty ------------------------------------------------------------
+		#region -- GetProperty --------------------------------------------------------
 
 		/// <summary>Gibt einen Parameter zurück.</summary>
 		/// <param name="name">Parametername.</param>
 		/// <param name="default">Defaultwert, falls der Wert nicht ermittelt werden konnte.</param>
 		/// <returns>Abgelegter Wert oder der Default-Wert.</returns>
 		public object GetProperty(string name, object @default)
-		{
-			object r;
-			return TryGetProperty(name, out r) ? r : @default;
-		} // func GetProperty
+			=> TryGetProperty(name, out object r) ? r : @default;
 
 		/// <summary>Gibt einen Parameter zurück.</summary>
 		/// <param name="name">Parametername.</param>
 		/// <param name="default">Defaultwert, falls der Wert nicht ermittelt werden konnte.</param>
 		/// <returns>Abgelegter Wert oder der Default-Wert.</returns>
 		public string GetProperty(string name, string @default)
-		{
-			string r;
-			return TryGetProperty(name, out r) ? r : @default;
-		} // func GetProperty
+			=> TryGetProperty(name, out string r) ? r : @default;
 
 		/// <summary>Gibt einen Parameter zurück.</summary>
 		/// <typeparam name="T">Rückgabewert.</typeparam>
 		/// <param name="name">Parametername.</param>
-		/// <param name="def">Defaultwert, falls der Wert nicht ermittelt werden konnte.</param>
+		/// <param name="default">Defaultwert, falls der Wert nicht ermittelt werden konnte.</param>
 		/// <returns>Abgelegter Wert oder der Default-Wert.</returns>
 		public T GetProperty<T>(string name, T @default)
-		{
-			T r;
-			return TryGetProperty(name, out r) ? r : @default;
-		} // func GetProperty
-
+			=> TryGetProperty(name, out T r) ? r : @default;
+		
 		/// <summary>Versucht einen Paremter zurückzugeben.</summary>
 		/// <param name="name">Parametername.</param>
 		/// <param name="value">Wert der abgelegt wurde.</param>
@@ -242,10 +260,9 @@ namespace TecWare.DE.Stuff
 		/// <returns><c>true</c>, wenn ein Wert gefunden wurde.</returns>
 		public bool TryGetProperty(string name, out object value, out Type type)
 		{
-			PropertyValue p;
 			if (!String.IsNullOrEmpty(name))
 			{
-				if (properties.TryGetValue(name, out p))
+				if (properties.TryGetValue(name, out var p))
 				{
 					value = p.Value;
 					type = p.Type;
@@ -267,11 +284,8 @@ namespace TecWare.DE.Stuff
 		/// <param name="value">Wert der abgelegt wurde.</param>
 		/// <returns><c>true</c>, wenn ein Wert gefunden wurde.</returns>
 		public bool TryGetProperty(string name, out object value)
-		{
-			Type type;
-			return TryGetProperty(name, out value, out type);
-		} // func TryGetProperty
-
+			=> TryGetProperty(name, out value, out var type);
+		
 		/// <summary>Versucht einen Paremter zurückzugeben.</summary>
 		/// <param name="name">Parametername.</param>
 		/// <param name="value">Wert der abgelegt wurde.</param>
@@ -301,10 +315,9 @@ namespace TecWare.DE.Stuff
 			{
 				try
 				{
-					if (ret is T)
-						value = (T)ret;
-					else
-						value = (T)Procs.ChangeType(ret, typeof(T));
+					value = ret is T
+						? (T)ret
+						: (T)Procs.ChangeType(ret, typeof(T));
 					return true;
 				}
 				catch (FormatException)
@@ -317,28 +330,22 @@ namespace TecWare.DE.Stuff
 
 		#endregion
 
-		#region -- Clear, Remove, Contains ------------------------------------------------
+		#region -- Clear, Remove, Contains --------------------------------------------
 
 		/// <summary>Löscht alle Parameter der aktuellen Ebene</summary>
 		public void Clear()
-		{
-			properties.Clear();
-		} // proc Clear
+			=> properties.Clear();
 
 		/// <summary>Löscht den Parameter aus dem Dictionary</summary>
 		/// <param name="name">Name des Parameters.</param>
 		public void Remove(string name)
-		{
-			properties.Remove(name);
-		} // proc Remove
+			=> properties.Remove(name);
 
 		/// <summary>Existiert dieser Parameter</summary>
 		/// <param name="name">Prüft, ob der Parameter vorhanden ist.</param>
 		/// <returns><c>true</c>, wenn der Parameter gefunden wurde.</returns>
 		public bool Contains(string name)
-		{
-			return Contains(name, true);
-		} // func Contains
+			=> Contains(name, true);
 
 		/// <summary>Existiert dieser Parameter</summary>
 		/// <param name="name">Prüft, ob der Parameter vorhanden ist.</param>
@@ -359,8 +366,8 @@ namespace TecWare.DE.Stuff
 		/// <returns>Wert</returns>
 		public object this[string name]
 		{
-			get { return GetProperty(name, null); }
-			set { SetProperty(name, value); }
+			get => GetProperty(name, null);
+			set => SetProperty(name, value);
 		} // prop this
 
 		/// <summary></summary>
@@ -371,12 +378,12 @@ namespace TecWare.DE.Stuff
 		public string PropertyList => Procs.JoinPropertyList(PropertyStrings);
 
 		/// <summary>Hinterlegter Parameter.</summary>
-		public PropertyDictionary Parent { get { return parentDictionary; } set { parentDictionary = value; } }
+		public PropertyDictionary Parent { get => parentDictionary; set => parentDictionary = value; }
 
 		/// <summary>Gibt die Anzahl der hinterlegten Parameter zurück.</summary>
 		public int Count { get { return properties.Count; } }
 
-		#region -- IEnumerable Member -----------------------------------------------------
+		#region -- IEnumerable Member -------------------------------------------------
 
 		IEnumerator<PropertyValue> IEnumerable<PropertyValue>.GetEnumerator()
 		{
@@ -395,20 +402,28 @@ namespace TecWare.DE.Stuff
 
 		#endregion
 
+		/// <summary></summary>
 		public static IPropertyEnumerableDictionary EmptyReadOnly { get; } = new EmptyReadOnlyDictionary();
 	} // class PropertyDictionary
 
 	#endregion
 
-	#region -- class XAttributesPropertyDictionary --------------------------------------
+	#region -- class XAttributesPropertyDictionary ------------------------------------
 
+	/// <summary>Property dictionary of a "attribute" xml-node.</summary>
 	public sealed class XAttributesPropertyDictionary : IPropertyReadOnlyDictionary
 	{
 		private readonly XElement x;
 
+		/// <summary></summary>
+		/// <param name="x"></param>
 		public XAttributesPropertyDictionary(XElement x)
 			=> this.x = x;
 
+		/// <summary></summary>
+		/// <param name="name"></param>
+		/// <param name="value"></param>
+		/// <returns></returns>
 		public bool TryGetProperty(string name, out object value)
 		{
 			var a = x.Attribute(name);
@@ -427,11 +442,15 @@ namespace TecWare.DE.Stuff
 
 	#endregion
 
+	#region -- class PropertyDictionaryExtensions -------------------------------------
+
+	/// <summary></summary>
 	public static class PropertyDictionaryExtensions
 	{
-		#region -- GetProperty ------------------------------------------------------------
+		#region -- GetProperty --------------------------------------------------------
 
 		/// <summary>Gibt einen Parameter zurück.</summary>
+		/// <param name="propertyDictionary"></param>
 		/// <param name="name">Parametername.</param>
 		/// <param name="default">Defaultwert, falls der Wert nicht ermittelt werden konnte.</param>
 		/// <returns>Abgelegter Wert oder der Default-Wert.</returns>
@@ -439,6 +458,7 @@ namespace TecWare.DE.Stuff
 			=> propertyDictionary.TryGetProperty(name, out var r) ? r : @default;
 
 		/// <summary>Gibt einen Parameter zurück.</summary>
+		/// <param name="propertyDictionary"></param>
 		/// <param name="name">Parametername.</param>
 		/// <param name="default">Defaultwert, falls der Wert nicht ermittelt werden konnte.</param>
 		/// <returns>Abgelegter Wert oder der Default-Wert.</returns>
@@ -447,21 +467,24 @@ namespace TecWare.DE.Stuff
 
 		/// <summary>Gibt einen Parameter zurück.</summary>
 		/// <typeparam name="T">Rückgabewert.</typeparam>
+		/// <param name="propertyDictionary"></param>
 		/// <param name="name">Parametername.</param>
-		/// <param name="def">Defaultwert, falls der Wert nicht ermittelt werden konnte.</param>
+		/// <param name="default">Defaultwert, falls der Wert nicht ermittelt werden konnte.</param>
 		/// <returns>Abgelegter Wert oder der Default-Wert.</returns>
 		public static T GetProperty<T>(this IPropertyReadOnlyDictionary propertyDictionary, string name, T @default)
 			=> propertyDictionary.TryGetProperty(name, out T r) ? r : @default;
 
 		/// <summary>Gibt einen Parameter zurück.</summary>
 		/// <typeparam name="T">Rückgabewert.</typeparam>
+		/// <param name="propertyDictionary"></param>
 		/// <param name="name">Parametername.</param>
-		/// <param name="def">Defaultwert, falls der Wert nicht ermittelt werden konnte.</param>
+		/// <param name="default">Defaultwert, falls der Wert nicht ermittelt werden konnte.</param>
 		/// <returns>Abgelegter Wert oder der Default-Wert.</returns>
 		public static T GetPropertyLate<T>(this IPropertyReadOnlyDictionary propertyDictionary, string name, Func<T> @default)
 			=> propertyDictionary.TryGetProperty(name, out T r) ? r : @default();
 
 		/// <summary>Versucht einen Paremter zurückzugeben.</summary>
+		/// <param name="propertyDictionary"></param>
 		/// <param name="name">Parametername.</param>
 		/// <param name="value">Wert der abgelegt wurde.</param>
 		/// <returns><c>true</c>, wenn ein Wert gefunden wurde.</returns>
@@ -481,6 +504,7 @@ namespace TecWare.DE.Stuff
 
 		/// <summary>Versucht einen Paremter zurückzugeben.</summary>
 		/// <typeparam name="T">Rückgabewert.</typeparam>
+		/// <param name="propertyDictionary"></param>
 		/// <param name="name">Parametername.</param>
 		/// <param name="value">Wert der abgelegt wurde.</param>
 		/// <returns><c>true</c>, wenn ein Wert gefunden wurde.</returns>
@@ -490,10 +514,9 @@ namespace TecWare.DE.Stuff
 			{
 				try
 				{
-					if (ret is T)
-						value = (T)ret;
-					else
-						value = (T)Procs.ChangeType(ret, typeof(T));
+					value = ret is T
+						? (T)ret
+						: (T)Procs.ChangeType(ret, typeof(T));
 					return true;
 				}
 				catch (FormatException)
@@ -507,35 +530,39 @@ namespace TecWare.DE.Stuff
 		#endregion
 	} // class PropertyDictionaryExtensions
 
+	#endregion
+
+	#region -- class Procs ------------------------------------------------------------
+
 	public partial class Procs
 	{
-		#region -- PropertyList -----------------------------------------------------------
+		#region -- PropertyList -------------------------------------------------------
 
 		private static string ReadStr(string cur, char terminator, ref int index)
 		{
-			StringBuilder sb = new StringBuilder();
-			bool lInQuote = false;
-			while (index < cur.Length && (lInQuote || cur[index] != terminator))
+			var sb = new StringBuilder();
+			var inQuote = false;
+			while (index < cur.Length && (inQuote || cur[index] != terminator))
 			{
-				char cCur = cur[index];
-				if (cCur == '"')
-					if (lInQuote)
+				var c = cur[index];
+				if (c == '"')
+					if (inQuote)
 					{
-						cCur = cur[++index];
-						if (cCur == terminator)
+						c = cur[++index];
+						if (c == terminator)
 							break;
-						else if (cCur == '"')
+						else if (c == '"')
 							sb.Append('"');
 						else
 						{
-							sb.Append(cCur);
-							lInQuote = false;
+							sb.Append(c);
+							inQuote = false;
 						}
 					}
 					else
-						lInQuote = true;
+						inQuote = true;
 				else
-					sb.Append(cCur);
+					sb.Append(c);
 				index++;
 			}
 			index++;
@@ -547,10 +574,8 @@ namespace TecWare.DE.Stuff
 		/// <param name="items"></param>
 		/// <returns></returns>
 		public static IEnumerable<KeyValuePair<string, string>> SplitPropertyList(string items)
-		{
-			return SplitPropertyList(items, ';');
-		} // func SplitPropertyList
-
+			=> SplitPropertyList(items, ';');
+		
 		/// <summary></summary>
 		/// <param name="items"></param>
 		/// <param name="sepChar"></param>
@@ -579,12 +604,14 @@ namespace TecWare.DE.Stuff
 		/// <returns></returns>
 		public static string JoinPropertyList(IEnumerable<KeyValuePair<string, string>> items)
 		{
-			StringBuilder sb = new StringBuilder();
-			foreach (KeyValuePair<string, string> oCur in items)
-				sb.Append(GetValue(oCur.Key)).Append('=').Append(GetValue(oCur.Value)).Append(';');
+			var sb = new StringBuilder();
+			foreach (var cur in items)
+				sb.Append(GetValue(cur.Key)).Append('=').Append(GetValue(cur.Value)).Append(';');
 			return sb.ToString();
 		} // func JoinPropertyList
 
 		#endregion
 	}
+
+	#endregion
 }

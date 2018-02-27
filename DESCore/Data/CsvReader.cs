@@ -22,54 +22,53 @@ using System.Text;
 
 namespace TecWare.DE.Data
 {
-	#region -- ITextCoreReader ----------------------------------------------------------
+	#region -- ITextCoreReader --------------------------------------------------------
 
+	/// <summary>Reader interface for row and column based text-files.</summary>
 	public interface ITextCoreReader : IReadOnlyList<string>, IDisposable
 	{
-		/// <summary></summary>
+		/// <summary>Skip rows, without reading it.</summary>
 		/// <param name="rows"></param>
 		/// <returns></returns>
 		bool SkipRows(int rows);
-		/// <summary></summary>
+		/// <summary>Read next row.</summary>
 		/// <returns></returns>
 		bool ReadRow();
 
-		/// <summary></summary>
+		/// <summary>Base reader.</summary>
 		TextReader BaseReader { get; }
-		/// <summary></summary>
-		TextSCoreSettings Settings { get; }
+		/// <summary>Settings for the text-file.</summary>
+		TextCoreSettings Settings { get; }
 	} //	interface ITextCoreReader
 
 	#endregion
 
-	#region -- class TextCoreReader -----------------------------------------------------
+	#region -- class TextCoreReader ---------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Base text reader implementation.</summary>
 	public abstract class TextCoreReader<TTEXTSCORESETTINGS> : ITextCoreReader
-		where TTEXTSCORESETTINGS : TextSCoreSettings
+		where TTEXTSCORESETTINGS : TextCoreSettings
 	{
 		private readonly TextReader tr;
 		private readonly TTEXTSCORESETTINGS settings;
 
-		#region -- Ctor/Dtor --------------------------------------------------------------
+		#region -- Ctor/Dtor ----------------------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="tr"></param>
+		/// <param name="settings"></param>
 		protected TextCoreReader(TextReader tr, TTEXTSCORESETTINGS settings)
 		{
-			if (tr == null)
-				throw new ArgumentNullException("TextReader");
-			if (settings == null)
-				throw new ArgumentNullException("settings");
-
-			this.tr = tr;
-			this.settings = settings;
+			this.tr = tr ?? throw new ArgumentNullException(nameof(tr));
+			this.settings = settings ?? throw new ArgumentNullException(nameof(settings));
 		} // ctor
 
+		/// <summary></summary>
 		public void Dispose()
-		{
-			Dispose(true);
-		} // proc Dispose
+			=> Dispose(true);
 
+		/// <summary></summary>
+		/// <param name="disposing"></param>
 		protected virtual void Dispose(bool disposing)
 		{
 			if (disposing)
@@ -81,7 +80,7 @@ namespace TecWare.DE.Data
 
 		#endregion
 
-		#region -- GetEnumerator ----------------------------------------------------------
+		#region -- GetEnumerator ------------------------------------------------------
 
 		/// <summary>Enumerate the columns</summary>
 		/// <returns></returns>
@@ -92,7 +91,7 @@ namespace TecWare.DE.Data
 		} // func GetEnumerator
 
 		IEnumerator IEnumerable.GetEnumerator()
-		=> GetEnumerator();
+			=> GetEnumerator();
 
 		#endregion
 
@@ -102,7 +101,6 @@ namespace TecWare.DE.Data
 		public abstract bool SkipRows(int rows);
 
 		/// <summary>Reads the contents of the current row.</summary>
-		/// <param name="columnIndex"></param>
 		/// <returns></returns>
 		public abstract bool ReadRow();
 		
@@ -118,13 +116,14 @@ namespace TecWare.DE.Data
 		/// <summary>Settings for the file.</summary>
 		public TTEXTSCORESETTINGS Settings => settings;
 
-		TextSCoreSettings ITextCoreReader.Settings => settings;
+		TextCoreSettings ITextCoreReader.Settings => settings;
 	} // interface ITextCoreReader
 
 	#endregion
 
-	#region -- class TextFixedReader ----------------------------------------------------
+	#region -- class TextFixedReader --------------------------------------------------
 
+	/// <summary>Text reader, that is based on a fixed column length.</summary>
 	public sealed class TextFixedReader : TextCoreReader<TextFixedSettings>
 	{
 		private readonly int recordLength;
@@ -132,6 +131,9 @@ namespace TecWare.DE.Data
 
 		private char[] currentRecord;
 		
+		/// <summary></summary>
+		/// <param name="tr"></param>
+		/// <param name="settings"></param>
 		public TextFixedReader(TextReader tr, TextFixedSettings settings)
 			: base(tr, settings)
 		{
@@ -162,6 +164,9 @@ namespace TecWare.DE.Data
 				throw new ArgumentException("Invalid block length.");
 		} // proc ReadRecord
 
+		/// <summary></summary>
+		/// <param name="rows"></param>
+		/// <returns></returns>
 		public override bool SkipRows(int rows)
 		{
 			while (rows-- > 0)
@@ -172,13 +177,17 @@ namespace TecWare.DE.Data
 			return true;
 		} // func SkipRows
 
+		/// <summary></summary>
+		/// <returns></returns>
 		public override bool ReadRow()
-		{
-			return ReadRecord(true);
-		} // func ReadRow
-
+			=> ReadRecord(true);
+		
+		/// <summary></summary>
 		public override int Count => recordOffsets.Length;
 
+		/// <summary></summary>
+		/// <param name="index"></param>
+		/// <returns></returns>
 		public override string this[int index]
 		{
 			get
@@ -200,11 +209,12 @@ namespace TecWare.DE.Data
 
 	#endregion
 
-	#region -- class TextCsvReader ------------------------------------------------------
+	#region -- class TextCsvReader ----------------------------------------------------
 
+	/// <summary>Csv reader</summary>
 	public sealed class TextCsvReader : TextCoreReader<TextCsvSettings>
 	{
-		#region -- enum ReadColumnReturn --------------------------------------------------
+		#region -- enum ReadColumnReturn ----------------------------------------------
 
 		private enum ReadColumnReturn
 		{
@@ -224,14 +234,19 @@ namespace TecWare.DE.Data
 		private int charBufferLength = 0;
 		private readonly char[] charBuffer;
 
-		#region -- Ctor/Dtor --------------------------------------------------------------
+		#region -- Ctor/Dtor ----------------------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="tr"></param>
+		/// <param name="settings"></param>
 		public TextCsvReader(TextReader tr, TextCsvSettings settings)
 			: base(tr, settings)
 		{
 			this.charBuffer = new char[1024];
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="disposing"></param>
 		protected override void Dispose(bool disposing)
 		{
 			if (disposing)
@@ -241,7 +256,7 @@ namespace TecWare.DE.Data
 
 		#endregion
 
-		#region -- Primitives -------------------------------------------------------------
+		#region -- Primitives ---------------------------------------------------------
 
 		private void SetColumn(int index, string value)
 		{
@@ -261,7 +276,7 @@ namespace TecWare.DE.Data
 
 		#endregion
 
-		#region -- SkipRow ----------------------------------------------------------------
+		#region -- SkipRow ------------------------------------------------------------
 
 		private bool SkipRow()
 		{
@@ -301,6 +316,9 @@ namespace TecWare.DE.Data
 			}
 		} // func SkipRow
 
+		/// <summary></summary>
+		/// <param name="rows"></param>
+		/// <returns></returns>
 		public override bool SkipRows(int rows)
 		{
 			while (rows-- > 0)
@@ -313,7 +331,7 @@ namespace TecWare.DE.Data
 
 		#endregion
 
-		#region -- ReadRow ----------------------------------------------------------------
+		#region -- ReadRow ------------------------------------------------------------
 
 		private ReadColumnReturn ReadColumn(int currentColumn)
 		{
@@ -407,6 +425,8 @@ namespace TecWare.DE.Data
 			}
 		} // func ReadColumn
 
+		/// <summary></summary>
+		/// <returns></returns>
 		public override bool ReadRow()
 		{
 			// first clear current row
@@ -440,28 +460,30 @@ namespace TecWare.DE.Data
 
 	#endregion
 
-	#region -- class TextRowEnumerator --------------------------------------------------
+	#region -- class TextRowEnumerator ------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Enumerator implementation for a text reader.</summary>
 	public abstract class TextRowEnumerator<T> : IEnumerator<T>
 	{
 		private readonly ITextCoreReader coreReader;
 		private int currentRow = -1;
 		private int currentDataRow = -1;
 
-		#region -- Ctor/Dtor --------------------------------------------------------------
+		#region -- Ctor/Dtor ----------------------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="coreReader"></param>
 		public TextRowEnumerator(ITextCoreReader coreReader)
 		{
 			this.coreReader = coreReader;
 		} // ctor
 
+		/// <summary></summary>
 		public void Dispose()
-		{
-			Dispose(true);
-		} // proc Dispose
+			=> Dispose(true);
 
+		/// <summary></summary>
+		/// <param name="disposing"></param>
 		protected virtual void Dispose(bool disposing)
 		{
 			if (disposing)
@@ -470,7 +492,7 @@ namespace TecWare.DE.Data
 
 		#endregion
 
-		#region -- Enumerator -------------------------------------------------------------
+		#region -- Enumerator ---------------------------------------------------------
 
 		private void SkipToRow(int targetRow)
 		{
@@ -497,6 +519,7 @@ namespace TecWare.DE.Data
 		/// <summary></summary>
 		protected virtual void OnReset() { }
 
+		/// <summary></summary>
 		public void Reset()
 		{
 			if (currentRow == -1)
@@ -515,6 +538,8 @@ namespace TecWare.DE.Data
 			OnReset();
 		} // proc Reset
 		
+		/// <summary></summary>
+		/// <returns></returns>
 		public virtual string[] MoveToHeader()
 		{
 			// move to header
@@ -538,6 +563,8 @@ namespace TecWare.DE.Data
 		{
 		} // proc UpdateCurrent
 
+		/// <summary></summary>
+		/// <returns></returns>
 		public virtual bool MoveNext()
 		{
 			SkipToRow(coreReader.Settings.StartRow);

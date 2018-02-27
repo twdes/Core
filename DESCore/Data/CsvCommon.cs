@@ -38,7 +38,7 @@ namespace TecWare.DE.Data
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public abstract class TextSCoreSettings
+	public abstract class TextCoreSettings
 	{
 		/// <summary>Leave Stream Open</summary>
 		public bool LeaveStreamOpen { get; set; } = false;
@@ -50,7 +50,7 @@ namespace TecWare.DE.Data
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public sealed class TextFixedSettings : TextSCoreSettings
+	public sealed class TextFixedSettings : TextCoreSettings
 	{
 		/// <summary></summary>
 		public int[] Lengths { get; set; } = null;
@@ -60,7 +60,7 @@ namespace TecWare.DE.Data
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Description of the text file.</summary>
-	public sealed class TextCsvSettings : TextSCoreSettings
+	public sealed class TextCsvSettings : TextCoreSettings
 	{
 		/// <summary>Delemitter for the columns (default: ';').</summary>
 		public char Delemiter { get; set; } = ';';

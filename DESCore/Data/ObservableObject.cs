@@ -16,30 +16,36 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace TecWare.DE.Data
 {
-	///////////////////////////////////////////////////////////////////////////////
+	#region -- class ObservableObject -------------------------------------------------
+
 	/// <summary></summary>
 	public class ObservableObject : INotifyPropertyChanged
 	{
 		/// <summary>Informiert über geänderte Objekte</summary>
 		public event PropertyChangedEventHandler PropertyChanged;
 
-		protected virtual void OnPropertyChanged(string sPropertyName)
+		/// <summary></summary>
+		/// <param name="propertyName"></param>
+		protected virtual void OnPropertyChanged(string propertyName)
 		{
-			if (String.IsNullOrEmpty(sPropertyName))
+			if (String.IsNullOrEmpty(propertyName))
 				throw new ArgumentNullException();
 
-			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(sPropertyName));
+			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 		} // proc OnPropertyChanged
 
+		/// <summary></summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="value"></param>
+		/// <param name="newValue"></param>
+		/// <param name="getPropertyName"></param>
+		/// <returns></returns>
 		protected bool Set<T>(ref T value, T newValue, Func<string> getPropertyName)
 		{
 			if (EqualityComparer<T>.Default.Equals(value, newValue))
@@ -50,11 +56,23 @@ namespace TecWare.DE.Data
 			return true;
 		} // func Set
 
-		protected bool Set<T>(ref T value, T newValue, [CallerMemberName] string sPropertyName = null)
+		/// <summary></summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="value"></param>
+		/// <param name="newValue"></param>
+		/// <param name="propertyName"></param>
+		/// <returns></returns>
+		protected bool Set<T>(ref T value, T newValue, [CallerMemberName] string propertyName = null)
 		{
-			return Set(ref value, newValue, () => sPropertyName);
+			return Set(ref value, newValue, () => propertyName);
 		} // func Set
 
+		/// <summary></summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="propertyExpression"></param>
+		/// <param name="value"></param>
+		/// <param name="newValue"></param>
+		/// <returns></returns>
 		protected bool Set<T>(Expression<Func<T>> propertyExpression, ref T value, T newValue)
 		{
 			if (propertyExpression == null)
@@ -63,4 +81,6 @@ namespace TecWare.DE.Data
 			return Set(ref value, newValue, () => ((PropertyInfo)((MemberExpression)(propertyExpression.Body)).Member).Name);
 		} // func Set
 	} // class ObservableObject
+
+	#endregion
 }

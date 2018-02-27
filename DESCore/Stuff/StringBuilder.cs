@@ -14,18 +14,16 @@
 //
 #endregion
 using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace TecWare.DE.Stuff
 {
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public static partial class Procs
 	{
+		/// <summary></summary>
+		/// <param name="sb"></param>
+		/// <returns></returns>
 		public static StringBuilder WriteFreshLine(this StringBuilder sb)
 		{
 			if (sb.Length > 0 && sb[sb.Length - 1] != '\n')
@@ -34,6 +32,10 @@ namespace TecWare.DE.Stuff
 			return sb;
 		} // func WriteFreshLine
 
+		/// <summary></summary>
+		/// <param name="sb"></param>
+		/// <param name="sHeader"></param>
+		/// <returns></returns>
 		public static StringBuilder WriteSeperator(this StringBuilder sb, string sHeader = null)
 		{
 			sb.WriteFreshLine();
@@ -50,6 +52,10 @@ namespace TecWare.DE.Stuff
 			return sb;
 		} // proc WriteSeperator
 
+		/// <summary></summary>
+		/// <param name="sb"></param>
+		/// <param name="e"></param>
+		/// <returns></returns>
 		public static StringBuilder WriteException(this StringBuilder sb, Exception e)
 		{
 			ExceptionFormatter.FormatPlainText(sb, e);

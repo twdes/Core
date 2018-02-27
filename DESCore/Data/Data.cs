@@ -72,6 +72,7 @@ namespace TecWare.DE.Data
 		bool IsDataOwner { get; }
 		/// <summary>Gets the value for the column with the specified name.</summary>
 		/// <param name="columnName">The name of the column to get the value.</param>
+		/// <param name="throwException"></param>
 		/// <returns></returns>
 		object this[string columnName, bool throwException = true] { get; }
 	} // interface IDataRow
@@ -178,13 +179,17 @@ namespace TecWare.DE.Data
 
 		#region -- IDynamicMetaObjectProvider -----------------------------------------
 
-		public DynamicMetaObject GetMetaObject(Expression parameter)
+		DynamicMetaObject IDynamicMetaObjectProvider.GetMetaObject(Expression parameter)
 			=> new DynamicDataRowMetaObjectProvider(parameter, this);
 
 		#endregion
 
 		#region -- IDataRow -----------------------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="columnName"></param>
+		/// <param name="value"></param>
+		/// <returns></returns>
 		public virtual bool TryGetProperty(string columnName, out object value)
 		{
 			value = null;
@@ -210,9 +215,16 @@ namespace TecWare.DE.Data
 			} // catch
 		} // func TryGetProperty
 
+		/// <summary></summary>
+		/// <param name="columnName"></param>
+		/// <returns></returns>
 		public object this[string columnName]
 			=> this[columnName, false];
 
+		/// <summary></summary>
+		/// <param name="columnName"></param>
+		/// <param name="throwException"></param>
+		/// <returns></returns>
 		public virtual object this[string columnName, bool throwException]
 		{
 			get
@@ -235,9 +247,14 @@ namespace TecWare.DE.Data
 		protected virtual BindingRestrictions GetRowBindingRestriction(Expression expression)
 			=> null;
 
+		/// <summary></summary>
+		/// <param name="index"></param>
+		/// <returns></returns>
 		public abstract object this[int index] { get; }
+		/// <summary></summary>
 		public abstract bool IsDataOwner { get; }
 
+		/// <summary></summary>
 		public abstract IReadOnlyList<IDataColumn> Columns { get; }
 
 		#endregion
@@ -265,12 +282,17 @@ namespace TecWare.DE.Data
 		private readonly object[] values;
 		private readonly SimpleDataColumn[] columns;
 
+		/// <summary></summary>
+		/// <param name="values"></param>
+		/// <param name="columns"></param>
 		public SimpleDataRow(object[] values, SimpleDataColumn[] columns)
 		{
 			this.values = values ?? throw new ArgumentNullException(nameof(values));
 			this.columns = columns ?? throw new ArgumentNullException(nameof(values));
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="row"></param>
 		public SimpleDataRow(IDataRow row)
 		{
 			var length = row.Columns.Count;
@@ -285,8 +307,13 @@ namespace TecWare.DE.Data
 			}
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="index"></param>
+		/// <returns></returns>
 		public override object this[int index] => values[index];
+		/// <summary></summary>
 		public override bool IsDataOwner => true;
+		/// <summary></summary>
 		public override IReadOnlyList<IDataColumn> Columns => columns;
 	} // class SimpleDataRow
 
@@ -299,8 +326,6 @@ namespace TecWare.DE.Data
 	{
 		#region -- class PropertyColumnInfo -------------------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
 		private sealed class PropertyColumnInfo : IDataColumn
 		{
 			private readonly PropertyInfo property;
@@ -366,6 +391,8 @@ namespace TecWare.DE.Data
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="enumerator"></param>
 		public GenericDataRowEnumerator(IEnumerator<T> enumerator)
 		{
 			this.enumerator = enumerator ?? throw new ArgumentNullException();
@@ -374,11 +401,10 @@ namespace TecWare.DE.Data
 				.Select(pi => new PropertyColumnInfo(pi)).ToArray();
 		} // ctor
 
+		/// <summary></summary>
 		public void Dispose()
-		{
-			enumerator.Dispose();
-		} // proc Dispose
-
+			=> enumerator.Dispose();
+		
 		#endregion
 
 		private PropertyColumnInfo GetProperty(string propertyName, bool throwException)
@@ -392,15 +418,21 @@ namespace TecWare.DE.Data
 			return property;
 		} // proc GetProperty
 
+		/// <summary></summary>
 		public void Reset()
 			=> enumerator.Reset();
 
+		/// <summary></summary>
+		/// <returns></returns>
 		public bool MoveNext()
 			=> enumerator.MoveNext();
 
+		/// <summary></summary>
 		public IReadOnlyList<IDataColumn> Columns => properties;
 
+		/// <summary></summary>
 		public IDataRow Current => new PropertyDataRow(this, BaseCurrent);
+		/// <summary></summary>
 		public T BaseCurrent => enumerator.Current;
 
 		object IEnumerator.Current => Current;
@@ -417,11 +449,17 @@ namespace TecWare.DE.Data
 		private readonly Type dataType;
 		private readonly IPropertyEnumerableDictionary attributes;
 
+		/// <summary></summary>
+		/// <param name="column"></param>
 		public SimpleDataColumn(IDataColumn column)
 			: this(column.Name, column.DataType, column.Attributes)
 		{
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="name"></param>
+		/// <param name="dataType"></param>
+		/// <param name="attributes"></param>
 		public SimpleDataColumn(string name, Type dataType, IPropertyEnumerableDictionary attributes = null)
 		{
 			if (String.IsNullOrEmpty(name))
@@ -432,11 +470,16 @@ namespace TecWare.DE.Data
 			this.attributes = attributes ?? PropertyDictionary.EmptyReadOnly;
 		} // ctor
 
+		/// <summary></summary>
+		/// <returns></returns>
 		public override string ToString()
 			=> $"Column: {name} ({dataType.Name})";
 
+		/// <summary></summary>
 		public string Name => name;
+		/// <summary></summary>
 		public Type DataType => dataType;
+		/// <summary></summary>
 		public IPropertyEnumerableDictionary Attributes => attributes;
 	} // class SimpleDataColumn
 
@@ -444,15 +487,19 @@ namespace TecWare.DE.Data
 
 	#region -- class SimpleDataColumns ------------------------------------------------
 
+	/// <summary></summary>
 	public class SimpleDataColumns : IDataColumns
 	{
 		private readonly IDataColumn[] columns;
 
+		/// <summary></summary>
+		/// <param name="columns"></param>
 		public SimpleDataColumns(params IDataColumn[] columns)
 		{
 			this.columns = columns ?? throw new ArgumentNullException(nameof(columns));
 		} // ctor
 
+		/// <summary></summary>
 		public IReadOnlyList<IDataColumn> Columns => columns;
 	} // class SimpleDataColumns
 
@@ -460,11 +507,22 @@ namespace TecWare.DE.Data
 
 	#region -- class DataRowHelper-----------------------------------------------------
 
+	/// <summary></summary>
 	public static class DataRowHelper
 	{
+		/// <summary></summary>
+		/// <param name="columns"></param>
+		/// <param name="columnName"></param>
+		/// <param name="throwException"></param>
+		/// <returns></returns>
 		public static int FindColumnIndex(this IEnumerator<IDataRow> columns, string columnName, bool throwException = false)
 			=> FindColumnIndex((IDataColumns)columns, columnName, throwException);
 
+		/// <summary></summary>
+		/// <param name="columns"></param>
+		/// <param name="columnName"></param>
+		/// <param name="throwException"></param>
+		/// <returns></returns>
 		public static int FindColumnIndex(this IDataColumns columns, string columnName, bool throwException = false)
 		{
 			for (var i = 0; i < columns.Columns.Count; i++)
@@ -476,7 +534,44 @@ namespace TecWare.DE.Data
 				throw new ArgumentOutOfRangeException(String.Format("Column '{0}' not found", columnName));
 			return -1;
 		} // func FindColumnIndex
+		  /// <summary></summary>
+		  /// <param name="columns"></param>
+		  /// <param name="throwException"></param>
+		  /// <param name="columnNames"></param>
+		  /// <returns></returns>
+		public static int[] FindColumnIndices(this IDataColumns columns, bool throwException, params string[] columnNames)
+		{
+			// init result
+			var idx = new int[columnNames.Length];
+			for (var i = 0; i < idx.Length; i++)
+				idx[i] = -1;
 
+			// match columns
+			for (var i = 0; i < columns.Columns.Count; i++)
+			{
+				var n = columns.Columns[i].Name;
+				var j = Array.FindIndex(columnNames, c => String.Compare(n, c, StringComparison.OrdinalIgnoreCase) == 0);
+				if (j != -1)
+					idx[j] = i;
+			}
+
+			// return values
+			for (var i = 0; i < idx.Length; i++)
+			{
+				if (idx[i] == -1)
+					throw new ArgumentOutOfRangeException(nameof(columnNames), columnNames[i], $"Column '{columnNames[i]}' not found.");
+			}
+
+			return idx;
+		} // func FindColumnIndices
+
+		/// <summary></summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="row"></param>
+		/// <param name="index"></param>
+		/// <param name="default"></param>
+		/// <param name="raiseCondition"></param>
+		/// <returns></returns>
 		public static T GetValue<T>(this IDataValues row, int index, T @default, Action<T> raiseCondition = null)
 		{
 			if (index == -1)
@@ -491,11 +586,21 @@ namespace TecWare.DE.Data
 			return r;
 		} // func GetGetValue
 
+		/// <summary></summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="items"></param>
+		/// <param name="index"></param>
+		/// <param name="default"></param>
+		/// <param name="raiseCondition"></param>
+		/// <returns></returns>
 		public static T GetValue<T>(this IEnumerator<IDataRow> items, int index, T @default, Action<T> raiseCondition = null)
 			=> GetValue<T>(items.Current, index, @default, raiseCondition);
 
 		#region -- ToMyData -----------------------------------------------------------
 
+		/// <summary>If the row is not owner of the data, the row data is copied in a SimpleDataRow.</summary>
+		/// <param name="row"></param>
+		/// <returns></returns>
 		public static IDataRow ToMyData(this IDataRow row)
 			=> row.IsDataOwner ? row : new SimpleDataRow(row);
 

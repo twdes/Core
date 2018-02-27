@@ -21,32 +21,29 @@ using Neo.IronLua;
 
 namespace TecWare.DE.Stuff
 {
-	#region -- class DisposableScope ----------------------------------------------------
+	#region -- class DisposableScope --------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public sealed class DisposableScope : IDisposable
 	{
 		private readonly Action dispose;
 
+		/// <summary></summary>
+		/// <param name="dispose"></param>
 		public DisposableScope(Action dispose)
-		{
-			this.dispose = dispose;
-		} // ctor
+			=> this.dispose = dispose;
 
+		/// <summary></summary>
 		public void Dispose()
-		{
-			dispose();
-		} // proc Dispose
+			=> dispose();
 	} // class class DisposableScope
 
 	#endregion
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public static partial class Procs
 	{
-		#region -- FreeAndNil -------------------------------------------------------------
+		#region -- FreeAndNil ---------------------------------------------------------
 
 		/// <summary>Ruft IDisposable.Dispose, wenn es implementiert wurde. Sonst wird die Variable auf <c>null</c> gesetzt.</summary>
 		/// <typeparam name="T"></typeparam>
@@ -55,8 +52,7 @@ namespace TecWare.DE.Stuff
 			where T : class
 		{
 			// Optionaler Call von Dispose
-			IDisposable disp = obj as IDisposable;
-			if (disp != null)
+			if (obj is IDisposable disp)
 				disp.Dispose();
 
 			// Setze die Referenz auf Null
@@ -65,7 +61,7 @@ namespace TecWare.DE.Stuff
 
 		#endregion
 
-		#region -- ChangeType -------------------------------------------------------------
+		#region -- ChangeType ---------------------------------------------------------
 
 		/// <summary>Konvertiert den Datentyp zum gewünschten Ziel-Datentyp.</summary>
 		/// <param name="value"></param>
@@ -92,7 +88,7 @@ namespace TecWare.DE.Stuff
 			else if (typeTo == typeof(XDocument) && (value == null || value is string))
 				return value == null ? null : XDocument.Parse((string)value);
 			else if (typeTo == typeof(string) && (value == null || value is XDocument))
-				return value == null ? null : value.ToString();
+				return value?.ToString();
 
 			else if (typeTo == typeof(Type) && (value == null || value is string))
 				return value == null ? null : LuaType.GetType((string)value, lateAllowed: false).Type;
@@ -111,12 +107,23 @@ namespace TecWare.DE.Stuff
 		
 		#endregion
 
-		#region -- GetService -------------------------------------------------------------
+		#region -- GetService ---------------------------------------------------------
 		
+		/// <summary></summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="sp"></param>
+		/// <param name="throwException"></param>
+		/// <returns></returns>
 		public static T GetService<T>(this IServiceProvider sp, bool throwException = false)
 			where T : class
 			=> GetService<T>(sp, typeof(T), throwException);
 		
+		/// <summary></summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="sp"></param>
+		/// <param name="serviceType"></param>
+		/// <param name="throwException"></param>
+		/// <returns></returns>
 		public static T GetService<T>(this IServiceProvider sp, Type serviceType, bool throwException = false)
 			where T : class
 		{
@@ -132,8 +139,12 @@ namespace TecWare.DE.Stuff
 
 		#endregion
 
-		#region -- CompareBytes -----------------------------------------------------------
+		#region -- CompareBytes -------------------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="a"></param>
+		/// <param name="b"></param>
+		/// <returns></returns>
 		public static bool CompareBytes(byte[] a, byte[] b)
 		{
 			if (a == null || b == null)
@@ -141,9 +152,16 @@ namespace TecWare.DE.Stuff
 			if (a.Length != b.Length)
 				return false;
 
-			return CompareBytes(a, 0, b, 0, a.Length);
+			return CompareBytesIntern(a, 0, b, 0, a.Length);
 		} // func CompareBytes
 
+		/// <summary></summary>
+		/// <param name="a"></param>
+		/// <param name="aOffset"></param>
+		/// <param name="b"></param>
+		/// <param name="bOffset"></param>
+		/// <param name="length"></param>
+		/// <returns></returns>
 		public static bool CompareBytes(byte[] a, int aOffset, byte[] b, int bOffset, int length)
 		{
 			if (a == null || b == null)
@@ -159,7 +177,7 @@ namespace TecWare.DE.Stuff
 
 			return CompareBytesIntern(a, aOffset, b, bOffset, length);
 		} // proc CompareBytes
-
+		
 		private static bool CompareBytesIntern(byte[] a, int aOffset, byte[] b, int bOffset, int length)
 		{
 			for (var i = 0; i < length; i++)
@@ -173,11 +191,19 @@ namespace TecWare.DE.Stuff
 
 		#endregion
 
-		#region -- Convert Bytes --------------------------------------------------------
+		#region -- Convert Bytes ------------------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="bytes"></param>
+		/// <returns></returns>
 		public static byte[] ConvertToBytes(string bytes)
 			=> ConvertToBytes(bytes, 0, bytes.Length);
 
+		/// <summary></summary>
+		/// <param name="bytes"></param>
+		/// <param name="ofs"></param>
+		/// <param name="len"></param>
+		/// <returns></returns>
 		public static byte[] ConvertToBytes(string bytes, int ofs, int len)
 		{
 			if (ofs + len > bytes.Length)
@@ -205,9 +231,17 @@ namespace TecWare.DE.Stuff
 			return data;
 		} // func ConvertToString
 
+		/// <summary></summary>
+		/// <param name="bytes"></param>
+		/// <returns></returns>
 		public static string ConvertToString(byte[] bytes)
 			=> ConvertToString(bytes, 0, bytes.Length);
 
+		/// <summary></summary>
+		/// <param name="bytes"></param>
+		/// <param name="ofs"></param>
+		/// <param name="len"></param>
+		/// <returns></returns>
 		public static string ConvertToString(byte[] bytes, int ofs, int len)
 		{
 			var sb = new StringBuilder(len << 1);
@@ -218,7 +252,5 @@ namespace TecWare.DE.Stuff
 		} // func ConvertToString
 
 		#endregion
-
-		public readonly static string[] EmptyStringArray = new string[0];
 	} // class Procs
 }

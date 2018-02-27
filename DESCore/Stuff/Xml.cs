@@ -16,10 +16,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
-using System.IO.Compression;
 using System.Linq;
-using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
@@ -27,11 +24,12 @@ using System.Xml.Linq;
 
 namespace TecWare.DE.Stuff
 {
-	///////////////////////////////////////////////////////////////////////////////
+	#region -- class Procs ------------------------------------------------------------
+
 	/// <summary></summary>
 	public static partial class Procs
 	{
-		#region -- ReaderSettings, WriterSettings ---------------------------------------
+		#region -- ReaderSettings, WriterSettings -------------------------------------
 
 		/// <summary>Gibt Standard Settings zum Lesen von Xml-Dateien zurück</summary>
 		public static XmlReaderSettings XmlReaderSettings
@@ -70,7 +68,7 @@ namespace TecWare.DE.Stuff
 
 		#endregion
 
-		#region -- GetAttribute, CreateAttribute ----------------------------------------
+		#region -- GetAttribute, CreateAttribute --------------------------------------
 
 		private static T ConvertXmlContent<T>(object value, T @default)
 		{
@@ -84,37 +82,78 @@ namespace TecWare.DE.Stuff
 			}
 		} // func ConvertXmlContent
 
+		/// <summary></summary>
+		/// <param name="xml"></param>
+		/// <param name="default"></param>
+		/// <returns></returns>
 		public static string GetElementContent(this XmlReader xml, string @default)
 			=> xml.HasValue
 				? xml.ReadContentAsString()
 				: @default;
 
+		/// <summary></summary>
+		/// <param name="xml"></param>
+		/// <param name="default"></param>
+		/// <returns></returns>
 		public static Task<string> GetElementContentAsync(this XmlReader xml, string @default)
 			=> xml.HasValue
 				? xml.ReadContentAsStringAsync()
 				: Task.FromResult(@default);
 
+		/// <summary></summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="xml"></param>
+		/// <param name="default"></param>
+		/// <returns></returns>
 		public static T GetElementContent<T>(this XmlReader xml, T @default)
 			=> ConvertXmlContent(GetElementContent(xml, (string)null), @default);
 
+		/// <summary></summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="xml"></param>
+		/// <param name="default"></param>
+		/// <returns></returns>
 		public static async Task<T> GetElementContentAsync<T>(this XmlReader xml, T @default)
 			=> ConvertXmlContent(await GetElementContentAsync(xml, (string)null), @default);
 
+		/// <summary></summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="xml"></param>
+		/// <param name="default"></param>
+		/// <returns></returns>
 		public static T ReadElementContent<T>(this XmlReader xml, T @default)
 			=> ConvertXmlContent(xml.ReadElementContentAsString(), @default);
 
+		/// <summary></summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="xml"></param>
+		/// <param name="default"></param>
+		/// <returns></returns>
 		public static async Task<T> ReadElementContentAsync<T>(this XmlReader xml, T @default)
 			=> ConvertXmlContent(await xml.ReadElementContentAsStringAsync(), @default);
 
+		/// <summary></summary>
+		/// <param name="message"></param>
+		/// <param name="innerException"></param>
+		/// <param name="lineInfo"></param>
+		/// <returns></returns>
 		public static XmlException CreateXmlException(string message, Exception innerException, IXmlLineInfo lineInfo)
 			=> new XmlException(message, innerException, lineInfo?.LineNumber ?? 0, lineInfo?.LinePosition ?? 0);
 
+		/// <summary></summary>
+		/// <param name="xml"></param>
+		/// <param name="expectedNodeType"></param>
+		/// <returns></returns>
 		public static async Task MoveToContentAsync(this XmlReader xml, XmlNodeType expectedNodeType)
 		{
 			if (await xml.MoveToContentAsync() != expectedNodeType)
 				throw CreateXmlException(String.Format("Invalid node type (expected: {0}, found: {1})", expectedNodeType, xml.NodeType), null, xml as IXmlLineInfo);
 		} // proc MoveToContentAsync
 
+		/// <summary></summary>
+		/// <param name="xml"></param>
+		/// <param name="name"></param>
+		/// <returns></returns>
 		public static async Task ReadStartElementAsync(this XmlReader xml, string name)
 		{
 			await MoveToContentAsync(xml, XmlNodeType.Element);
@@ -125,12 +164,20 @@ namespace TecWare.DE.Stuff
 			await xml.ReadAsync();
 		} // proc ReadStartElementAsync
 
+		/// <summary></summary>
+		/// <param name="xml"></param>
+		/// <returns></returns>
 		public static async Task ReadEndElementAsync(this XmlReader xml)
 		{
 			await MoveToContentAsync(xml, XmlNodeType.EndElement);
 			await xml.ReadAsync();
 		} // proc ReadEndElementAsync
 
+		/// <summary></summary>
+		/// <param name="xml"></param>
+		/// <param name="attributeName"></param>
+		/// <param name="default"></param>
+		/// <returns></returns>
 		public static string GetAttribute(this XmlReader xml, XName attributeName, string @default)
 		{
 			if (xml == null)
@@ -140,9 +187,21 @@ namespace TecWare.DE.Stuff
 			return xml.GetAttribute(attributeName.LocalName) ?? @default;
 		} // func GetAttribute
 
+		/// <summary></summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="xml"></param>
+		/// <param name="attributeName"></param>
+		/// <param name="default"></param>
+		/// <returns></returns>
 		public static T GetAttribute<T>(this XmlReader xml, XName attributeName, T @default)
 			=> TryGetAttribute<T>(xml, attributeName, out var t) ? t : @default;
 
+		/// <summary></summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="xml"></param>
+		/// <param name="attributeName"></param>
+		/// <param name="value"></param>
+		/// <returns></returns>
 		public static bool TryGetAttribute<T>(this XmlReader xml, XName attributeName, out T value)
 		{
 			try
@@ -189,6 +248,12 @@ namespace TecWare.DE.Stuff
 		public static T GetAttribute<T>(this XElement x, XName attributeName, T @default)
 			=> TryGetAttribute<T>(x, attributeName, out var t) ? t : @default;
 
+		/// <summary></summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="x"></param>
+		/// <param name="attributeName"></param>
+		/// <param name="value"></param>
+		/// <returns></returns>
 		public static bool TryGetAttribute<T>(this XElement x, XName attributeName, out T value)
 		{
 			try
@@ -217,10 +282,8 @@ namespace TecWare.DE.Stuff
 		/// <param name="value">Wert des Attributes</param>
 		/// <returns>Attribut oder null.</returns>
 		public static XAttribute XAttributeCreate<T>(string attributeName, T value)
-		{
-			return XAttributeCreate<T>(attributeName, value, default(T));
-		} // func XAttributeCreate
-
+			=> XAttributeCreate<T>(attributeName, value, default(T));
+		
 		/// <summary>Erzeugt ein Attribut für ein XElement.</summary>
 		/// <typeparam name="T">Datentyp von dem Konvertiert werden soll.</typeparam>
 		/// <param name="attributeName">Name des Attributes</param>
@@ -229,7 +292,7 @@ namespace TecWare.DE.Stuff
 		/// <returns>Attribut oder null.</returns>
 		public static XAttribute XAttributeCreate<T>(string attributeName, T value, T @default)
 		{
-			if (Object.Equals(value, @default))
+			if (Equals(value, @default))
 				return null;
 			if (value == null)
 				return null;
@@ -248,15 +311,17 @@ namespace TecWare.DE.Stuff
 
 			while (x != null)
 			{
-				object r = x.Annotation(typeAnnotation);
+				var r = x.Annotation(typeAnnotation);
 				if (r != null)
 					return r;
 
 				if (x.Parent == null)
+				{
 					if (x is XDocument)
 						break;
 					else
 						x = x.Document;
+				}
 				else
 					x = x.Parent;
 			}
@@ -292,7 +357,7 @@ namespace TecWare.DE.Stuff
 
 		#endregion
 
-		#region -- GetNode --------------------------------------------------------------
+		#region -- GetNode ------------------------------------------------------------
 
 		/// <summary></summary>
 		/// <param name="x"></param>
@@ -300,8 +365,8 @@ namespace TecWare.DE.Stuff
 		/// <returns></returns>
 		public static XElement GetElement(this XElement x, params XName[] names)
 		{
-			XElement r = x;
-			for (int i = 0; i < names.Length; i++)
+			var r = x;
+			for (var i = 0; i < names.Length; i++)
 			{
 				r = r.Element(names[i]);
 				if (r == null)
@@ -334,10 +399,10 @@ namespace TecWare.DE.Stuff
 		{
 			try
 			{
-				string sValue = GetNode(x, elementName, (string)null);
-				if (sValue == null)
+				var value = GetNode(x, elementName, (string)null);
+				if (value == null)
 					return @default;
-				return (T)Convert.ChangeType(sValue, typeof(T), CultureInfo.InvariantCulture);
+				return (T)Convert.ChangeType(value, typeof(T), CultureInfo.InvariantCulture);
 			}
 			catch
 			{
@@ -347,7 +412,7 @@ namespace TecWare.DE.Stuff
 
 		#endregion
 
-		#region -- CompareNode ----------------------------------------------------------
+		#region -- CompareNode --------------------------------------------------------
 
 		/// <summary>Vergleicht zwei Xml-Knoten.</summary>
 		/// <param name="a"></param>
@@ -398,11 +463,12 @@ namespace TecWare.DE.Stuff
 
 		#endregion
 
-		#region -- MergeAttributes ------------------------------------------------------
+		#region -- MergeAttributes ----------------------------------------------------
 
 		/// <summary>Simple merge of two xml attributes.</summary>
 		/// <param name="xTarget"></param>
 		/// <param name="xSource"></param>
+		/// <param name="isChanged"></param>
 		public static void MergeAttributes(XElement xTarget, XElement xSource, ref bool isChanged)
 		{
 			// merge attribues
@@ -415,7 +481,7 @@ namespace TecWare.DE.Stuff
 					xTarget.Add(new XAttribute(xSrcAttr.Name, xSrcAttr.Value));
 					isChanged = true;
 				}
-				else if (!Object.Equals(xSrcAttr.Value, xTargetAttr.Value))
+				else if (!Equals(xSrcAttr.Value, xTargetAttr.Value))
 				{
 					xTargetAttr.Value = xSrcAttr.Value;
 					isChanged = true;
@@ -425,7 +491,7 @@ namespace TecWare.DE.Stuff
 
 		#endregion
 
-		#region -- GetStrings -----------------------------------------------------------
+		#region -- GetStrings ---------------------------------------------------------
 
 		private static string[] EmptyArray(string[] a, bool emptyArrayToNull)
 		{
@@ -437,19 +503,26 @@ namespace TecWare.DE.Stuff
 				return a;
 		} // func EmptyArray
 
+		/// <summary></summary>
+		/// <param name="x"></param>
+		/// <param name="attribute"></param>
+		/// <param name="emptyArrayToNull"></param>
+		/// <returns></returns>
 		public static string[] GetStrings(this XElement x, XName attribute, bool emptyArrayToNull = false)
 		{
 			var list = x?.GetAttribute(attribute, (string)null);
-			if (String.IsNullOrEmpty(list))
-				return EmptyArray(null, emptyArrayToNull);
-			else
-				return EmptyArray(list.Split(new char[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries), emptyArrayToNull);
+			return String.IsNullOrEmpty(list)
+				? EmptyArray(null, emptyArrayToNull)
+				: EmptyArray(list.Split(new char[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries), emptyArrayToNull);
 		} // func GetStrings
 
 		#endregion
 
-		#region -- GetPaths -------------------------------------------------------------
+		#region -- GetPaths -----------------------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="value"></param>
+		/// <returns></returns>
 		public static IEnumerable<string> SplitPaths(string value)
 		{
 			if (value == null)
@@ -494,6 +567,9 @@ namespace TecWare.DE.Stuff
 				yield return value.Substring(startAt, pos - startAt);
 		} // func SplitPaths
 
+		/// <summary></summary>
+		/// <param name="values"></param>
+		/// <returns></returns>
 		public static string JoinPaths(IEnumerable<string> values)
 		{
 			var sb = new StringBuilder();
@@ -515,13 +591,17 @@ namespace TecWare.DE.Stuff
 			return sb.ToString();
 		} // func JoinPaths
 
+		/// <summary></summary>
+		/// <param name="x"></param>
+		/// <param name="attribute"></param>
+		/// <param name="emptyArrayToNull"></param>
+		/// <returns></returns>
 		public static string[] GetPaths(this XElement x, XName attribute, bool emptyArrayToNull = false)
 		{
 			var value = x?.Attribute(attribute)?.Value;
-			if (String.IsNullOrEmpty(value))
-				return EmptyArray(null, emptyArrayToNull);
-			else
-				return EmptyArray(SplitPaths(value).ToArray(), emptyArrayToNull);
+			return String.IsNullOrEmpty(value)
+				? EmptyArray(null, emptyArrayToNull)
+				: EmptyArray(SplitPaths(value).ToArray(), emptyArrayToNull);
 		} // func GetPaths
 
 		#endregion
@@ -540,4 +620,6 @@ namespace TecWare.DE.Stuff
 			typeLineInfoEndElementAnnotation = Type.GetType(xobjectTypeName.Replace("XObject", "LineInfoEndElementAnnotation"), false);
 		} // ctor
 	} // class Procs
+
+	#endregion
 }

@@ -90,6 +90,9 @@ namespace TecWare.DE.Stuff
 #endif
 				);
 
+		/// <summary></summary>
+		/// <param name="e"></param>
+		/// <returns></returns>
 		public static Exception GetInnerException(this Exception e)
 		{
 			if (e is TargetInvocationException te)

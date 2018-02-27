@@ -14,15 +14,12 @@
 //
 #endregion
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace TecWare.DE.Stuff
 {
-	#region -- enum LogMsgType ----------------------------------------------------------
+	#region -- enum LogMsgType --------------------------------------------------------
 
 	/// <summary>Art der Log-Nachricht</summary>
 	public enum LogMsgType
@@ -39,7 +36,7 @@ namespace TecWare.DE.Stuff
 
 	#endregion
 
-	#region -- interface ILogger --------------------------------------------------------
+	#region -- interface ILogger ------------------------------------------------------
 
 	/// <summary>Simple interface to the log-file.</summary>
 	public interface ILogger
@@ -52,9 +49,8 @@ namespace TecWare.DE.Stuff
 
 	#endregion
 
-	#region -- interface ILogger2 -------------------------------------------------------
+	#region -- interface ILogger2 -----------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public interface ILogger2
 	{
@@ -72,7 +68,7 @@ namespace TecWare.DE.Stuff
 
 	#endregion
 
-	#region -- interface ILogMessageScope -----------------------------------------------
+	#region -- interface ILogMessageScope ---------------------------------------------
 
 	/// <summary></summary>
 	public interface ILogMessageScope : IDisposable
@@ -108,14 +104,15 @@ namespace TecWare.DE.Stuff
 
 	#endregion
 
-	#region -- class LogMessageScopeProxy ------------------------------------------------
+	#region -- class LogMessageScopeProxy ---------------------------------------------
 
+	/// <summary></summary>
 	public sealed class LogMessageScopeProxy : IDisposable
 	{
 		private ILogMessageScope scope;
 		private Stopwatch stopWatch;
 
-		#region -- Ctor/Dtor --------------------------------------------------------------
+		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		internal LogMessageScopeProxy(ILogMessageScope scope, bool stopTime = false)
 		{
@@ -123,11 +120,10 @@ namespace TecWare.DE.Stuff
 			this.stopWatch = stopTime ? Stopwatch.StartNew() : null;
 		} // ctor
 
+		/// <summary></summary>
 		public void Dispose()
-		{
-			Dispose(true);
-		} // proc Dispose
-
+			=> Dispose(true);
+		
 		private void Dispose(bool disposing)
 		{
 			if (disposing)
@@ -143,32 +139,44 @@ namespace TecWare.DE.Stuff
 
 		#endregion
 
-		#region -- Write ------------------------------------------------------------------
+		#region -- Write --------------------------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="autoFlush"></param>
+		/// <returns></returns>
 		public LogMessageScopeProxy AutoFlush(bool autoFlush = true)
 		{
 			scope?.AutoFlush(autoFlush);
 			return this;
 		} // func AutoFlush
 
+		/// <summary></summary>
+		/// <returns></returns>
 		public LogMessageScopeProxy NewLine()
 		{
 			scope?.WriteLine(false);
 			return this;
 		} // func NewLine
 
+		/// <summary></summary>
+		/// <returns></returns>
 		public LogMessageScopeProxy WriteLine()
 		{
 			scope?.WriteLine(true);
 			return this;
 		} // func WriteLine
 
+		/// <summary></summary>
+		/// <param name="text"></param>
+		/// <returns></returns>
 		public LogMessageScopeProxy Write(string text)
 		{
 			scope?.Write(text);
 			return this;
 		} // proc Write
 
+		/// <summary></summary>
+		/// <returns></returns>
 		public LogMessageScopeProxy WriteStopWatch()
 		{
 			if (stopWatch != null)
@@ -176,6 +184,10 @@ namespace TecWare.DE.Stuff
 			return this;
 		} // proc WriteStopWatch 
 
+		/// <summary></summary>
+		/// <param name="typ"></param>
+		/// <param name="force"></param>
+		/// <returns></returns>
 		public LogMessageScopeProxy SetType(LogMsgType typ, bool force = false)
 		{
 			if (scope != null)
@@ -187,34 +199,60 @@ namespace TecWare.DE.Stuff
 			return this;
 		} // proc SetType
 
-		public LogMessageScopeProxy Write(string text, params object[] args) => Write(String.Format(text, args));
+		/// <summary></summary>
+		/// <param name="text"></param>
+		/// <param name="args"></param>
+		/// <returns></returns>
+		public LogMessageScopeProxy Write(string text, params object[] args)
+			=> Write(String.Format(text, args));
 
-		public LogMessageScopeProxy WriteLine(string text) => Write(text).WriteLine();
-		public LogMessageScopeProxy WriteLine(string text, params object[] args) => Write(text, args).WriteLine();
+		/// <summary></summary>
+		/// <param name="text"></param>
+		/// <returns></returns>
+		public LogMessageScopeProxy WriteLine(string text)
+			=> Write(text).WriteLine();
 
-		public LogMessageScopeProxy WriteWarning(Exception e) => NewLine().SetType(LogMsgType.Warning).WriteLine(e.GetMessageString());
-		public LogMessageScopeProxy WriteException(Exception e) => NewLine().SetType(LogMsgType.Error).WriteLine(e.GetMessageString());
+		/// <summary></summary>
+		/// <param name="text"></param>
+		/// <param name="args"></param>
+		/// <returns></returns>
+		public LogMessageScopeProxy WriteLine(string text, params object[] args) 
+			=> Write(text, args).WriteLine();
 
+		/// <summary></summary>
+		/// <param name="e"></param>
+		/// <returns></returns>
+		public LogMessageScopeProxy WriteWarning(Exception e) 
+			=> NewLine().SetType(LogMsgType.Warning).WriteLine(e.GetMessageString());
+
+		/// <summary></summary>
+		/// <param name="e"></param>
+		/// <returns></returns>
+		public LogMessageScopeProxy WriteException(Exception e) 
+			=> NewLine().SetType(LogMsgType.Error).WriteLine(e.GetMessageString());
+
+		/// <summary></summary>
+		/// <returns></returns>
 		public IDisposable Indent() => scope?.Indent();
 
 		#endregion
 
+		/// <summary></summary>
 		public LogMsgType Typ => scope?.Typ ?? LogMsgType.Information;
 
+		/// <summary></summary>
 		public static LogMessageScopeProxy Empty { get; } = new LogMessageScopeProxy(null);
 	} // class LogMessageScopeProxy
 
 	#endregion
 
-	#region -- class LogMessageScope ----------------------------------------------------
+	#region -- class LogMessageScope --------------------------------------------------
 
 	/// <summary></summary>
 	public sealed class LogMessageScope : ILogMessageScope
 	{
-		#region -- class IndentationScope -------------------------------------------------
+		#region -- class IndentationScope ---------------------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
 		private class IndentationScope : IDisposable
 		{
 			private LogMessageScope owner;
@@ -248,6 +286,10 @@ namespace TecWare.DE.Stuff
 		private IndentationScope currentIndentation = null;
 		private readonly StringBuilder sb = new StringBuilder();
 
+		/// <summary></summary>
+		/// <param name="log"></param>
+		/// <param name="typ"></param>
+		/// <param name="autoFlush"></param>
 		public LogMessageScope(ILogger log, LogMsgType typ, bool autoFlush)
 		{
 			this.log = log;
@@ -256,18 +298,24 @@ namespace TecWare.DE.Stuff
 		} // ctor
 
 		// no dtor, only flush log in the calling thread
+		/// <summary></summary>
 		public void Dispose()
 		{
 			if (autoFlush)
 				Flush();
 		} // proc Dispose
 
+		/// <summary></summary>
 		public void Flush()
 		{
 			log?.LogMsg(typ, sb.ToString());
 			sb.Length = 0;
 		} // proc Flush
 
+		/// <summary></summary>
+		/// <param name="value"></param>
+		/// <param name="force"></param>
+		/// <returns></returns>
 		public ILogMessageScope SetType(LogMsgType value, bool force = false)
 		{
 			if (force || typ < value)
@@ -275,12 +323,18 @@ namespace TecWare.DE.Stuff
 			return this;
 		} // proc SetType
 
+		/// <summary></summary>
+		/// <param name="autoFlush"></param>
+		/// <returns></returns>
 		public ILogMessageScope AutoFlush(bool autoFlush = true)
 		{
 			this.autoFlush = autoFlush;
 			return this;
 		} // func AutoFlush
 
+		/// <summary></summary>
+		/// <param name="indentation"></param>
+		/// <returns></returns>
 		public IDisposable Indent(string indentation = "  ")
 			=> currentIndentation = new IndentationScope(this, indentation);
 
@@ -295,6 +349,9 @@ namespace TecWare.DE.Stuff
 			sb.Append(text, startAt, endAt);
 		} // proc AppendLine
 
+		/// <summary></summary>
+		/// <param name="text"></param>
+		/// <returns></returns>
 		public ILogMessageScope Write(string text)
 		{
 			if (currentIndentation != null)
@@ -318,6 +375,9 @@ namespace TecWare.DE.Stuff
 			return this;
 		} // func Write
 
+		/// <summary></summary>
+		/// <param name="force"></param>
+		/// <returns></returns>
 		public ILogMessageScope WriteLine(bool force = true)
 		{
 			if (force || !startIndent)
@@ -328,17 +388,18 @@ namespace TecWare.DE.Stuff
 			return this;
 		} // func WriteLine
 
+		/// <summary></summary>
 		public LogMsgType Typ => typ;
 	} // class LogMessageScope
 
 	#endregion
 
-	#region -- class LoggerProxy --------------------------------------------------------
+	#region -- class LoggerProxy ------------------------------------------------------
 
 	/// <summary>Extensions for the Logger-Interface.</summary>
 	public abstract class LoggerProxy : ILogger
 	{
-		#region -- class LoggerProxySimple ------------------------------------------------
+		#region -- class LoggerProxySimple --------------------------------------------
 
 		private sealed class LoggerProxySimple : LoggerProxy
 		{
@@ -353,7 +414,7 @@ namespace TecWare.DE.Stuff
 
 		#endregion
 
-		#region -- class LoggerProxyPrefix ------------------------------------------------
+		#region -- class LoggerProxyPrefix --------------------------------------------
 
 		private sealed class LoggerProxyPrefix : LoggerProxy
 		{
@@ -376,27 +437,76 @@ namespace TecWare.DE.Stuff
 
 		private ILogger logger;
 
+		/// <summary></summary>
+		/// <param name="logger"></param>
 		protected LoggerProxy(ILogger logger)
 		{
 			this.logger = logger;
 		} // ctor
 
-		public void Info(string message) => LogMsg(LogMsgType.Information, message);
-		public void Info(string message, params object[] args) => LogMsg(LogMsgType.Information, message, args);
+		/// <summary></summary>
+		/// <param name="message"></param>
+		public void Info(string message) 
+			=> LogMsg(LogMsgType.Information, message);
+		/// <summary></summary>
+		/// <param name="message"></param>
+		/// <param name="args"></param>
+		public void Info(string message, params object[] args) 
+			=> LogMsg(LogMsgType.Information, message, args);
 
-		public void Warn(string message) => LogMsg(LogMsgType.Warning, message);
-		public void Warn(string message, params object[] args) => LogMsg(LogMsgType.Warning, message, args);
-		public void Warn(Exception e) => Procs.LogMsg(logger, LogMsgType.Warning, e);
-		public void Warn(string message, Exception e) => Procs.LogMsg(logger, LogMsgType.Warning, message, e);
+		/// <summary></summary>
+		/// <param name="message"></param>
+		public void Warn(string message) 
+			=> LogMsg(LogMsgType.Warning, message);
+		/// <summary></summary>
+		/// <param name="message"></param>
+		/// <param name="args"></param>
+		public void Warn(string message, params object[] args) 
+			=> LogMsg(LogMsgType.Warning, message, args);
+		/// <summary></summary>
+		/// <param name="e"></param>
+		public void Warn(Exception e) 
+			=> Procs.LogMsg(logger, LogMsgType.Warning, e);
+		/// <summary></summary>
+		/// <param name="message"></param>
+		/// <param name="e"></param>
+		public void Warn(string message, Exception e) 
+			=> Procs.LogMsg(logger, LogMsgType.Warning, message, e);
 
-		public void Except(string message) => LogMsg(LogMsgType.Error, message);
-		public void Except(string message, params object[] args) => LogMsg(LogMsgType.Error, message, args);
-		public void Except(Exception e) => Procs.LogMsg(logger, LogMsgType.Error, e);
-		public void Except(string message, Exception e) => Procs.LogMsg(logger, LogMsgType.Error, message, e);
+		/// <summary></summary>
+		/// <param name="message"></param>
+		public void Except(string message) 
+			=> LogMsg(LogMsgType.Error, message);
+		/// <summary></summary>
+		/// <param name="message"></param>
+		/// <param name="args"></param>
+		public void Except(string message, params object[] args) 
+			=> LogMsg(LogMsgType.Error, message, args);
+		/// <summary></summary>
+		/// <param name="e"></param>
+		public void Except(Exception e) 
+			=> Procs.LogMsg(logger, LogMsgType.Error, e);
+		/// <summary></summary>
+		/// <param name="message"></param>
+		/// <param name="e"></param>
+		public void Except(string message, Exception e) 
+			=> Procs.LogMsg(logger, LogMsgType.Error, message, e);
 
+		/// <summary></summary>
+		/// <param name="typ"></param>
+		/// <param name="message"></param>
 		public abstract void LogMsg(LogMsgType typ, string message);
+		/// <summary></summary>
+		/// <param name="typ"></param>
+		/// <param name="message"></param>
+		/// <param name="args"></param>
 		public abstract void LogMsg(LogMsgType typ, string message, params object[] args);
 
+		/// <summary></summary>
+		/// <param name="typ"></param>
+		/// <param name="autoFlush"></param>
+		/// <param name="stopTime"></param>
+		/// <returns></returns>
 		public LogMessageScopeProxy GetScope(LogMsgType typ = LogMsgType.Information, bool autoFlush = true, bool stopTime = false)
 		{
 			if (logger is ILogger2 logger2)
@@ -405,6 +515,11 @@ namespace TecWare.DE.Stuff
 			return new LogMessageScopeProxy(new LogMessageScope(this, typ, autoFlush), stopTime);
 		} // func GetScope
 
+		/// <summary></summary>
+		/// <param name="typ"></param>
+		/// <param name="autoFlush"></param>
+		/// <param name="stopTime"></param>
+		/// <returns></returns>
 		public LogMessageScopeProxy CreateScope(LogMsgType typ = LogMsgType.Information, bool autoFlush = true, bool stopTime = false)
 		{
 			if (logger is ILogger2 logger2)
@@ -413,12 +528,21 @@ namespace TecWare.DE.Stuff
 			return new LogMessageScopeProxy(new LogMessageScope(this, typ, autoFlush), stopTime);
 		} // func CreateScopy
 
+		/// <summary></summary>
 		public bool IsEmpty => logger == null;
+		/// <summary></summary>
 		public ILogger Logger => logger;
 
+		/// <summary></summary>
+		/// <param name="log"></param>
+		/// <returns></returns>
 		public static LoggerProxy Create(ILogger log)
 			=> log == null ? Empty : new LoggerProxySimple(log);
 
+		/// <summary></summary>
+		/// <param name="log"></param>
+		/// <param name="prefix"></param>
+		/// <returns></returns>
 		public static LoggerProxy Create(ILogger log, string prefix)
 		{
 			if (String.IsNullOrEmpty(prefix))
@@ -426,21 +550,43 @@ namespace TecWare.DE.Stuff
 			return log == null ? Empty : new LoggerProxyPrefix(log, prefix);
 		} // func Create
 
+		/// <summary></summary>
 		public static LoggerProxy Empty { get; } = new LoggerProxySimple(null);
 	} // class LoggerProxy
 
 	#endregion
 
-	#region -- class Procs --------------------------------------------------------------
+	#region -- class Procs ------------------------------------------------------------
 
 	/// <summary></summary>
 	public static partial class Procs
 	{
-		public static void LogMsg(this ILogger logger, LogMsgType typ, string message, params object[] args) => logger?.LogMsg(typ, String.Format(message, args));
-		public static void LogMsg(this ILogger logger, LogMsgType typ, string message, Exception e) => logger?.LogMsg(typ, message + Environment.NewLine + Environment.NewLine + e.GetMessageString());
-		public static void LogMsg(this ILogger logger, LogMsgType typ, Exception e) => LogMsg(logger, typ, e.Message, e);
-		public static LoggerProxy LogProxy(this IServiceProvider sp) => LoggerProxy.Create(sp?.GetService<ILogger>(false));
+		/// <summary></summary>
+		/// <param name="logger"></param>
+		/// <param name="typ"></param>
+		/// <param name="message"></param>
+		/// <param name="args"></param>
+		public static void LogMsg(this ILogger logger, LogMsgType typ, string message, params object[] args) 
+			=> logger?.LogMsg(typ, String.Format(message, args));
+		/// <summary></summary>
+		/// <param name="logger"></param>
+		/// <param name="typ"></param>
+		/// <param name="message"></param>
+		/// <param name="e"></param>
+		public static void LogMsg(this ILogger logger, LogMsgType typ, string message, Exception e) 
+			=> logger?.LogMsg(typ, message + Environment.NewLine + Environment.NewLine + e.GetMessageString());
+		/// <summary></summary>
+		/// <param name="logger"></param>
+		/// <param name="typ"></param>
+		/// <param name="e"></param>
+		public static void LogMsg(this ILogger logger, LogMsgType typ, Exception e) 
+			=> LogMsg(logger, typ, e.Message, e);
 
+		/// <summary></summary>
+		/// <param name="sp"></param>
+		/// <returns></returns>
+		public static LoggerProxy LogProxy(this IServiceProvider sp) 
+			=> LoggerProxy.Create(sp?.GetService<ILogger>(false));
 	} // class Procs
 
 	#endregion

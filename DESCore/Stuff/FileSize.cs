@@ -18,42 +18,65 @@ using System.Globalization;
 
 namespace TecWare.DE.Stuff
 {
-	#region -- struct FileSize ----------------------------------------------------------
+	#region -- struct FileSize --------------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>File size data type implementation</summary>
 	public struct FileSize : IComparable, IComparable<FileSize>, IEquatable<FileSize>, IFormattable
 	{
 		private readonly long fileSize;
 
+		/// <summary></summary>
+		/// <param name="_fileSize"></param>
 		public FileSize(long _fileSize)
 		{
 			fileSize = _fileSize;
 		} // ctor
 
+		/// <summary></summary>
+		/// <returns></returns>
 		public override int GetHashCode()
 			=> fileSize.GetHashCode();
 
+		/// <summary></summary>
+		/// <param name="obj"></param>
+		/// <returns></returns>
 		public override bool Equals(object obj)
 			=> obj is FileSize ? Equals((FileSize)obj) : false;
 
+		/// <summary></summary>
+		/// <param name="other"></param>
+		/// <returns></returns>
 		public bool Equals(FileSize other)
 			=> fileSize.Equals(other.fileSize);
 
+		/// <summary></summary>
+		/// <param name="obj"></param>
+		/// <returns></returns>
 		public int CompareTo(object obj)
 			=> obj is FileSize ? CompareTo((FileSize)obj) : -1;
 
+		/// <summary></summary>
+		/// <param name="other"></param>
+		/// <returns></returns>
 		public int CompareTo(FileSize other)
 			=> fileSize.CompareTo(other.fileSize);
 
+		/// <summary></summary>
+		/// <returns></returns>
 		public override string ToString()
 			=> ToString(null, null);
 
+		/// <summary></summary>
+		/// <param name="format"></param>
+		/// <param name="formatProvider"></param>
+		/// <returns></returns>
 		public string ToString(string format, IFormatProvider formatProvider)
 			=> Format(fileSize, format, formatProvider) ?? fileSize.ToString(format, formatProvider);
 
+		/// <summary>Core value of the file size in byte.</summary>
 		public long Value => fileSize;
 
+		/// <summary>Is the file size zero bytes.</summary>
 		public bool IsEmpty => fileSize == 0;
 
 		private static readonly string[] unitSuffix = new string[] { "Byte", "KiB", "MiB", "GiB", "TiB", "PiB" };
@@ -96,32 +119,55 @@ namespace TecWare.DE.Stuff
 			}
 		} // func FormatFileSize
 
+		/// <summary></summary>
+		/// <param name="s"></param>
+		/// <returns></returns>
 		public static FileSize Parse(string s)
 			=> Parse(s, NumberStyles.Number, NumberFormatInfo.CurrentInfo);
 
+		/// <summary></summary>
+		/// <param name="s"></param>
+		/// <param name="formatProvider"></param>
+		/// <returns></returns>
 		public static FileSize Parse(string s, IFormatProvider formatProvider)
 			=> Parse(s, NumberStyles.Number, formatProvider);
 
+		/// <summary></summary>
+		/// <param name="s"></param>
+		/// <param name="numberStyles"></param>
+		/// <param name="formatProvider"></param>
+		/// <returns></returns>
 		public static FileSize Parse(string s, NumberStyles numberStyles, IFormatProvider formatProvider)
-		{
-			FileSize result;
-			if (TryParse(s, numberStyles, formatProvider, out result))
-				return result;
-			else
-				throw new FormatException();
-		} // func Parse
+			=> TryParse(s, numberStyles, formatProvider, out var result)
+				? result
+				: throw new FormatException();
 
+		/// <summary></summary>
+		/// <param name="s"></param>
+		/// <param name="result"></param>
+		/// <returns></returns>
 		public static bool TryParse(string s, out FileSize result)
 			=> TryParse(s, NumberStyles.Number, NumberFormatInfo.CurrentInfo, out result);
 
+		/// <summary></summary>
+		/// <param name="s"></param>
+		/// <param name="formatProvider"></param>
+		/// <param name="result"></param>
+		/// <returns></returns>
 		public static bool TryParse(string s, IFormatProvider formatProvider, out FileSize result)
 			=> TryParse(s, NumberStyles.Number, formatProvider, out result);
 
+		/// <summary></summary>
+		/// <param name="s"></param>
+		/// <param name="numberStyles"></param>
+		/// <param name="formatProvider"></param>
+		/// <param name="result"></param>
+		/// <returns></returns>
 		public static bool TryParse(string s, NumberStyles numberStyles, IFormatProvider formatProvider, out FileSize result)
 		{
 			if (String.IsNullOrEmpty(s))
 			{
-				result = FileSize.Empty;
+				result = Empty;
 				return false;
 			}
 
@@ -135,10 +181,9 @@ namespace TecWare.DE.Stuff
 				s = s.Substring(0, s.Length - sl).TrimEnd();
 			}
 
-			decimal value;
-			if (!Decimal.TryParse(s, numberStyles, formatProvider, out value))
+			if (!Decimal.TryParse(s, numberStyles, formatProvider, out var value))
 			{
-				result = FileSize.Empty;
+				result = Empty;
 				return false;
 			}
 
@@ -146,23 +191,29 @@ namespace TecWare.DE.Stuff
 			return true;
 		} // func TryParse
 
+		/// <summary></summary>
+		/// <param name="value"></param>
 		public static implicit operator FileSize(int value)
 			=> new FileSize(value);
 
+		/// <summary></summary>
+		/// <param name="value"></param>
 		public static implicit operator FileSize(long value)
 			=> new FileSize(value);
 
+		/// <summary></summary>
+		/// <param name="value"></param>
 		public static implicit operator long(FileSize value)
 			=> value.fileSize;
 
+		/// <summary></summary>
 		public static FileSize Empty { get; } = new FileSize();
 	} // struct FileSize
 
 	#endregion
 
-	#region -- class FormatFileSizeConverter --------------------------------------------
+	#region -- class FormatFileSizeConverter ------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public class FormatFileSizeConverter : IFormatProvider, ICustomFormatter
 	{
@@ -172,18 +223,17 @@ namespace TecWare.DE.Stuff
 		{
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="formatProvider"></param>
 		public FormatFileSizeConverter(IFormatProvider formatProvider)
 		{
 			this.formatProvider = formatProvider;
 		} // ctor
 
 		object IFormatProvider.GetFormat(Type formatType)
-		{
-			if (formatType == typeof(ICustomFormatter))
-				return this;
-			else
-				return FormatProvider.GetFormat(formatType);
-		} // func IFormatProvider.GetFormat
+			=> formatType == typeof(ICustomFormatter)
+				? this
+				: FormatProvider.GetFormat(formatType);
 
 		string ICustomFormatter.Format(string format, object arg, IFormatProvider formatProvider)
 		{
@@ -194,6 +244,7 @@ namespace TecWare.DE.Stuff
 			return null;
 		} // func ICustomFormatter.Format
 
+		/// <summary></summary>
 		public IFormatProvider FormatProvider => formatProvider ?? CultureInfo.CurrentUICulture;
 
 		/// <summary>Default provider.</summary>

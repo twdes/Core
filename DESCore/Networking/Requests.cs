@@ -153,9 +153,10 @@ namespace TecWare.DE.Networking
 		public static ClientAuthentificationInformation Ntlm { get; } = new ClientAuthentificationInformation(ClientAuthentificationType.Ntlm, integratedSecurity);
 
 		/// <summary></summary>
-		/// <param name="e">
+		/// <param name="e"></param>
 		/// <param name="info"></param>
 		/// <param name="autoDisposeResponse"></param>
+		/// <returns></returns>
 		public static bool TryGet(WebException e, ref ClientAuthentificationInformation info, bool autoDisposeResponse = true)
 		{
 			var t = Get(e);

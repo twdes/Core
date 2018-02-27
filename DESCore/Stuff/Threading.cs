@@ -27,17 +27,21 @@ namespace TecWare.DE.Stuff
 		private volatile TaskCompletionSource<bool> flag = new TaskCompletionSource<bool>();
 		private volatile bool isDisposed = false;
 
+		/// <summary></summary>
+		/// <param name="isSet"></param>
 		public ManualResetEventAsync(bool isSet = true)
 		{
 			if (!isSet)
 				flag.TrySetResult(true);
 		} // ctor
 
+		/// <summary></summary>
 		~ManualResetEventAsync()
 		{
 			Dispose(false);
 		} // dtor
 
+		/// <summary></summary>
 		public void Dispose()
 		{
 			GC.SuppressFinalize(this);
@@ -68,9 +72,14 @@ namespace TecWare.DE.Stuff
 				throw new ObjectDisposedException(nameof(ManualResetEventAsync));
 		} // proc ThrowIfDisposed
 
+		/// <summary></summary>
+		/// <returns></returns>
 		public Task WaitAsync()
 			=> flag.Task;
 
+		/// <summary></summary>
+		/// <param name="millisecondsDelay"></param>
+		/// <returns></returns>
 		public async Task<bool> WaitAsync(int millisecondsDelay)
 		{
 			if (millisecondsDelay < 0)
@@ -85,6 +94,9 @@ namespace TecWare.DE.Stuff
 			}
 		} // func WaitAsync
 
+		/// <summary></summary>
+		/// <param name="cancellationToken"></param>
+		/// <returns></returns>
 		public async Task<bool> WaitAsync(CancellationToken cancellationToken)
 		{
 			if (cancellationToken == CancellationToken.None)
@@ -129,6 +141,7 @@ namespace TecWare.DE.Stuff
 			}
 		} // proc Set
 
+		/// <summary></summary>
 		public void Set()
 		{
 			var tcs = flag;
@@ -136,6 +149,7 @@ namespace TecWare.DE.Stuff
 			tcs.Task.Wait();
 		} // proc Set
 
+		/// <summary></summary>
 		public void Reset()
 		{
 			ThrowIfDisposed();

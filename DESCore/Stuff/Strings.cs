@@ -14,23 +14,29 @@
 //
 #endregion
 using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
 namespace TecWare.DE.Stuff
 {
 	public static partial class Procs
 	{
+		/// <summary></summary>
+		/// <param name="value"></param>
+		/// <returns></returns>
 		public static string EscapeSpecialChars(this string value)
 			=> Regex.Replace(value, @"\r\n?|\n|\t", m => m.Value == "\t" ? "\\t" : "\\n");
 
+		/// <summary></summary>
+		/// <param name="value"></param>
+		/// <returns></returns>
 		public static string UnescapeSpecialChars(this string value)
 			=> Regex.Replace(value, @"\\n|\\t", m => m.Value == @"\t" ? "\t" : "\n");
 
+		/// <summary></summary>
+		/// <param name="language"></param>
+		/// <param name="languagePart"></param>
+		/// <param name="countryPart"></param>
+		/// <returns></returns>
 		public static bool TrySplitLanguage(string language, out string languagePart, out string countryPart)
 		{
 			if (String.IsNullOrEmpty(language))
@@ -69,6 +75,10 @@ namespace TecWare.DE.Stuff
 			throw new NotImplementedException();
 		} // func GetFilterFunctionEx
 		
+		/// <summary>Create for a simple star filter, a predicate</summary>
+		/// <param name="filterExpression"></param>
+		/// <param name="defaultFilter"></param>
+		/// <returns></returns>
 		public static Func<string, bool> GetFilerFunction(string filterExpression, bool? defaultFilter = null)
 		{
 			if (String.IsNullOrEmpty(filterExpression))
