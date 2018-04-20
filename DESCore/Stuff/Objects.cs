@@ -14,6 +14,7 @@
 //
 #endregion
 using System;
+using System.Collections;
 using System.Globalization;
 using System.Text;
 using System.Xml.Linq;
@@ -250,6 +251,78 @@ namespace TecWare.DE.Stuff
 				sb.Append(bytes[ofs++].ToString("X2"));
 			return sb.ToString();
 		} // func ConvertToString
+
+		#endregion
+
+		#region -- CombineEnumerator --------------------------------------------------
+
+		#region -- class ConnectedEnumerator ------------------------------------------
+
+		private sealed class ConnectedEnumerator : IEnumerator, IDisposable
+		{
+			private readonly IEnumerator enumerators;
+			private IEnumerator currentEnumerator = null;
+
+			public ConnectedEnumerator(params IEnumerator[] enumerators)
+			{
+				this.enumerators = enumerators.GetEnumerator();
+			} // ctor
+
+			void IDisposable.Dispose()
+			{
+				// dispose enumerators
+				if (currentEnumerator is IDisposable d)
+					d.Dispose();
+
+				while (enumerators.MoveNext())
+				{
+					if (enumerators.Current is IDisposable d2)
+						d2.Dispose();
+				}
+			} // proc Dispose
+
+			public bool MoveNext()
+			{
+				if (currentEnumerator == null || !currentEnumerator.MoveNext())
+				{
+					if (enumerators.MoveNext())
+					{
+						currentEnumerator = (IEnumerator)enumerators.Current;
+						return MoveNext();
+					}
+					else
+					{
+						currentEnumerator = null;
+						return false;
+					}
+				}
+				else
+					return true;
+			} // func MoveNext
+
+			public void Reset()
+			{
+				currentEnumerator = null;
+				enumerators.Reset();
+			} // proc Reset
+
+			public object Current => currentEnumerator;
+		} // class ConnectedEnumerator
+
+		#endregion
+
+		/// <summary></summary>
+		/// <param name="enumerators"></param>
+		/// <returns></returns>
+		public static IEnumerator CombineEnumerator(params IEnumerator[] enumerators)
+		{
+			if (enumerators.Length == 0)
+				return Array.Empty<IEnumerator>().GetEnumerator();
+			else if (enumerators.Length == 1)
+				return enumerators[1];
+			else
+				return new ConnectedEnumerator(enumerators);
+		} // func Combine
 
 		#endregion
 	} // class Procs
