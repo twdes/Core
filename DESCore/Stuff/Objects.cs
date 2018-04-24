@@ -306,7 +306,7 @@ namespace TecWare.DE.Stuff
 				enumerators.Reset();
 			} // proc Reset
 
-			public object Current => currentEnumerator;
+			public object Current => currentEnumerator.Current;
 		} // class ConnectedEnumerator
 
 		#endregion
