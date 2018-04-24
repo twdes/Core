@@ -162,6 +162,24 @@ namespace TecWare.DE.Stuff
 			return x;
 		} // func ToXml
 
+		/// <summary></summary>
+		/// <param name="properties"></param>
+		/// <returns></returns>
+		public static IPropertyReadOnlyDictionary ToProperties(object properties)
+		{
+			switch (properties)
+			{
+				case null:
+					return PropertyDictionary.EmptyReadOnly;
+				case LuaTable t:
+					return new LuaTableProperties(t);
+				case IPropertyReadOnlyDictionary d:
+					return d;
+				default:
+					throw new ArgumentException(nameof(properties));
+			}
+		} // func GetDictionaryProperties
+
 		/// <summary>LuaTable to <c>IPropertyReadOnlyDictionary</c>.</summary>
 		/// <param name="table"></param>
 		/// <returns></returns>
