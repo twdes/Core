@@ -15,6 +15,8 @@
 #endregion
 using System;
 using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
 using System.Xml.Linq;
 using Neo.IronLua;
 using TecWare.DE.Data;
@@ -47,7 +49,7 @@ namespace TecWare.DE.Stuff
 	#region -- class LuaTableProperties -----------------------------------------------
 
 	/// <summary>Wrapper for LuaTable to <c>IPropertyReadOnlyDictionary</c>.</summary>
-	public class LuaTableProperties : IPropertyReadOnlyDictionary
+	public class LuaTableProperties : IPropertyEnumerableDictionary
 	{
 		private readonly LuaTable table;
 
@@ -59,11 +61,17 @@ namespace TecWare.DE.Stuff
 		} // ctor
 
 		/// <summary></summary>
+		/// <returns></returns>
+		public IEnumerator<PropertyValue> GetEnumerator()
+			=> table.Members.Select(cur => new PropertyValue(cur.Key, cur.Value)).GetEnumerator();
+
+		/// <summary></summary>
 		/// <param name="name"></param>
 		/// <param name="value"></param>
 		/// <returns></returns>
 		public bool TryGetProperty(string name, out object value)
 			=> (value = table?.GetMemberValue(name, true)) != null;
+		IEnumerator IEnumerable.GetEnumerator() => throw new NotImplementedException();
 	} // class LuaPropertiesTable
 
 	#endregion
@@ -161,24 +169,6 @@ namespace TecWare.DE.Stuff
 			ToXml(table, x);
 			return x;
 		} // func ToXml
-
-		/// <summary></summary>
-		/// <param name="properties"></param>
-		/// <returns></returns>
-		public static IPropertyReadOnlyDictionary ToProperties(object properties)
-		{
-			switch (properties)
-			{
-				case null:
-					return PropertyDictionary.EmptyReadOnly;
-				case LuaTable t:
-					return new LuaTableProperties(t);
-				case IPropertyReadOnlyDictionary d:
-					return d;
-				default:
-					throw new ArgumentException(nameof(properties));
-			}
-		} // func GetDictionaryProperties
 
 		/// <summary>LuaTable to <c>IPropertyReadOnlyDictionary</c>.</summary>
 		/// <param name="table"></param>

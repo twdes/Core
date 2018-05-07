@@ -306,7 +306,7 @@ namespace TecWare.DE.Stuff
 				enumerators.Reset();
 			} // proc Reset
 
-			public object Current => currentEnumerator.Current;
+			public object Current => currentEnumerator?.Current;
 		} // class ConnectedEnumerator
 
 		#endregion
@@ -316,7 +316,7 @@ namespace TecWare.DE.Stuff
 		/// <returns></returns>
 		public static IEnumerator CombineEnumerator(params IEnumerator[] enumerators)
 		{
-			if (enumerators.Length == 0)
+			if (enumerators == null || enumerators.Length == 0)
 				return Array.Empty<IEnumerator>().GetEnumerator();
 			else if (enumerators.Length == 1)
 				return enumerators[1];

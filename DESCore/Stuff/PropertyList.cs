@@ -124,6 +124,31 @@ namespace TecWare.DE.Stuff
 
 		#endregion
 
+		#region -- class EmptyEnumerableDictionary ------------------------------------
+
+		private sealed class EmptyEnumerableDictionary : IPropertyEnumerableDictionary
+		{
+			private readonly IPropertyReadOnlyDictionary properties;
+
+			public EmptyEnumerableDictionary(IPropertyReadOnlyDictionary properties)
+			{
+				this.properties = properties ?? throw new ArgumentNullException(nameof(properties));
+			} // ctor
+
+			public IEnumerator<PropertyValue> GetEnumerator()
+			{
+				yield break;
+			} // func GetEnumerator
+
+			public bool TryGetProperty(string name, out object value)
+				=> properties.TryGetProperty(name, out value);
+
+			IEnumerator IEnumerable.GetEnumerator()
+				=> GetEnumerator();
+		} //class EmptyReadOnlyDictionary
+
+		#endregion
+
 		private PropertyDictionary parentDictionary = null;
 		private Dictionary<string, PropertyValue> properties = new Dictionary<string, PropertyValue>(StringComparer.OrdinalIgnoreCase);
 
@@ -403,6 +428,12 @@ namespace TecWare.DE.Stuff
 		#endregion
 
 		/// <summary></summary>
+		/// <param name="properties"></param>
+		/// <returns></returns>
+		public static IPropertyEnumerableDictionary ToEmptyEnumerator(IPropertyReadOnlyDictionary properties)
+			=> new EmptyEnumerableDictionary(properties);
+
+		/// <summary></summary>
 		public static IPropertyEnumerableDictionary EmptyReadOnly { get; } = new EmptyReadOnlyDictionary();
 	} // class PropertyDictionary
 
@@ -609,6 +640,35 @@ namespace TecWare.DE.Stuff
 				sb.Append(GetValue(cur.Key)).Append('=').Append(GetValue(cur.Value)).Append(';');
 			return sb.ToString();
 		} // func JoinPropertyList
+
+		/// <summary></summary>
+		/// <param name="properties"></param>
+		/// <returns></returns>
+		public static IPropertyEnumerableDictionary ToProperties(object properties)
+		{
+			switch (properties)
+			{
+				case null:
+					return PropertyDictionary.EmptyReadOnly;
+				case Neo.IronLua.LuaTable t:
+					return new LuaTableProperties(t);
+				case IPropertyEnumerableDictionary f:
+					return f;
+				case IPropertyReadOnlyDictionary d:
+					return PropertyDictionary.ToEmptyEnumerator(d);
+
+				case string values2:
+					return new PropertyDictionary(values2);
+				case PropertyValue[] values1:
+					return new PropertyDictionary(values1);
+				case KeyValuePair<string, string> values3:
+					return new PropertyDictionary(values3);
+				case KeyValuePair<string, object> values4:
+					return new PropertyDictionary(values4);
+				default:
+					throw new ArgumentException(nameof(properties));
+			}
+		} // func GetDictionaryProperties
 
 		#endregion
 	}
