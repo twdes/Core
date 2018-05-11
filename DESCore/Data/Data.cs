@@ -86,8 +86,6 @@ namespace TecWare.DE.Data
 	{
 		#region -- class DynamicDataRowMetaObjectProvider -----------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
 		private sealed class DynamicDataRowMetaObjectProvider : DynamicMetaObject
 		{
 			public DynamicDataRowMetaObjectProvider(Expression expression, DynamicDataRow row)
@@ -148,7 +146,7 @@ namespace TecWare.DE.Data
 
 			public override DynamicMetaObject BindGetMember(GetMemberBinder binder)
 			{
-				if (binder.Name == nameof(DynamicDataRow.Columns))
+				if (binder.Name == nameof(Columns))
 					return base.BindGetMember(binder);
 				else
 					return BindMember(binder.Name, false);
@@ -169,7 +167,7 @@ namespace TecWare.DE.Data
 
 			public override DynamicMetaObject BindInvokeMember(InvokeMemberBinder binder, DynamicMetaObject[] args)
 				=> args.Length > 0  // optimization: arguments should be a method call, we only add properties dynamic
-				|| binder.Name == nameof(DynamicDataRow.Columns) // optimization: columns is a known public properties
+				|| binder.Name == nameof(Columns) // optimization: columns is a known public properties
 				|| IsPublicMember(LimitType, binder.Name) // test for non-dynamic members (methods, properties)
 					? base.BindInvokeMember(binder, args)
 					: BindMember(binder.Name, true);
@@ -192,27 +190,22 @@ namespace TecWare.DE.Data
 		/// <returns></returns>
 		public virtual bool TryGetProperty(string columnName, out object value)
 		{
-			value = null;
-
-			try
+			if (String.IsNullOrEmpty(columnName)
+				|| Columns == null || Columns.Count < 1)
 			{
-				if (String.IsNullOrEmpty(columnName))
-					return false;
-
-				if (Columns == null || Columns.Count < 1)
-					return false;
-
-				var index = this.FindColumnIndex(columnName);
-				if (index == -1)
-					return false;
-
-				value = this[index];
-				return true;
-			} // try
-			catch
-			{
+				value = null;
 				return false;
-			} // catch
+			}
+
+			var index = this.FindColumnIndex(columnName);
+			if (index == -1)
+			{
+				value = null;
+				return false;
+			}
+
+			value = this[index];
+			return true;
 		} // func TryGetProperty
 
 		/// <summary></summary>
@@ -225,19 +218,16 @@ namespace TecWare.DE.Data
 		/// <param name="columnName"></param>
 		/// <param name="throwException"></param>
 		/// <returns></returns>
-		public virtual object this[string columnName, bool throwException]
+		public object this[string columnName, bool throwException]
 		{
 			get
 			{
-				var index = this.FindColumnIndex(columnName);
-				if (index == -1)
-				{
-					if (throwException)
-						throw new ArgumentException(String.Format("Column with name \"{0}\" not found.", columnName ?? "null"));
-					else
-						return null;
-				}
-				return this[index];
+				if (TryGetProperty(columnName, out var value))
+					return value;
+				else if (throwException)
+					throw new ArgumentException(String.Format("Column with name \"{0}\" not found.", columnName ?? "null"));
+				else
+					return null;
 			}
 		} // prop this
 
