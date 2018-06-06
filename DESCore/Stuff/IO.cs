@@ -84,10 +84,15 @@ namespace TecWare.DE.Stuff
 		/// <returns></returns>
 		public override int Read(byte[] buffer, int offset, int count)
 		{
-			var length = Length;
-			if (count + position > length)
-				count = unchecked((int)(length - position));
+			// check upper bound
+			if (this.length >= 0)
+			{
+				var length = Length;
+				if (count + position > length)
+					count = unchecked((int)(length - position));
+			}
 
+			// read baseStream
 			if (count > 0)
 			{
 				var r = baseStream.Read(buffer, offset, count);
