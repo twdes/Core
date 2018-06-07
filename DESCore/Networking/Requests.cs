@@ -19,9 +19,12 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
@@ -31,56 +34,307 @@ using TecWare.DE.Stuff;
 
 namespace TecWare.DE.Networking
 {
+	#region -- class MimeTypeInfoAttribute --------------------------------------------
+
+	[AttributeUsage(AttributeTargets.Field)]
+	internal class MimeTypeInfoAttribute : Attribute
+	{
+		public MimeTypeInfoAttribute(bool isPackedContent, params string[] extensions)
+		{
+			IsPackedContent = isPackedContent;
+			Extensions = extensions;
+		} // ctor
+
+		public bool IsPackedContent { get; }
+		public string[] Extensions { get; }
+	} // class MimeTypeInfoAttribute
+
+	#endregion
+
 	#region -- class MimeTypes --------------------------------------------------------
 
-	/// <summary></summary>
+	/// <summary>Static mime type definitons.</summary>
 	public static class MimeTypes
 	{
-		/// <summary></summary>
+		/// <summary>All text mime types</summary>
 		public static class Text
 		{
 			/// <summary></summary>
+			[MimeTypeInfo(false, ".txt", ".ts")]
 			public const string Plain = "text/plain";
 			/// <summary></summary>
+			[MimeTypeInfo(false, ".xml")]
 			public const string Xml = "text/xml";
 			/// <summary></summary>
+			[MimeTypeInfo(false, ".js")]
 			public const string JavaScript = "text/javascript";
 			/// <summary></summary>
+			[MimeTypeInfo(false, ".css")]
 			public const string Css = "text/css";
 			/// <summary></summary>
+			[MimeTypeInfo(false, ".html", ".htm")]
 			public const string Html = "text/html";
 			/// <summary></summary>
+			[MimeTypeInfo(false, ".lua")]
 			public const string Lua = "text/x-lua";
 			/// <summary></summary>
+			[MimeTypeInfo(false, ".json", ".map")]
 			public const string Json = "text/json";
 			/// <summary></summary>
+			[MimeTypeInfo(false)]
 			public const string DataSet = "text/dataset";
 		} // class Text
 
-		/// <summary></summary>
+		/// <summary>All image mime types</summary>
 		public static class Image
 		{
 			/// <summary></summary>
+			[MimeTypeInfo(false, ".bmp")]
 			public const string Bmp = "image/bmp";
 			/// <summary></summary>
+			[MimeTypeInfo(true, ".png")]
 			public const string Png = "image/png";
 			/// <summary></summary>
+			[MimeTypeInfo(true, ".jpg", ".jpeg", ".jpe")]
 			public const string Jpeg = "image/jpeg";
 			/// <summary></summary>
+			[MimeTypeInfo(true, ".gif")]
 			public const string Gif = "image/gif";
 			/// <summary></summary>
+			[MimeTypeInfo(false, ".ico")]
 			public const string Icon = "image/x-icon";
 		} // class Image
 
-		/// <summary></summary>
+		/// <summary>All application mime types.</summary>
 		public static class Application
 		{
+			/// <summary>Pdf files.</summary>
+			[MimeTypeInfo(false, ".pdf")]
+			public const string Pdf = "application/pdf";
 			/// <summary></summary>
+			[MimeTypeInfo(false, ".xaml")]
 			public const string Xaml = "application/xaml+xml";
 			/// <summary></summary>
+			[MimeTypeInfo(true, ".dat")]
 			public const string OctetStream = "application/octet-stream";
 		} // class Application
 	} // class MimeTypes
+
+	#endregion
+
+	#region -- class MimeTypeMapping --------------------------------------------------
+
+	/// <summary>Mime type mapping class</summary>
+	public sealed class MimeTypeMapping
+	{
+		private MimeTypeMapping(string mimeType, bool isCompressedContent, string[] extensions)
+		{
+			MimeType = mimeType;
+			Extensions = extensions;
+			IsCompressedContent = isCompressedContent;
+		} // ctor
+
+		/// <summary></summary>
+		/// <returns></returns>
+		public override int GetHashCode()
+			=> MimeType.GetHashCode();
+
+		/// <summary></summary>
+		/// <param name="obj"></param>
+		/// <returns></returns>
+		public override bool Equals(object obj)
+			=> obj is MimeTypeMapping m ? MimeType.Equals(m.MimeType) : base.Equals(obj);
+
+		/// <summary></summary>
+		/// <returns></returns>
+		public override string ToString()
+			=> "Mapping: " + MimeType;
+
+		/// <summary>Mime type.</summary>
+		public string MimeType { get; }
+		/// <summary>Return posible extensions of the mime type.</summary>
+		public string[] Extensions { get; }
+		/// <summary>Is the content of this mimetype a compress data format.</summary>
+		public bool IsCompressedContent { get; }
+
+		private static readonly Regex extensionRegEx = new Regex(@"^\.\w+$", RegexOptions.Singleline | RegexOptions.Compiled | RegexOptions.IgnoreCase);
+		private static readonly List<MimeTypeMapping> mimeTypeMappings = new List<MimeTypeMapping>();
+		private static readonly Dictionary<string, int> mimeTypeIndex = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+		private static readonly Dictionary<string, int> extensionIndex = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+		static MimeTypeMapping()
+		{
+			foreach (var t in typeof(MimeTypes).GetNestedTypes(BindingFlags.Public | BindingFlags.Static))
+			{
+				foreach (var fi in t.GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.GetField))
+				{
+					var attr = fi.GetCustomAttribute<MimeTypeInfoAttribute>();
+					if (attr != null)
+						UpdateIntern((string)fi.GetValue(null), attr.IsPackedContent, true, attr.Extensions);
+				}
+			}
+		} // sctor
+
+		private static void UpdateIntern(string mimeType, bool isCompressedContent, bool replace, string[] extensions)
+		{
+			if (String.IsNullOrEmpty(mimeType))
+				throw new ArgumentNullException(nameof(mimeType));
+
+			// clean extensions
+			var cleanExtensions = GetCleanExtensions(extensions);
+
+			// check if mime type exists
+			if (mimeTypeIndex.TryGetValue(mimeType, out var idx))
+			{
+				var oldMapping = mimeTypeMappings[idx];
+				if (replace)
+				{
+					ClearExtensionIndex(oldMapping.Extensions, idx);
+					extensions = cleanExtensions.ToArray();
+				}
+				else
+					extensions = oldMapping.Extensions.Union(cleanExtensions).ToArray();
+
+				mimeTypeMappings[idx] = new MimeTypeMapping(mimeType, isCompressedContent, extensions);
+
+				UpdateExtensionIndex(extensions, idx);
+			}
+			else // add new
+			{
+				extensions = cleanExtensions.ToArray();
+
+				idx = mimeTypeMappings.Count;
+
+				// add mapping
+				var mapping = new MimeTypeMapping(mimeType, isCompressedContent, extensions);
+				mimeTypeMappings.Add(mapping);
+
+				mimeTypeIndex[mimeType] = idx;
+
+				UpdateExtensionIndex(extensions, idx);
+			}
+		} // UpdateIntern
+
+		private static IEnumerable<string> GetCleanExtensions(string[] extensions)
+		{
+			foreach(var c in extensions)
+			{
+				// check syntax
+				if (!extensionRegEx.IsMatch(c))
+					throw new ArgumentOutOfRangeException("ext", c, $"Extension '{c}' is invalid.");
+				yield return c;
+
+			}
+		} // func GetCleanExtension
+
+		private static void ClearExtensionIndex(string[] extensions, int idx)
+		{
+			for (var i = 0; i < extensions.Length; i++)
+			{
+				var key = extensions[i];
+				if (extensionIndex.TryGetValue(key, out var currentIdx) && currentIdx == idx)
+					extensionIndex.Remove(key);
+			}
+		} // proc ClearExtensionIndex 
+
+		private static void UpdateExtensionIndex(string[] extensions, int idx)
+		{
+			for (var i = 0; i < extensions.Length; i++)
+			{
+				var key = extensions[i];
+				if (!extensionIndex.ContainsKey(key))
+					extensionIndex[key] = idx;
+			}
+		} // proc UpdateExtensionIndex
+
+		/// <summary></summary>
+		/// <param name="mimeType"></param>
+		/// <param name="replace"></param>
+		/// <param name="isPackedContent"></param>
+		/// <param name="extensions"></param>
+		public static void Update(string mimeType, bool isPackedContent, bool replace, params string[] extensions)
+		{
+			lock (mimeTypeMappings)
+				UpdateIntern(mimeType, isPackedContent, replace, extensions);
+		} // proc Update
+
+		/// <summary>Find mapping information for a mimeType.</summary>
+		/// <param name="mimeType"></param>
+		/// <param name="mapping"></param>
+		/// <returns></returns>
+		public static bool TryGetMapping(string mimeType, out MimeTypeMapping mapping)
+		{
+			if (mimeTypeIndex.TryGetValue(mimeType, out var idx))
+			{
+				mapping = mimeTypeMappings[idx];
+				return true;
+			}
+			else
+			{
+				mapping = null;
+				return false;
+			}
+		} // func TryGetMapping
+
+		/// <summary>Translate a extension to a mime type.</summary>
+		/// <param name="extension"></param>
+		/// <returns></returns>
+		public static string GetMimeTypeFromExtension(string extension)
+			=> TryGetMimeTypeFromExtension(extension, out var mimeType) ? mimeType : MimeTypes.Application.OctetStream;
+
+		/// <summary>Translate a extension to a mime type.</summary>
+		/// <param name="extension"></param>
+		/// <param name="mimeType"></param>
+		/// <returns></returns>
+		public static bool TryGetMimeTypeFromExtension(string extension, out string mimeType)
+		{
+			// test for filename
+			if (!extensionRegEx.IsMatch(extension))
+				extension = Path.GetExtension(extension);
+
+			// search extension
+			if (extensionIndex.TryGetValue(extension, out var idx))
+			{
+				mimeType = mimeTypeMappings[idx].MimeType;
+				return true;
+			}
+			else
+			{
+				mimeType = null;
+				return false;
+			}
+		} // func TryGetMimeTypeFromExtension
+
+		/// <summary>Translate a mime type to extension.</summary>
+		/// <param name="mimeType"></param>
+		/// <returns></returns>
+		public static string GetExtensionFromMimeType(string mimeType)
+			=> TryGetExtensionFromMimeType(mimeType, out var ext) ? ext : ".dat";
+
+		/// <summary>Translate a mime type to extension.</summary>
+		/// <param name="mimeType"></param>
+		/// <param name="extension"></param>
+		/// <returns></returns>
+		public static bool TryGetExtensionFromMimeType(string mimeType, out string extension)
+		{
+			if (TryGetMapping(mimeType, out var mapping) && mapping.Extensions.Length > 0)
+			{
+				extension = mapping.Extensions.First();
+				return true;
+			}
+			else
+			{
+				extension = null;
+				return false;
+			}
+		} // func TryGetExtensionFromMimeType
+
+		  /// <summary>Is the content of the mime type text based.</summary>
+		  /// <param name="mimeType"></param>
+		  /// <returns></returns>
+		public static bool GetIsCompressedContent(string mimeType)
+			=> TryGetMapping(mimeType, out var mapping) ? mapping.IsCompressedContent : false;
+	} // class MimeTypeMapping
 
 	#endregion
 
