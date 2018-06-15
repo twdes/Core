@@ -334,6 +334,19 @@ namespace TecWare.DE.Networking
 		  /// <returns></returns>
 		public static bool GetIsCompressedContent(string mimeType)
 			=> TryGetMapping(mimeType, out var mapping) ? mapping.IsCompressedContent : false;
+
+		/// <summary>Return all mappings.</summary>
+		public static IEnumerable<MimeTypeMapping> Mappings
+		{
+			get
+			{
+				lock(mimeTypeMappings)
+				{
+					foreach (var m in mimeTypeMappings)
+						yield return m;
+				}
+			}
+		} // prop Mappings
 	} // class MimeTypeMapping
 
 	#endregion
