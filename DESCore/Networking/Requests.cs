@@ -81,6 +81,9 @@ namespace TecWare.DE.Networking
 			[MimeTypeInfo(false, ".json", ".map")]
 			public const string Json = "text/json";
 			/// <summary></summary>
+			[MimeTypeInfo(false, ".lson")]
+			public const string Lson = "text/lson";
+			/// <summary></summary>
 			[MimeTypeInfo(false)]
 			public const string DataSet = "text/dataset";
 		} // class Text
