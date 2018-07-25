@@ -13,16 +13,11 @@
 // specific language governing permissions and limitations under the Licence.
 //
 #endregion
-using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace TecWare.DE.Data
 {
-	///////////////////////////////////////////////////////////////////////////////
+	#region -- enum CsvQuotation ------------------------------------------------------
+
 	/// <summary>Defines the quotation algorithmus.</summary>
 	public enum CsvQuotation
 	{
@@ -36,7 +31,10 @@ namespace TecWare.DE.Data
 		Forced
 	} // enum CsvQuotation
 
-	///////////////////////////////////////////////////////////////////////////////
+	#endregion
+
+	#region -- class TextCoreSettings -------------------------------------------------
+
 	/// <summary></summary>
 	public abstract class TextCoreSettings
 	{
@@ -48,7 +46,10 @@ namespace TecWare.DE.Data
 		public int StartRow { get; set; } = 1;
 	} // class TextSCoreSettings
 
-	///////////////////////////////////////////////////////////////////////////////
+	#endregion
+
+	#region -- class TextFixedSettings ------------------------------------------------
+
 	/// <summary></summary>
 	public sealed class TextFixedSettings : TextCoreSettings
 	{
@@ -58,7 +59,10 @@ namespace TecWare.DE.Data
 		public char Padding { get; set; } = ' ';
 	} // class TextFixedSettings
 
-	///////////////////////////////////////////////////////////////////////////////
+	#endregion
+
+	#region -- class TextCsvSettings --------------------------------------------------
+
 	/// <summary>Description of the text file.</summary>
 	public sealed class TextCsvSettings : TextCoreSettings
 	{
@@ -69,4 +73,6 @@ namespace TecWare.DE.Data
 		/// <summary>Quotation char (default: '"').</summary>
 		public char Quote { get; set; } = '"';
 	} // class TextCsvSettings
+
+	#endregion
 }

@@ -16,7 +16,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Text;
 
@@ -103,7 +102,7 @@ namespace TecWare.DE.Data
 		/// <summary>Reads the contents of the current row.</summary>
 		/// <returns></returns>
 		public abstract bool ReadRow();
-		
+
 		/// <summary>Number of columns</summary>
 		public abstract int Count { get; }
 		/// <summary>Content of a column</summary>
@@ -130,7 +129,7 @@ namespace TecWare.DE.Data
 		private readonly int[] recordOffsets;
 
 		private char[] currentRecord;
-		
+
 		/// <summary></summary>
 		/// <param name="tr"></param>
 		/// <param name="settings"></param>
@@ -153,9 +152,9 @@ namespace TecWare.DE.Data
 			this.currentRecord = new char[recordLength];
 		} // ctor
 
-		private bool ReadRecord( bool throwInvalidBlockLength)
+		private bool ReadRecord(bool throwInvalidBlockLength)
 		{
-			 var r = BaseReader.ReadBlock(currentRecord, 0, recordLength);
+			var r = BaseReader.ReadBlock(currentRecord, 0, recordLength);
 			if (r == recordLength)
 				return true;
 			else if (r == 0 || !throwInvalidBlockLength)
@@ -181,7 +180,7 @@ namespace TecWare.DE.Data
 		/// <returns></returns>
 		public override bool ReadRow()
 			=> ReadRecord(true);
-		
+
 		/// <summary></summary>
 		public override int Count => recordOffsets.Length;
 
@@ -452,7 +451,7 @@ namespace TecWare.DE.Data
 		/// <summary></summary>
 		/// <param name="index"></param>
 		/// <returns></returns>
-		public override string this[int index]=>index >= 0 && index < columns.Count ? columns[index] : null;
+		public override string this[int index] => index >= 0 && index < columns.Count ? columns[index] : null;
 
 		/// <summary></summary>
 		public override int Count => columns.Count;
@@ -537,7 +536,7 @@ namespace TecWare.DE.Data
 			currentDataRow = -1;
 			OnReset();
 		} // proc Reset
-		
+
 		/// <summary></summary>
 		/// <returns></returns>
 		public virtual string[] MoveToHeader()
