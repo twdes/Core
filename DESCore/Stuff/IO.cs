@@ -171,47 +171,6 @@ namespace TecWare.DE.Stuff
 	/// <summary></summary>
 	public static partial class Procs
 	{
-		#region -- OpenStreamReader ---------------------------------------------------
-
-		/// <summary>Open a stream read and detect encoding.,</summary>
-		/// <param name="src"></param>
-		/// <param name="default"></param>
-		/// <returns></returns>
-		public static StreamReader OpenStreamReader(Stream src, Encoding @default)
-		{
-			// Ermittle die Codierung
-			var encodingSource = @default;
-			var detectEncoding = false;
-			if (src.CanSeek)
-			{
-				var bPreamble = new byte[4];
-				var readed = src.Read(bPreamble, 0, 4);
-
-				if (readed >= 3 && bPreamble[0] == 0xEF && bPreamble[1] == 0xBB && bPreamble[2] == 0xBF) // utf-8
-					encodingSource = Encoding.UTF8;
-				else if (readed == 4 && bPreamble[0] == 0x00 && bPreamble[1] == 0x00 && bPreamble[2] == 0xFE && bPreamble[3] == 0xFF) // utf-32 EB
-				{
-					encodingSource = Encoding.GetEncoding("utf-32"); // is a EL codepage, but the StreamReader should switch to EB
-					detectEncoding = true;
-				}
-				else if (readed == 4 && bPreamble[0] == 0xFF && bPreamble[1] == 0xFE && bPreamble[2] == 0x00 && bPreamble[3] == 0x00) // utf-32 EL
-					encodingSource = Encoding.GetEncoding("utf-32");
-				else if (readed >= 2 && bPreamble[0] == 0xFE && bPreamble[1] == 0xFF) // utf-16 EB
-					encodingSource = Encoding.BigEndianUnicode;
-				else if (readed >= 2 && bPreamble[0] == 0xFF && bPreamble[1] == 0xFE) // utf-16 EL
-					encodingSource = Encoding.Unicode;
-
-				src.Seek(-readed, SeekOrigin.Current);
-			}
-			else
-				detectEncoding = true;
-			
-			// Öffne den StreamReader
-			return new StreamReader(src, encodingSource, detectEncoding);
-		} // func OpenStreamReader
-
-		#endregion
-
 		#region -- ReadInArray --------------------------------------------------------
 
 		/// <summary></summary>
