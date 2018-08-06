@@ -67,7 +67,7 @@ namespace TecWare.DE.Networking
 			public const string Xml = "text/xml";
 			/// <summary></summary>
 			[MimeTypeInfo(false, ".js")]
-			public const string JavaScript = "text/javascript";
+			public const string JavaScript = "application/javascript";
 			/// <summary></summary>
 			[MimeTypeInfo(false, ".css")]
 			public const string Css = "text/css";
