@@ -17,6 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 
 namespace TecWare.DE.Stuff
 {
@@ -27,14 +28,34 @@ namespace TecWare.DE.Stuff
 		/// <returns></returns>
 		public static IEnumerable<string> ParseMultiValueHeader(string value)
 			=> from c in value.Split(',')
-						 let t = c.Trim()
-						 where t.Length > 0
-						 select t;
+				let t = c.Trim()
+				where t.Length > 0
+				select t;
 
-		/// <summary></summary>
+		/// <summary>Get filename from uri path.</summary>
 		/// <param name="uri"></param>
 		/// <returns></returns>
 		public static string GetFileName(this Uri uri)
 			=> Path.GetFileName(uri.AbsolutePath);
+
+		/// <summary>Filter unwanted chars from status description.</summary>
+		/// <param name="statusDescription"></param>
+		/// <returns></returns>
+		public static string FilterHttpStatusDescription(string statusDescription)
+		{
+			if (String.IsNullOrEmpty(statusDescription))
+				return statusDescription;
+
+			var sb = new StringBuilder(statusDescription.Length);
+			for (var i = 0; i < statusDescription.Length; i++)
+			{
+				var c = statusDescription[i];
+				if (c == '\n')
+					sb.Append("<br/>");
+				else if (c > (char)0x1F || c == '\t')
+					sb.Append(c);
+			}
+			return sb.ToString();
+		} // func FilterHttpStatusDescription
 	} // class Procs
 }

@@ -63,7 +63,7 @@ namespace TecWare.DE.Stuff
 			return false;
 		} // func SplitLanguage
 
-		#region -- Filter -----------------------------------------------------------------
+		#region -- Filter -------------------------------------------------------------
 
 		private static bool StaticTrueFilter(string value)
 			=> true;
