@@ -82,7 +82,7 @@ namespace TecWare.DE.Networking
 			public const string Json = "text/json";
 			/// <summary></summary>
 			[MimeTypeInfo(false, ".lson")]
-			public const string Lson = "text/lson";
+			public const string Lson = "text/x-lson";
 			/// <summary></summary>
 			[MimeTypeInfo(false)]
 			public const string DataSet = "text/dataset";
