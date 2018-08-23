@@ -386,9 +386,7 @@ namespace TecWare.DE.Data
 		public GenericDataRowEnumerator(IEnumerator<T> enumerator)
 		{
 			this.enumerator = enumerator ?? throw new ArgumentNullException();
-			this.properties = typeof(T).GetRuntimeProperties()
-				.Where(pi => pi.CanRead && pi.GetMethod.IsPublic && !pi.GetMethod.IsStatic)
-				.Select(pi => new PropertyColumnInfo(pi)).ToArray();
+			this.properties = GetColumnInfoCore();
 		} // ctor
 
 		/// <summary></summary>
@@ -426,6 +424,16 @@ namespace TecWare.DE.Data
 		public T BaseCurrent => enumerator.Current;
 
 		object IEnumerator.Current => Current;
+
+		private static PropertyColumnInfo[] GetColumnInfoCore()
+			=> typeof(T).GetRuntimeProperties()
+				.Where(pi => pi.CanRead && pi.GetMethod.IsPublic && !pi.GetMethod.IsStatic)
+				.Select(pi => new PropertyColumnInfo(pi)).ToArray();
+
+		/// <summary></summary>
+		/// <returns></returns>
+		public static IDataColumn[] GetColumnInfo()
+			=> GetColumnInfoCore();
 	} // class GenericDataRowEnumerator<T>
 
 	#endregion

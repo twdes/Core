@@ -15,6 +15,7 @@
 #endregion
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using System.Xml.Linq;
@@ -317,12 +318,140 @@ namespace TecWare.DE.Stuff
 		public static IEnumerator CombineEnumerator(params IEnumerator[] enumerators)
 		{
 			if (enumerators == null || enumerators.Length == 0)
-				return Array.Empty<IEnumerator>().GetEnumerator();
+				return Array.Empty<object>().GetEnumerator();
 			else if (enumerators.Length == 1)
 				return enumerators[1];
 			else
 				return new ConnectedEnumerator(enumerators);
 		} // func Combine
+
+		#endregion
+
+		#region -- Range Enumerator ---------------------------------------------------
+
+		private class RangeEnumeratorCore<ENUM> : IEnumerator
+			where ENUM : IEnumerator
+		{
+			private readonly ENUM enumerator;
+			private readonly int start;
+			private readonly int end;
+			private int position = 0;
+
+			public RangeEnumeratorCore(ENUM enumerator, int start, int count)
+			{
+				if (enumerator == null)
+					throw new ArgumentOutOfRangeException(nameof(enumerator));
+
+				this.enumerator = enumerator;
+				this.start = start;
+				this.end = start > 0 ? start + count : count;
+			} // ctor
+
+			public void Reset()
+			{
+				position = 0;
+				enumerator.Reset();
+			} // proc Reset
+
+			public bool MoveNext()
+			{
+				// skip part
+				while (position < start)
+				{
+					if (!enumerator.MoveNext())
+						return false;
+					position++;
+				}
+
+				// count part
+				if (position < end)
+				{
+					if (!enumerator.MoveNext())
+						return false;
+					position++;
+					return true;
+				}
+				return false;
+			} // func MoveNext
+
+			public object Current => enumerator.Current;
+
+			protected ENUM Enumerator => enumerator;
+		} // class RangeEnumeratorCore
+
+		private sealed class RangeEnumeratorUntyped : RangeEnumeratorCore<IEnumerator>
+		{
+			public RangeEnumeratorUntyped(IEnumerator enumerator, int start, int count) 
+				: base(enumerator, start, count)
+			{
+			}
+		} // class RangeEnumeratorUntyped
+
+		private sealed class RangeEnumeratorTyped<T> : RangeEnumeratorCore<IEnumerator<T>>, IEnumerator<T>
+		{
+			public RangeEnumeratorTyped(IEnumerator<T> enumerator, int start, int count)
+				: base(enumerator, start, count)
+			{
+			} // ctor
+
+			public void Dispose()
+				=> Enumerator.Dispose();
+
+			T IEnumerator<T>.Current => Enumerator.Current;
+		} // class RangeEnumeratorTyped
+
+		/// <summary></summary>
+		/// <param name="enumerator"></param>
+		/// <param name="start"></param>
+		/// <param name="count"></param>
+		/// <returns></returns>
+		public static IEnumerator GetRangeEnumerator(this IEnumerator enumerator, int start, int count)
+			=> start == 0 && count == Int32.MaxValue
+				? enumerator
+				: new RangeEnumeratorUntyped(enumerator, start, count);
+
+		/// <summary></summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="enumerator"></param>
+		/// <param name="start"></param>
+		/// <param name="count"></param>
+		/// <returns></returns>
+		public static IEnumerator<T> GetRangeEnumerator<T>(this IEnumerator<T> enumerator, int start, int count)
+			=> start == 0 && count == Int32.MaxValue
+				? enumerator
+				: new RangeEnumeratorTyped<T>(enumerator, start, count);
+
+		#endregion
+
+		#region -- Typed Enumerator ---------------------------------------------------
+
+		private sealed class TypedEnumerator<T> : IEnumerator<T>
+		{
+			private readonly IEnumerator enumerator;
+
+			public TypedEnumerator(IEnumerator enumerator)
+				=> this.enumerator = enumerator ?? throw new ArgumentNullException(nameof(enumerator));
+
+			public void Dispose()
+				=> (enumerator as IDisposable)?.Dispose();
+
+			public void Reset()
+				=> enumerator.Reset();
+
+			public bool MoveNext()
+				=> enumerator.MoveNext();
+
+			object IEnumerator.Current => enumerator.Current;
+
+			public T Current => (T)enumerator.Current;
+		} // class TypedEnumerator
+
+		/// <summary></summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="enumerator"></param>
+		/// <returns></returns>
+		public static IEnumerator<T> GetTypedEnumerator<T>(this IEnumerator enumerator)
+			=> new TypedEnumerator<T>(enumerator);
 
 		#endregion
 	} // class Procs
