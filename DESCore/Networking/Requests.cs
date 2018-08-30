@@ -565,10 +565,13 @@ namespace TecWare.DE.Networking
 
 		/// <summary></summary>
 		/// <param name="path"></param>
+		/// <param name="acceptMimeType"></param>
 		/// <returns></returns>
-		public async Task<WebResponse> GetResponseAsync(string path)
+		public async Task<WebResponse> GetResponseAsync(string path, string acceptMimeType)
 		{
 			var request = GetWebRequest(path);
+			if (acceptMimeType != null)
+				((HttpWebRequest)request).Accept = acceptMimeType;
 
 #if DEBUG
 			Debug.WriteLine($"Request: {path}");
@@ -666,7 +669,7 @@ namespace TecWare.DE.Networking
 		/// <param name="acceptedMimeType">Optional.</param>
 		/// <returns></returns>
 		public async Task<Stream> GetStreamAsync(string path, string acceptedMimeType = null)
-			=> GetStream(await GetResponseAsync(path), acceptedMimeType);
+			=> GetStream(await GetResponseAsync(path, acceptedMimeType), acceptedMimeType);
 
 		#endregion
 
@@ -690,7 +693,7 @@ namespace TecWare.DE.Networking
 		/// <param name="acceptedMimeType"></param>
 		/// <returns></returns>
 		public async Task<TextReader> GetTextReaderAsync(string path, string acceptedMimeType)
-			=> GetTextReader(await GetResponseAsync(path), acceptedMimeType);
+			=> GetTextReader(await GetResponseAsync(path, acceptedMimeType), acceptedMimeType);
 
 		#endregion
 
@@ -726,7 +729,7 @@ namespace TecWare.DE.Networking
 		/// <returns></returns>
 		public async Task<XmlReader> GetXmlStreamAsync(string path, string acceptedMimeType = MimeTypes.Text.Xml, XmlReaderSettings settings = null)
 		{
-			var response = await GetResponseAsync(path); // todo: is disposed called?
+			var response = await GetResponseAsync(path, acceptedMimeType); // todo: is disposed called?
 			return GetXmlStream(response, acceptedMimeType, settings);
 		} // func GetXmlStreamAsync
 
@@ -775,7 +778,7 @@ namespace TecWare.DE.Networking
 		/// <param name="rootName"></param>
 		/// <returns></returns>
 		public async Task<XElement> GetXmlAsync(string path, string acceptedMimeType = MimeTypes.Text.Xml, XName rootName = null)
-			=> GetXml(await GetResponseAsync(path), acceptedMimeType, rootName);
+			=> GetXml(await GetResponseAsync(path, acceptedMimeType), acceptedMimeType, rootName);
 
 		#endregion
 
@@ -786,7 +789,7 @@ namespace TecWare.DE.Networking
 		/// <param name="rootName"></param>
 		/// <returns></returns>
 		public async Task<LuaTable> GetTableAsync(string path, XName rootName = null)
-			=> GetTable(await GetResponseAsync(path), rootName);
+			=> GetTable(await GetResponseAsync(path, MimeTypes.Text.Xml), rootName);
 
 		/// <summary></summary>
 		/// <param name="response"></param>
