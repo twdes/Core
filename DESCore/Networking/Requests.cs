@@ -570,8 +570,8 @@ namespace TecWare.DE.Networking
 		public async Task<WebResponse> GetResponseAsync(string path, string acceptMimeType)
 		{
 			var request = GetWebRequest(path);
-			if (acceptMimeType != null)
-				((HttpWebRequest)request).Accept = acceptMimeType;
+			if (acceptMimeType != null && request is HttpWebRequest webRequest)
+				webRequest.Accept = acceptMimeType;
 
 #if DEBUG
 			Debug.WriteLine($"Request: {path}");
