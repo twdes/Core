@@ -182,7 +182,7 @@ namespace TecWare.DE.Data
 		public TextDataRowColumn[] Columns => columns;
 		/// <summary></summary>
 		public bool IsParsedStrict { get; set; } = false;
-	} // class TextDynamicRowEnumerator
+	} // class TextDataRowEnumerator
 
 	#endregion
 }

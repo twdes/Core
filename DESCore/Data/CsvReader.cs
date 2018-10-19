@@ -524,8 +524,7 @@ namespace TecWare.DE.Data
 			if (currentRow == -1)
 				return;
 
-			var sr = coreReader.BaseReader as StreamReader;
-			if (sr == null || !sr.BaseStream.CanSeek)
+			if (!(coreReader.BaseReader is StreamReader sr) || !sr.BaseStream.CanSeek)
 				throw new NotSupportedException();
 
 			// seek begin of file
