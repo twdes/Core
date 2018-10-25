@@ -221,9 +221,9 @@ namespace TecWare.DE.Stuff
 			if ((len & 1) != 0) // even number expected
 				throw new ArgumentException("invalid bytes", nameof(bytes));
 
-			var data = new byte[(len >> 1) - 1];
+			var data = new byte[len >> 1];
 			var j = 0;
-			while (ofs < len)
+			while (j < data.Length)
 			{
 				data[j] = Byte.Parse(bytes.Substring(ofs, 2), NumberStyles.AllowHexSpecifier);
 				ofs += 2;
