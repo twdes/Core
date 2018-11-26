@@ -284,7 +284,7 @@ namespace TecWare.DE.Stuff
 		/// <summary>Create a Lua table from data row.</summary>
 		/// <param name="values"></param>
 		/// <returns></returns>
-		public static LuaTable CreateLuaTable(IDataRow values)
+		public static LuaTable CreateLuaTable(this IDataRow values)
 		{
 			var t = new LuaTable();
 			for (var i = 0; i < values.Columns.Count; i++)

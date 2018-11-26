@@ -54,17 +54,34 @@ namespace TecWare.DE.Networking
 		private readonly string userName;
 		private readonly string password;
 
-		/// <summary></summary>
+		/// <summary>Create a basic user credential.</summary>
+		/// <param name="userName">User name</param>
+		/// <param name="password">Password of the user.</param>
+		public UserCredential(string userName, string password)
+			: this("Basic", null, userName, password)
+		{
+		} // ctor
+
+		/// <summary>Create a ntlm user credential.</summary>
+		/// <param name="domain"></param>
+		/// <param name="userName">User name</param>
+		/// <param name="password">Password of the user.</param>
+		public UserCredential(string domain, string userName, string password)
+			: this("NTLM", domain, userName, password)
+		{
+		} // ctor
+
+		/// <summary>Create a user credential with authentification type.</summary>
 		/// <param name="authType"></param>
 		/// <param name="domain"></param>
-		/// <param name="userName"></param>
-		/// <param name="password"></param>
+		/// <param name="userName">User name</param>
+		/// <param name="password">Password of the user.</param>
 		public UserCredential(string authType, string domain, string userName, string password)
 		{
-			this.authType = authType;
+			this.authType = authType ?? throw new ArgumentNullException(nameof(authType));
 			this.domain = domain;
-			this.userName = userName;
-			this.password = password;
+			this.userName = userName ?? String.Empty;
+			this.password = password ?? String.Empty;
 		} // ctor
 
 		/// <summary>GetCredential implementation, that compares the authentification type, too.</summary>

@@ -454,5 +454,78 @@ namespace TecWare.DE.Stuff
 			=> new TypedEnumerator<T>(enumerator);
 
 		#endregion
+
+		#region -- Disposable Enumerators ---------------------------------------------
+
+		#region -- class DisposeEnumerator --------------------------------------------
+
+		private sealed class DisposeEnumerator<T> : IEnumerator<T>
+		{
+			private readonly IDisposable disposable;
+			private readonly IEnumerator<T> innerEnumerator;
+
+			public DisposeEnumerator(IDisposable disposable, IEnumerator<T> innerEnumerator)
+			{
+				this.disposable = disposable ?? throw new ArgumentNullException(nameof(disposable));
+				this.innerEnumerator = innerEnumerator ?? throw new ArgumentNullException(nameof(innerEnumerator));
+			} // ctor
+
+			public void Dispose()
+			{
+				innerEnumerator.Dispose();
+				disposable.Dispose();
+			} // proc Dispose
+
+			public bool MoveNext()
+				=> innerEnumerator.MoveNext();
+
+			public void Reset()
+				=> innerEnumerator.Reset();
+
+			public T Current => innerEnumerator.Current;
+			object IEnumerator.Current => innerEnumerator.Current;
+		} // class DisposeEnumerator
+
+		#endregion
+
+		#region -- class DisposeEnumerable --------------------------------------------
+
+		private sealed class DisposeEnumerable<T> : IEnumerable<T>
+		{
+			private readonly IDisposable disposable;
+			private readonly IEnumerable<T> enumeratable;
+
+			public DisposeEnumerable(IDisposable disposable, IEnumerable<T> enumeratable)
+			{
+				this.disposable = disposable ?? throw new ArgumentNullException(nameof(disposable));
+				this.enumeratable = enumeratable ?? throw new ArgumentNullException(nameof(enumeratable));
+			} // ctor
+
+			public IEnumerator<T> GetEnumerator()
+				=> enumeratable.GetEnumerator();
+
+			IEnumerator IEnumerable.GetEnumerator()
+				=> GetEnumerator();
+		} // class DisposeEnumerable
+
+		#endregion
+
+		/// <summary></summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="e"></param>
+		/// <param name="disposable"></param>
+		/// <returns></returns>
+		public static IEnumerable<T> Dispose<T>(this IEnumerable<T> e, IDisposable disposable)
+			=> new DisposeEnumerable<T>(disposable, e);
+
+		/// <summary></summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="e"></param>
+		/// <param name="disposable"></param>
+		/// <returns></returns>
+		public static IEnumerator<T> Dispose<T>(this IEnumerator<T> e, IDisposable disposable)
+			=> new DisposeEnumerator<T>(disposable, e);
+
+		#endregion
 	} // class Procs
 }

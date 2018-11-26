@@ -555,6 +555,7 @@ namespace TecWare.DE.Networking
 
 			// we accept always gzip
 			request.Headers[HttpRequestHeader.AcceptEncoding] = "gzip";
+			request.Headers["des-multiple-authentifications"] = "true";
 
 			// set network login information
 			if (credentials != null)
