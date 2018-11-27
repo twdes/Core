@@ -33,9 +33,7 @@ namespace TecWare.DE.Stuff
 		/// <summary></summary>
 		/// <param name="properties"></param>
 		public LuaPropertiesTable(IPropertyReadOnlyDictionary properties)
-		{
-			this.properties = properties;
-		} // ctor
+			=> this.properties = properties;
 		
 		/// <summary></summary>
 		/// <param name="key"></param>
@@ -56,9 +54,7 @@ namespace TecWare.DE.Stuff
 		/// <summary></summary>
 		/// <param name="table"></param>
 		public LuaTableProperties(LuaTable table)
-		{
-			this.table = table;
-		} // ctor
+			=> this.table = table;
 
 		/// <summary></summary>
 		/// <returns></returns>
@@ -71,7 +67,9 @@ namespace TecWare.DE.Stuff
 		/// <returns></returns>
 		public bool TryGetProperty(string name, out object value)
 			=> (value = table?.GetMemberValue(name, true)) != null;
-		IEnumerator IEnumerable.GetEnumerator() => throw new NotImplementedException();
+
+		IEnumerator IEnumerable.GetEnumerator() 
+			=> throw new NotImplementedException();
 	} // class LuaPropertiesTable
 
 	#endregion
@@ -189,7 +187,7 @@ namespace TecWare.DE.Stuff
 			if (type == typeof(LuaTable))
 				return CreateLuaTable(x);
 			else
-				return Procs.ChangeType(x.Value, type);
+				return ChangeType(x.Value, type);
 		} // func GetValue
 		
 		/// <summary>Create a LuaTable from a xml definition.</summary>

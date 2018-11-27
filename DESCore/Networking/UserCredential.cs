@@ -15,6 +15,8 @@
 #endregion
 using System;
 using System.Net;
+using System.Security;
+using TecWare.DE.Stuff;
 
 namespace TecWare.DE.Networking
 {
@@ -52,12 +54,12 @@ namespace TecWare.DE.Networking
 		private readonly string authType;
 		private readonly string domain;
 		private readonly string userName;
-		private readonly string password;
+		private readonly SecureString password;
 
 		/// <summary>Create a basic user credential.</summary>
 		/// <param name="userName">User name</param>
 		/// <param name="password">Password of the user.</param>
-		public UserCredential(string userName, string password)
+		public UserCredential(string userName, SecureString password)
 			: this("Basic", null, userName, password)
 		{
 		} // ctor
@@ -66,7 +68,7 @@ namespace TecWare.DE.Networking
 		/// <param name="domain"></param>
 		/// <param name="userName">User name</param>
 		/// <param name="password">Password of the user.</param>
-		public UserCredential(string domain, string userName, string password)
+		public UserCredential(string domain, string userName, SecureString password)
 			: this("NTLM", domain, userName, password)
 		{
 		} // ctor
@@ -76,12 +78,12 @@ namespace TecWare.DE.Networking
 		/// <param name="domain"></param>
 		/// <param name="userName">User name</param>
 		/// <param name="password">Password of the user.</param>
-		public UserCredential(string authType, string domain, string userName, string password)
+		public UserCredential(string authType, string domain, string userName, SecureString password)
 		{
 			this.authType = authType ?? throw new ArgumentNullException(nameof(authType));
 			this.domain = domain;
 			this.userName = userName ?? String.Empty;
-			this.password = password ?? String.Empty;
+			this.password = password != null ? password.Copy() : new SecureString();
 		} // ctor
 
 		/// <summary>GetCredential implementation, that compares the authentification type, too.</summary>
@@ -89,12 +91,9 @@ namespace TecWare.DE.Networking
 		/// <param name="authType"></param>
 		/// <returns></returns>
 		public NetworkCredential GetCredential(Uri uri, string authType)
-		{
-			if (String.Compare(authType, this.authType, StringComparison.OrdinalIgnoreCase) == 0)
-				return new NetworkCredential(userName, password, domain);
-			else
-				return null;
-		} // func GetCredential
+			=> String.Compare(authType, this.authType, StringComparison.OrdinalIgnoreCase) == 0
+				? new NetworkCredential(userName, password, domain)
+				: null;
 
 		/// <summary>Authentification type</summary>
 		public string AuthType => authType;
@@ -103,12 +102,52 @@ namespace TecWare.DE.Networking
 		/// <summary>User name</summary>
 		public string UserName => userName;
 		/// <summary>Password</summary>
-		public string Password => password;
+		public SecureString Password => password;
 
 		/// <summary>Wrap network credentials to compare also the authentification type.</summary>
 		/// <param name="userInfo"></param>
 		/// <returns></returns>
 		public static ICredentials Wrap(NetworkCredential userInfo)
 			=> new CredentialWrapper(userInfo);
+
+		/// <summary>Create UserCredential from password and username.</summary>
+		/// <param name="userName"></param>
+		/// <param name="password"></param>
+		/// <returns></returns>
+		public unsafe static UserCredential Create(string userName, string password)
+		{
+			if (String.IsNullOrEmpty(password))
+				return Create(userName, (SecureString)null);
+			else
+			{
+				fixed (char* c = password)
+				{
+					using (var p = new SecureString(c, password.Length))
+						return Create(userName, p);
+				}
+			}
+		} // func Create
+		
+		/// <summary>Create UserCredential from password and username.</summary>
+		/// <param name="userName"></param>
+		/// <param name="password"></param>
+		/// <returns></returns>
+		public static UserCredential Create(string userName, SecureString password)
+		{
+			if (userName == null)
+				throw new ArgumentNullException(nameof(userName));
+
+			var p = userName.IndexOf('\\');
+			if(p >= 0)
+				return new UserCredential(userName.Substring(0, p), userName.Substring(p + 1), password);
+			else
+			{
+				p = userName.IndexOf('@');
+				if (p >= 0)
+					return new UserCredential(userName.Substring(p + 1), userName.Substring(0, p), password);
+				else
+					return new UserCredential(userName, password);
+			}
+		} // func Create
 	} // class UserCredential
 }
