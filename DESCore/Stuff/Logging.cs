@@ -585,8 +585,15 @@ namespace TecWare.DE.Stuff
 		/// <summary></summary>
 		/// <param name="sp"></param>
 		/// <returns></returns>
-		public static LoggerProxy LogProxy(this IServiceProvider sp) 
+		public static LoggerProxy LogProxy(this IServiceProvider sp)
 			=> LoggerProxy.Create(sp?.GetService<ILogger>(false));
+
+		/// <summary></summary>
+		/// <param name="sp"></param>
+		/// <param name="prefix"></param>
+		/// <returns></returns>
+		public static LoggerProxy LogProxy(this IServiceProvider sp, string prefix) 
+			=> LoggerProxy.Create(sp?.GetService<ILogger>(false), prefix);
 	} // class Procs
 
 	#endregion
