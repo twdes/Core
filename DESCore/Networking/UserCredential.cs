@@ -114,20 +114,34 @@ namespace TecWare.DE.Networking
 		/// <param name="userName"></param>
 		/// <param name="password"></param>
 		/// <returns></returns>
-		public unsafe static UserCredential Create(string userName, string password)
+		public static UserCredential Create(string userName, string password)
+		{
+			using (var p = CreateSecureString(password))
+				return Create(userName, p);
+		} // func Create
+
+#if NET47
+		private static unsafe SecureString CreateSecureString(string password)
 		{
 			if (String.IsNullOrEmpty(password))
-				return Create(userName, (SecureString)null);
-			else
-			{
-				fixed (char* c = password)
-				{
-					using (var p = new SecureString(c, password.Length))
-						return Create(userName, p);
-				}
-			}
-		} // func Create
-		
+				return null;
+			fixed (char* c = password)
+				return new SecureString(c, password.Length);
+		} // func CreateSecureString
+#else
+		private static SecureString CreateSecureString(string password)
+		{
+			if (String.IsNullOrEmpty(password))
+				return null;
+
+			var s = new SecureString();
+			foreach (var c in password)
+				s.AppendChar(c);
+			s.MakeReadOnly();
+			return s;
+		} // func CreateSecureString
+#endif
+
 		/// <summary>Create UserCredential from password and username.</summary>
 		/// <param name="userName"></param>
 		/// <param name="password"></param>
