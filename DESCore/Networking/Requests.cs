@@ -16,15 +16,16 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
@@ -452,12 +453,9 @@ namespace TecWare.DE.Networking
 			var r = (HttpWebResponse)e.Response;
 			try
 			{
-				var code = r.StatusCode;
-
-				if (code == HttpStatusCode.Unauthorized)
-					return new ClientAuthentificationInformation(r.Headers["WWW-Authenticate"]);
-				else
-					return null;
+				return r.StatusCode == HttpStatusCode.Unauthorized
+					? new ClientAuthentificationInformation(r.Headers["WWW-Authenticate"])
+					: null;
 			}
 			finally
 			{
@@ -469,343 +467,262 @@ namespace TecWare.DE.Networking
 
 	#endregion
 
-	#region -- class BaseWebRequest ---------------------------------------------------
+	#region -- class DEHttpSocket -----------------------------------------------------
 
-	/// <summary></summary>
-	public sealed class BaseWebRequest
+	/// <summary>Log info connection to receive events and state of the server</summary>
+	public sealed class DEHttpSocket
 	{
-		private readonly Uri baseUri;
-		private readonly Encoding defaultEncoding;
-		private readonly ICredentials credentials;
+		//public event EventHandler EventReceived;
 
-		/// <summary></summary>
-		/// <param name="baseUri"></param>
-		/// <param name="defaultEncoding"></param>
-		/// <param name="credentials"></param>
-		public BaseWebRequest(Uri baseUri, Encoding defaultEncoding, ICredentials credentials = null)
+		//private readonly WebSocket webSocket;
+
+		//public bool IsConnected { get; }
+	} // class DEHttpSocket
+
+	#endregion
+
+	#region -- class DEHttpClient -----------------------------------------------------
+
+	/// <summary>Extension of HttpClient</summary>
+	public class DEHttpClient : HttpClient
+	{
+		#region -- class UnpackStreamContent ------------------------------------------
+
+		private sealed class UnpackStreamContent : HttpContent
 		{
-			this.baseUri = baseUri;
-			this.defaultEncoding = defaultEncoding;
-			this.credentials = credentials;
+			private readonly HttpContent innerContent;
+
+			public UnpackStreamContent(HttpContent innerContent)
+			{
+				this.innerContent = innerContent ?? throw new ArgumentNullException(nameof(innerContent));
+
+				foreach (var c in innerContent.Headers)
+					Headers.Add(c.Key, c.Value);
+			} // ctor
+
+			protected override void Dispose(bool disposing)
+			{
+				innerContent.Dispose();
+				base.Dispose(disposing);
+			} // proc Dispose
+
+			protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
+			{
+				using (var src = new GZipStream(await innerContent.ReadAsStreamAsync(), CompressionMode.Decompress))
+					await src.CopyToAsync(stream);
+			} // func SerializeToStreamAsync
+
+			protected override bool TryComputeLength(out long length)
+			{
+				length = 0;
+				return false;
+			} // func TryComputeLength
+		} // class UnpackStreamContent
+
+		#endregion
+
+		#region -- class DEClientHandler ----------------------------------------------
+
+		private sealed class DEClientHandler : MessageProcessingHandler
+		{
+			public DEClientHandler(HttpMessageHandler innerHandler)
+				: base(innerHandler)
+			{
+			}
+
+			protected override HttpRequestMessage ProcessRequest(HttpRequestMessage request, CancellationToken cancellationToken)
+				=> request;
+
+			protected override HttpResponseMessage ProcessResponse(HttpResponseMessage response, CancellationToken cancellationToken)
+			{
+				if (response.Content.Headers.ContentEncoding.Contains("gzip")) // result is packed, unpack
+					response.Content = new UnpackStreamContent(response.Content);
+				return response;
+			} // func ProcessResponse
+		} // class DEClientHandler
+
+		#endregion
+
+		#region -- Ctor/Dtor ----------------------------------------------------------
+
+		private DEHttpClient(DEClientHandler messageHandler, Uri baseUri, Encoding defaultEncoding = null)
+			: base(messageHandler, true)
+		{
+			DefaultEncoding = defaultEncoding ?? Encoding.UTF8;
+			BaseAddress = CheckBaseUri(baseUri);
+
+			// add add encoding
+			DefaultRequestHeaders.AcceptCharset.Add(new StringWithQualityHeaderValue(DefaultEncoding.WebName));
+			DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue("gzip"));
+			DefaultRequestHeaders.Add("des-multiple-authentifications", "true");
 		} // ctor
 
-		private Encoding CheckMimeType(string contentType, string acceptedMimeType, bool charset)
-		{
-			string mimeType;
+		//public Task<DEHttpSocket> CreateConnectionAsync()
+		//{
+		//	throw new NotImplementedException();
+		//}
 
-			// Lese den MimeType
-			var pos = contentType.IndexOf(';');
-			if (pos == -1)
-				mimeType = contentType.Trim();
-			else
-				mimeType = contentType.Substring(0, pos).Trim();
+		#endregion
 
-			// Prüfe den MimeType
-			if (acceptedMimeType != null && !mimeType.StartsWith(acceptedMimeType))
-				throw new ArgumentException($"Expected: {acceptedMimeType}; received: {mimeType}");
-
-			if (charset)
-			{
-				var startAt = contentType.IndexOf("charset=");
-				if (startAt >= 0)
-				{
-					startAt += 8;
-					var endAt = contentType.IndexOf(';', startAt);
-					if (endAt == -1)
-						endAt = contentType.Length;
-
-					var charSet = contentType.Substring(startAt, endAt - startAt);
-					return Encoding.GetEncoding(charSet);
-				}
-				else
-					return defaultEncoding;
-			}
-			else
-				return null;
-		} // func CheckMimeType
-
-		private bool IsCompressed(string contentEncoding)
-			=> contentEncoding != null && contentEncoding.IndexOf("gzip") >= 0;
+		#region -- Helper -------------------------------------------------------------
 
 		/// <summary></summary>
 		/// <param name="path"></param>
 		/// <returns></returns>
-		public Uri GetFullUri(string path)
+		public Uri CreateFullUri(string path)
 		{
 			Uri uri;
 
 			if (path == null)
-				uri = baseUri;
+				uri = BaseAddress;
 			else
 			{
 				uri = new Uri(path, UriKind.RelativeOrAbsolute);
-				if (!uri.IsAbsoluteUri && baseUri != null)
-					uri = new Uri(baseUri, uri);
+				if (!uri.IsAbsoluteUri && BaseAddress != null)
+					uri = new Uri(BaseAddress, uri);
 			}
 
 			if (uri == null)
-				throw new ArgumentNullException("Uri can not be null.");
+				throw new ArgumentNullException(nameof(path), "BaseAddress and path can not be null.");
 
 			return uri;
 		} // func GetFullUri
 
-		private WebRequest GetWebRequest(string path)
-		{
-			var request = WebRequest.Create(GetFullUri(path));
+		#endregion
 
-			// we accept always gzip
-			request.Headers[HttpRequestHeader.AcceptEncoding] = "gzip";
-			request.Headers["des-multiple-authentifications"] = "true";
-
-			// set network login information
-			if (credentials != null)
-				request.Credentials = credentials;
-
-			return request;
-		} // func GetWebRequest
+		#region -- GetResponseAsync ---------------------------------------------------
 
 		/// <summary></summary>
-		/// <param name="path"></param>
-		/// <param name="acceptMimeType"></param>
+		/// <param name="requestUri"></param>
+		/// <param name="acceptedMimeType"></param>
 		/// <returns></returns>
-		public async Task<WebResponse> GetResponseAsync(string path, string acceptMimeType)
+		public async Task<HttpResponseMessage> GetResponseAsync(string requestUri, string acceptedMimeType)
 		{
-			var request = GetWebRequest(path);
-			if (acceptMimeType != null && request is HttpWebRequest webRequest)
-				webRequest.Accept = acceptMimeType;
-
-#if DEBUG
-			Debug.WriteLine($"Request: {path}");
-			var sw = Stopwatch.StartNew();
-			try
-			{
-#endif
-				return await request.GetResponseAsync();
-#if DEBUG
-			}
-			finally
-			{
-				Debug.WriteLine("Request: {0}ms", sw.ElapsedMilliseconds);
-			}
-#endif
+			var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
+			request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue(acceptedMimeType));
+			return await SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
 		} // func GetResponseAsync
 
-		#region -- Putxxxx ------------------------------------------------------------
-
-		/// <summary></summary>
-		/// <param name="path"></param>
-		/// <param name="writeRequest"></param>
-		/// <returns></returns>
-		public async Task<WebResponse> PutStreamResponseAsync(string path, Action<WebRequest, Stream> writeRequest)
-		{
-			var request = GetWebRequest(path);
-
-			// write request stream
-			request.Method = HttpMethod.Put.Method;
-			writeRequest(request, await request.GetRequestStreamAsync());
-
-			// get the response
-			return await request.GetResponseAsync();
-		} // proc PutStreamResponseAsync
-
-		/// <summary></summary>
-		/// <param name="path"></param>
-		/// <param name="inputContentType"></param>
-		/// <param name="writeRequest"></param>
-		/// <returns></returns>
-		public Task<WebResponse> PutTextResponseAsync(string path, string inputContentType, Action<TextWriter> writeRequest)
-		{
-			return PutStreamResponseAsync(path,
-				(r, dst) =>
-				{
-					// set header
-					r.ContentType = inputContentType + ";charset=" + defaultEncoding.WebName;
-					r.Headers[HttpRequestHeader.ContentEncoding] = "gzip";
-
-					// convert the text to bytes
-					using (var zip = new GZipStream(dst, CompressionMode.Compress))
-					using (var tw = new StreamWriter(zip, defaultEncoding))
-						writeRequest(tw);
-				});
-		} // func PutTextResponseAsync
-
-		/// <summary></summary>
-		/// <param name="path"></param>
-		/// <param name="inputContentType"></param>
-		/// <param name="writeRequest"></param>
-		/// <returns></returns>
-		public Task<WebResponse> PutXmlResponseAsync(string path, string inputContentType, Action<XmlWriter> writeRequest)
-			=> PutTextResponseAsync(path, inputContentType ?? MimeTypes.Text.Xml,
-				tw =>
-				{
-					using (var xml = XmlWriter.Create(tw, Procs.XmlWriterSettings))
-						writeRequest(xml);
-				});
-
-		/// <summary></summary>
-		/// <param name="path"></param>
-		/// <param name="table"></param>
-		/// <returns></returns>
-		public Task<WebResponse> PutTableResponseAsync(string path, LuaTable table)
-			=> PutXmlResponseAsync(path, MimeTypes.Text.Xml, xml => table.ToXml().WriteTo(xml));
-
 		#endregion
 
-		#region -- GetStream ----------------------------------------------------------
+		#region -- GetxxxxAsync -------------------------------------------------------
 
 		/// <summary></summary>
-		/// <param name="response"></param>
-		/// <param name="acceptedMimeType"></param>
+		/// <param name="requestUri"></param>
 		/// <returns></returns>
-		public Stream GetStream(WebResponse response, string acceptedMimeType = null)
-		{
-			CheckMimeType(response.ContentType, acceptedMimeType, false);
-			return IsCompressed(response.Headers["Content-Encoding"])
-				? new GZipStream(response.GetResponseStream(), CompressionMode.Decompress, false)
-				: response.GetResponseStream();
-		} // func GetStreamAsync
-
-		/// <summary>Creates a plain Web-Request, special arguments are filled with IWebRequestCreate.</summary>
-		/// <param name="path">Resource</param>
-		/// <param name="acceptedMimeType">Optional.</param>
-		/// <returns></returns>
-		public async Task<Stream> GetStreamAsync(string path, string acceptedMimeType = null)
-			=> GetStream(await GetResponseAsync(path, acceptedMimeType), acceptedMimeType);
-
-		#endregion
-
-		#region -- GetTextReader ------------------------------------------------------
+		public Task<TextReader> GetTextReaderAsync(string requestUri)
+			=> GetAsync(requestUri, HttpCompletionOption.ResponseHeadersRead).GetTextReaderAsync();
 
 		/// <summary></summary>
-		/// <param name="response"></param>
-		/// <param name="acceptedMimeType"></param>
-		/// <returns></returns>
-		public TextReader GetTextReader(WebResponse response, string acceptedMimeType)
-		{
-			var enc = CheckMimeType(response.ContentType, acceptedMimeType, true);
-			if (IsCompressed(response.Headers["Content-Encoding"]))
-				return new StreamReader(new GZipStream(response.GetResponseStream(), CompressionMode.Decompress), enc);
-			else
-				return new StreamReader(response.GetResponseStream(), enc);
-		}// func GetTextReaderAsync
-
-		/// <summary></summary>
-		/// <param name="path"></param>
-		/// <param name="acceptedMimeType"></param>
-		/// <returns></returns>
-		public async Task<TextReader> GetTextReaderAsync(string path, string acceptedMimeType)
-			=> GetTextReader(await GetResponseAsync(path, acceptedMimeType), acceptedMimeType);
-
-		#endregion
-
-		#region -- GetXmlStream -------------------------------------------------------
-
-		/// <summary></summary>
-		/// <param name="response"></param>
+		/// <param name="requestUri"></param>
 		/// <param name="acceptedMimeType"></param>
 		/// <param name="settings"></param>
 		/// <returns></returns>
-		public XmlReader GetXmlStream(WebResponse response, string acceptedMimeType = MimeTypes.Text.Xml, XmlReaderSettings settings = null)
+		public Task<XmlReader> GetXmlReaderAsync(string requestUri, string acceptedMimeType = MimeTypes.Text.Xml, XmlReaderSettings settings = null)
+			=> GetResponseAsync(requestUri, acceptedMimeType).GetXmlStreamAsync(acceptedMimeType, settings);
+
+		/// <summary></summary>
+		/// <param name="requestUri"></param>
+		/// <param name="acceptedMimeType"></param>
+		/// <param name="rootName"></param>
+		/// <returns></returns>
+		public Task<XElement> GetXmlAsync(string requestUri, string acceptedMimeType = MimeTypes.Text.Xml, XName rootName = null)
+			=> GetResponseAsync(requestUri, acceptedMimeType).GetXmlAsync(acceptedMimeType, rootName);
+
+		/// <summary></summary>
+		/// <param name="requestUri"></param>
+		/// <returns></returns>
+		public Task<LuaTable> GetTableAsync(string requestUri)
+			=> GetResponseAsync(requestUri, MimeTypes.Text.Lson).GetTableAsync();
+
+		#endregion
+
+		#region -- PutxxxxAsync -------------------------------------------------------
+
+		/// <summary></summary>
+		/// <param name="content"></param>
+		/// <param name="inputMimeType"></param>
+		/// <returns></returns>
+		public HttpContent CreateStringContent(string content, string inputMimeType)
 		{
-			if (settings == null)
+			if (content.Length > 256)
 			{
-				settings = new XmlReaderSettings()
+				using (var dst = new MemoryStream(content.Length / 2))
+				using (var gz = new GZipStream(dst, CompressionMode.Compress))
+				using (var sw = new StreamWriter(gz, DefaultEncoding))
 				{
-					IgnoreComments = acceptedMimeType != MimeTypes.Application.Xaml,
-					IgnoreWhitespace = acceptedMimeType != MimeTypes.Application.Xaml
-				};
+					sw.Write(content);
+					sw.Close();
+					gz.Close();
+					var cnt = new ByteArrayContent(dst.ToArray());
+					cnt.Headers.ContentType = new MediaTypeHeaderValue(inputMimeType ?? MimeTypes.Text.Plain) { CharSet = DefaultEncoding.WebName };
+					cnt.Headers.ContentEncoding.Add("gzip");
+					return cnt;
+				}
 			}
-			settings.CloseInput = true;
+			else
+				return new StringContent(content, DefaultEncoding, inputMimeType ?? MimeTypes.Text.Plain);
+		} // proc CreateStringContent
 
-			var baseUri = response.ResponseUri.GetComponents(UriComponents.Scheme | UriComponents.Host | UriComponents.Port | UriComponents.Path, UriFormat.SafeUnescaped);
-			var context = new XmlParserContext(null, null, null, null, null, null, baseUri, null, XmlSpace.Default);
-
-			return XmlReader.Create(GetTextReader(response, acceptedMimeType), settings, context);
-		} // func GetXmlStream
-
-		/// <summary></summary>
-		/// <param name="path"></param>
-		/// <param name="acceptedMimeType"></param>
-		/// <param name="settings"></param>
+		/// <summary>Put a xml writer.</summary>
+		/// <param name="requesturi"></param>
+		/// <param name="inputMimeType"></param>
+		/// <param name="xmlWriter"></param>
 		/// <returns></returns>
-		public async Task<XmlReader> GetXmlStreamAsync(string path, string acceptedMimeType = MimeTypes.Text.Xml, XmlReaderSettings settings = null)
+		public async Task<HttpResponseMessage> PutResponseXmlAsync(string requesturi, Action<XmlWriter> xmlWriter, string inputMimeType = null)
 		{
-			var response = await GetResponseAsync(path, acceptedMimeType); // todo: is disposed called?
-			return GetXmlStream(response, acceptedMimeType, settings);
-		} // func GetXmlStreamAsync
-
-		#endregion
-
-		#region -- GetXml -------------------------------------------------------------
+			using (var sw = new StringWriter())
+			using (var xw = XmlWriter.Create(sw))
+			{
+				await Task.Run(() => xmlWriter(xw));
+				xw.Flush();
+				sw.Flush();
+				return await PutResponseTextAsync(requesturi, inputMimeType ?? MimeTypes.Text.Xml, sw.GetStringBuilder().ToString());
+			}
+		} // func PutXmlAsync
 
 		/// <summary></summary>
+		/// <param name="requestUri"></param>
+		/// <param name="inputMimeType"></param>
 		/// <param name="x"></param>
 		/// <returns></returns>
-		public XElement CheckForExceptionResult(XElement x)
+		public async Task<HttpResponseMessage> PutResponseXmlAsync(string requestUri, XDocument x, string inputMimeType = null)
 		{
-			var xStatus = x.Attribute("status");
-			if (xStatus != null && xStatus.Value != "ok")
+			using (var sw = new StringWriter())
 			{
-				var xText = x.Attribute("text");
-				throw new ArgumentException(String.Format("Server returns an error: {0}", xText?.Value ?? "unknown"));
+				await Task.Run(() => x.Save(sw));
+				sw.Flush();
+				return await PutResponseTextAsync(requestUri, inputMimeType ?? MimeTypes.Text.Xml, sw.GetStringBuilder().ToString());
 			}
-			return x;
-		} // func CheckForExceptionResult
+		} // func PutXmlAsync
 
 		/// <summary></summary>
-		/// <param name="response"></param>
-		/// <param name="acceptedMimeType"></param>
-		/// <param name="rootName"></param>
+		/// <param name="requestUri"></param>
+		/// <param name="inputMimeType"></param>
+		/// <param name="content"></param>
 		/// <returns></returns>
-		public XElement GetXml(WebResponse response, string acceptedMimeType = MimeTypes.Text.Xml, XName rootName = null)
-		{
-			XDocument document;
-			using (var xml = GetXmlStream(response, acceptedMimeType, null))
-				document = XDocument.Load(xml, LoadOptions.SetBaseUri);
-			if (document == null)
-				throw new ArgumentException("Keine Antwort vom Server.");
-
-			CheckForExceptionResult(document.Root);
-
-			if (rootName != null && document.Root.Name != rootName)
-				throw new ArgumentException(String.Format("Wurzelelement erwartet '{0}', aber '{1}' vorgefunden.", document.Root.Name, rootName));
-
-			return document.Root;
-		} // func GetXml
+		public Task<HttpResponseMessage> PutResponseTextAsync(string requestUri, string content, string inputMimeType = null)
+			=> PutAsync(requestUri, CreateStringContent(content, inputMimeType));
 
 		/// <summary></summary>
-		/// <param name="path"></param>
-		/// <param name="acceptedMimeType"></param>
-		/// <param name="rootName"></param>
-		/// <returns></returns>
-		public async Task<XElement> GetXmlAsync(string path, string acceptedMimeType = MimeTypes.Text.Xml, XName rootName = null)
-			=> GetXml(await GetResponseAsync(path, acceptedMimeType), acceptedMimeType, rootName);
-
-		#endregion
-
-		#region -- GetTable -----------------------------------------------------------
-
-		/// <summary></summary>
-		/// <param name="path"></param>
-		/// <param name="rootName"></param>
-		/// <returns></returns>
-		public async Task<LuaTable> GetTableAsync(string path, XName rootName = null)
-			=> GetTable(await GetResponseAsync(path, MimeTypes.Text.Xml), rootName);
-
-		/// <summary></summary>
-		/// <param name="response"></param>
-		/// <param name="rootName"></param>
-		/// <returns></returns>
-		public LuaTable GetTable(WebResponse response, XName rootName = null)
-			=> Procs.CreateLuaTable(CheckForExceptionResult(GetXml(response, rootName: (rootName ?? "table"))));
-
-		/// <summary></summary>
-		/// <param name="path"></param>
+		/// <param name="requestUri"></param>
 		/// <param name="table"></param>
-		/// <param name="rootName"></param>
+		/// <param name="toXml"></param>
 		/// <returns></returns>
-		public async Task<LuaTable> PutTableAsync(string path, LuaTable table, XName rootName = null)
-			=> GetTable(await PutTableResponseAsync(path, table), rootName);
+		public Task<HttpResponseMessage> PutResponseTableAsync(string requestUri, LuaTable table, bool toXml = false)
+			=> toXml
+				? PutResponseXmlAsync(requestUri, new XDocument(table.ToXml()), MimeTypes.Text.Xml)
+				: PutResponseTextAsync(requestUri, table.ToLson(false), MimeTypes.Text.Lson);
+
+		/// <summary></summary>
+		/// <param name="requestUri"></param>
+		/// <param name="table"></param>
+		/// <param name="toXml"></param>
+		/// <returns></returns>
+		public Task<LuaTable> PutTableAsync(string requestUri, LuaTable table, bool toXml = false)
+			=> (toXml
+				? PutResponseXmlAsync(requestUri, new XDocument(table.ToXml()), MimeTypes.Text.Xml)
+				: PutResponseTextAsync(requestUri, table.ToLson(false), MimeTypes.Text.Lson)).GetTableAsync();
 
 		#endregion
 
@@ -938,7 +855,7 @@ namespace TecWare.DE.Networking
 						#region -- ReadingState.Unread --
 						case ReadingState.Unread:
 							// open the xml stream
-							xml = owner.request.GetXmlStreamAsync(owner.path, owner.acceptedMimeType).Result;
+							xml = owner.request.GetXmlReaderAsync(owner.path, owner.acceptedMimeType).Result;
 
 							xml.Read();
 							if (xml.NodeType == XmlNodeType.XmlDeclaration)
@@ -1096,7 +1013,7 @@ namespace TecWare.DE.Networking
 
 			#endregion
 
-			private readonly BaseWebRequest request;
+			private readonly DEHttpClient request;
 			private readonly string path;
 			private readonly string acceptedMimeType;
 
@@ -1106,7 +1023,7 @@ namespace TecWare.DE.Networking
 			/// <param name="request"></param>
 			/// <param name="path"></param>
 			/// <param name="acceptedMimeType"></param>
-			public ViewDataReader(BaseWebRequest request, string path, string acceptedMimeType = MimeTypes.Text.Xml)
+			public ViewDataReader(DEHttpClient request, string path, string acceptedMimeType = MimeTypes.Text.Xml)
 			{
 				this.request = request;
 				this.path = path;
@@ -1139,13 +1056,195 @@ namespace TecWare.DE.Networking
 
 		#endregion
 
+		/// <summary>Default encoding, when no encoding is givven.</summary>
+		public Encoding DefaultEncoding { get; }
+
+		/// <summary>Create new http client.</summary>
+		/// <param name="baseUri">Base uri for the request.</param>
+		/// <param name="credentials">Optional credentials</param>
+		/// <param name="defaultEncoding">Default encoding.</param>
+		public static DEHttpClient Create(Uri baseUri, ICredentials credentials = null, Encoding defaultEncoding = null)
+		{
+			var httpHandler = GetDefaultMessageHandler();
+			if (credentials != null)
+				httpHandler.Credentials = credentials;
+
+			try
+			{
+				return new DEHttpClient(new DEClientHandler(httpHandler), baseUri, defaultEncoding);
+			}
+			catch
+			{
+				httpHandler.Dispose();
+				throw;
+			}
+		} // func Create
+
+		private static Uri CheckBaseUri(Uri baseUri)
+		{
+			if (baseUri == null)
+				throw new ArgumentNullException(nameof(baseUri));
+			if (!baseUri.IsAbsoluteUri)
+				throw new ArgumentException("Absolute uri expected.", nameof(baseUri));
+
+			return baseUri;
+		} // func CheckBaseUri
+
+		/// <summary>Get default message handler.</summary>
+		/// <returns></returns>
+		public static HttpClientHandler GetDefaultMessageHandler()
+			=> new HttpClientHandler();
+	} // class HttpDE
+
+	#endregion
+
+	#region -- class HttpStuff --------------------------------------------------------
+
+	/// <summary></summary>
+	public static class HttpStuff
+	{
+		/// <summary>Check if the content.type is equal to the expected content-type</summary>
+		/// <param name="response"></param>
+		/// <param name="acceptedMimeType"></param>
+		/// <returns></returns>
+		public static HttpResponseMessage CheckMimeType(HttpResponseMessage response, string acceptedMimeType)
+		{
+			if (acceptedMimeType == null)
+				return response;
+
+			var mediaType = response.Content.Headers.ContentType.MediaType;
+			if (mediaType != acceptedMimeType)
+				throw new ArgumentException($"Expected: {acceptedMimeType}; received: {mediaType}");
+
+			return response;
+		} // func CheckMimeType
+
+		private static Encoding GetEncodingFromCharset(string charSet)
+		{
+			if (String.IsNullOrEmpty(charSet))
+				return null;
+
+			return Encoding.GetEncoding(charSet);
+		} //func GetEncodingFromCharset
+
 		/// <summary></summary>
-		public Uri BaseUri => baseUri;
+		/// <param name="x"></param>
+		/// <param name="rootName"></param>
+		/// <returns></returns>
+		public static XElement CheckForExceptionResult(XElement x, XName rootName = null)
+		{
+			if (x == null)
+				throw new ArgumentNullException(nameof(x), "No result parsed.");
+
+			var xStatus = x.Attribute("status");
+			if (xStatus != null && xStatus.Value != "ok")
+			{
+				var xText = x.Attribute("text");
+				throw new ArgumentException(String.Format("Server returns an error: {0}", xText?.Value ?? "unknown"));
+			}
+
+			if (rootName != null && x.Name != rootName)
+				throw new ArgumentOutOfRangeException(nameof(rootName), x.Name, $"Root element expected '{rootName}', but '{x.Name}' found.");
+
+			return x;
+		} // func CheckForExceptionResult
+
 		/// <summary></summary>
-		public Encoding DefaultEncoding => defaultEncoding;
+		/// <param name="t"></param>
+		/// <returns></returns>
+		public static LuaTable CheckForExceptionResult(LuaTable t)
+		{
+			if (t == null)
+				throw new ArgumentNullException(nameof(t), "No result parsed.");
+
+
+			if (t.GetMemberValue("status", rawGet: true) is string s && s != null && s != "ok")
+			{
+				var text = t.GetMemberValue("text", rawGet: true) as string;
+				throw new ArgumentException($"Server returns an error: {text ?? "Unknown"}");
+			}
+
+			return t;
+		} // func CheckForExceptionResult
+		private static async Task<TextReader> GetTextReaderAsync(HttpResponseMessage response)
+		{
+			var enc = GetEncodingFromCharset(response.Content.Headers.ContentType?.CharSet);
+			return new StreamReader(await response.Content.ReadAsStreamAsync(), enc ?? Encoding.UTF8, enc != null, 1024, false);
+		} // func GetTextReaderAsync
+
+		private static async Task<XmlReader> GetXmlStreamAsync(HttpResponseMessage response, string acceptedMimeType, XmlReaderSettings settings)
+		{
+			if (settings == null)
+			{
+				settings = new XmlReaderSettings()
+				{
+					IgnoreComments = acceptedMimeType != MimeTypes.Application.Xaml,
+					IgnoreWhitespace = acceptedMimeType != MimeTypes.Application.Xaml
+				};
+			}
+			settings.CloseInput = true;
+
+			var baseUri = response.RequestMessage.RequestUri.GetComponents(UriComponents.Scheme | UriComponents.Host | UriComponents.Port | UriComponents.Path, UriFormat.SafeUnescaped);
+			var context = new XmlParserContext(null, null, null, null, null, null, baseUri, null, XmlSpace.Default);
+
+			return XmlReader.Create(await GetTextReaderAsync(CheckMimeType(response, acceptedMimeType)), settings, context);
+		} // func GetXmlStreamAsync
+
+		private static async Task<XElement> GetXmlAsync(HttpResponseMessage response, string acceptedMimeType, XName rootName)
+		{
+			using (var xml = await GetXmlStreamAsync(response, acceptedMimeType, null))
+			{
+				var xDoc = await Task.Run(() => XDocument.Load(xml, LoadOptions.SetBaseUri));
+				return CheckForExceptionResult(xDoc?.Root, rootName);
+			}
+		} // func GetXmlAsync
+
+		private static async Task<LuaTable> GetTableAsync(HttpResponseMessage response)
+		{
+			using (var tr = await GetTextReaderAsync(response))
+				return CheckForExceptionResult(LuaTable.FromLson(tr));
+
+		} // func GetTableAsync
+
 		/// <summary></summary>
-		public ICredentials Credentials => credentials;
-	} // class BaseWebReqeust
+		/// <param name="t"></param>
+		/// <param name="acceptedMimeType"></param>
+		/// <returns></returns>
+		public static async Task<TextReader> GetTextReaderAsync(this Task<HttpResponseMessage> t, string acceptedMimeType = null)
+			=> await GetTextReaderAsync(CheckMimeType(await t, acceptedMimeType));
+
+		/// <summary></summary>
+		/// <param name="t"></param>
+		/// <param name="rootName"></param>
+		/// <returns></returns>
+		public static async Task<LuaTable> GetTableAsync(this Task<HttpResponseMessage> t, XName rootName = null)
+		{
+			var r = await t;
+			if (r.Content.Headers.ContentType.MediaType == MimeTypes.Text.Lson)
+				return await GetTableAsync(r);
+			else if (r.Content.Headers.ContentType.MediaType == MimeTypes.Text.Xml)
+				return Procs.CreateLuaTable(await GetXmlAsync(r, MimeTypes.Text.Xml, rootName));
+			else
+				throw new ArgumentException();
+		} // func Get
+
+		/// <summary></summary>
+		/// <param name="t"></param>
+		/// <param name="acceptedMimeType"></param>
+		/// <param name="settings"></param>
+		/// <returns></returns>
+		public static async Task<XmlReader> GetXmlStreamAsync(this Task<HttpResponseMessage> t, string acceptedMimeType = MimeTypes.Text.Xml, XmlReaderSettings settings = null)
+			=> await GetXmlStreamAsync(await t, acceptedMimeType, settings);
+
+		/// <summary></summary>
+		/// <param name="t"></param>
+		/// <param name="acceptedMimeType"></param>
+		/// <param name="rootName"></param>
+		/// <returns></returns>
+		public static async Task<XElement> GetXmlAsync(this Task<HttpResponseMessage> t, string acceptedMimeType = MimeTypes.Text.Xml, XName rootName = null)
+			=> await GetXmlAsync(await t, acceptedMimeType, rootName);
+
+	} // func HttpStuff
 
 	#endregion
 }

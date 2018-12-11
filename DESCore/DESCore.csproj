@@ -12,6 +12,8 @@
     <Authors>TecWare</Authors>
     <Version>3.4.27</Version>
     <AssemblyVersion>3.4.0.0</AssemblyVersion>
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>Temp.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net47|AnyCPU'">
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
