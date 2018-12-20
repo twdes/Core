@@ -16,12 +16,14 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Net.WebSockets;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -467,17 +469,328 @@ namespace TecWare.DE.Networking
 
 	#endregion
 
-	#region -- class DEHttpSocket -----------------------------------------------------
+	#region -- class DEHttpSocketBase -------------------------------------------------
 
-	/// <summary>Log info connection to receive events and state of the server</summary>
-	public sealed class DEHttpSocket
+	/// <summary>Socket communication base class for data exchange server sockets</summary>
+	public abstract class DEHttpSocketBase : IDisposable
 	{
-		//public event EventHandler EventReceived;
+		private readonly Uri serverUri;
+		private readonly ICredentials credentials;
+		private readonly CancellationTokenSource sessionDisposeSource;
+		private bool isDisposing = false;
 
-		//private readonly WebSocket webSocket;
+		#region -- Ctor/Dtor ----------------------------------------------------------
 
-		//public bool IsConnected { get; }
+		/// <summary></summary>
+		/// <param name="serverUri"></param>
+		/// <param name="credentials"></param>
+		protected DEHttpSocketBase(Uri serverUri, ICredentials credentials)
+		{
+			var scheme = serverUri.Scheme;
+			if (scheme == "http" || scheme == "https") // rewrite uri
+				this.serverUri = new Uri((scheme == "https" ? "wss" : "ws") + "://" + serverUri.Host + ":" + serverUri.Port + "/" + serverUri.AbsolutePath);
+			else // use uri
+				this.serverUri = serverUri;
+
+			this.credentials = credentials;
+			this.sessionDisposeSource = new CancellationTokenSource();
+		} // ctor
+
+		/// <summary>Dispose current session.</summary>
+		public void Dispose()
+		{
+			Dispose(true);
+		} // proc Dispose
+
+		/// <summary></summary>
+		/// <param name="disposing"></param>
+		protected virtual void Dispose(bool disposing)
+		{
+			if (disposing)
+			{
+				isDisposing = true;
+
+				lock (socketLock)
+				{
+					if (clientSocket != null && clientSocket.State == WebSocketState.Open)
+						Task.Run(() => clientSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Done", CancellationToken.None)).Wait();
+				}
+
+				if (!sessionDisposeSource.IsCancellationRequested)
+					sessionDisposeSource.Cancel();
+				sessionDisposeSource.Dispose();
+			}
+		} // proc Dispose
+
+		#endregion
+
+		#region -- Communication ------------------------------------------------------
+
+		private readonly object socketLock = new object();
+		private ClientWebSocket clientSocket = null;
+		private CancellationToken currentConnectionToken = CancellationToken.None;
+
+		/// <summary>Start socket.</summary>
+		public void Start()
+			=> Task.Run(() => RunProtocolAsync()).ContinueWith(t => OnCommunicationExceptionAsync(t.Exception).Wait(),TaskContinuationOptions.OnlyOnFaulted);
+
+		/// <summary>Main loop for the debug session, that runs the protocol handlers.</summary>
+		/// <returns></returns>
+		public async Task RunProtocolAsync()
+		{
+			var recvOffset = 0;
+			var recvBuffer = new byte[1 << 20];
+			var lastNativeErrorCode = Int32.MinValue;
+			var currentConnectionTokenSource = (CancellationTokenSource)null;
+			var sessionDisposeToken = sessionDisposeSource.Token;
+
+			while (!isDisposing && !sessionDisposeToken.IsCancellationRequested)
+			{
+				var connectionEstablished = false;
+
+				// create the connection
+				var socket = new ClientWebSocket();
+				socket.Options.Credentials = credentials;
+				socket.Options.SetRequestHeader("des-multiple-authentifications", "true");
+				socket.Options.AddSubProtocol(SubProtocol);
+
+				#region -- connect --
+				try
+				{
+					await socket.ConnectAsync(serverUri, sessionDisposeToken);
+					connectionEstablished = true;
+					lock (socketLock)
+					{
+						clientSocket = socket;
+
+						currentConnectionTokenSource = new CancellationTokenSource();
+						currentConnectionToken = currentConnectionTokenSource.Token;
+					}
+					await OnConnectionEstablishedAsync();
+				}
+				catch (WebSocketException e)
+				{
+					if (lastNativeErrorCode != e.NativeErrorCode) // connect exception
+					{
+						if (!await OnConnectionFailureAsync(e))
+							lastNativeErrorCode = e.NativeErrorCode;
+					}
+				}
+				catch (TaskCanceledException)
+				{
+				}
+				catch (Exception e)
+				{
+					lastNativeErrorCode = Int32.MinValue;
+					await OnConnectionFailureAsync(e);
+				}
+				#endregion
+
+				try
+				{
+					// reconnect set use
+					if (socket.State == WebSocketState.Open)
+						await OnConnectedAsync(socket, sessionDisposeToken);
+
+					// wait for answers
+					recvOffset = 0;
+					while (socket.State == WebSocketState.Open && !sessionDisposeToken.IsCancellationRequested)
+					{
+						// check if the buffer is large enough
+						var recvRest = recvBuffer.Length - recvOffset;
+						if (recvRest == 0)
+						{
+							await socket.CloseAsync(WebSocketCloseStatus.MessageTooBig, "Message to big.", sessionDisposeToken);
+							break;
+						}
+
+						// receive the characters
+						var r = await socket.ReceiveAsync(new ArraySegment<byte>(recvBuffer, recvOffset, recvRest), sessionDisposeToken);
+						if (r.MessageType == WebSocketMessageType.Text)
+						{
+							recvOffset += r.Count;
+							if (r.EndOfMessage)
+							{
+								try
+								{
+									await OnProcessMessageAsync(recvBuffer, 0, recvOffset);
+								}
+								catch (Exception e)
+								{
+									lastNativeErrorCode = Int32.MinValue;
+									await OnCommunicationExceptionAsync(e);
+								}
+								recvOffset = 0;
+							}
+						}
+					} // message loop
+				}
+				catch (WebSocketException e)
+				{
+					if (!isDisposing)
+					{
+						lastNativeErrorCode = e.NativeErrorCode;
+						await OnCommunicationExceptionAsync(e);
+					}
+				}
+				catch (TaskCanceledException)
+				{
+				}
+
+				// close connection
+				if (!isDisposing && connectionEstablished)
+					await OnConnectionLostAsync();
+
+				lock (socketLock)
+				{
+					clientSocket = null;
+
+					// dispose current cancellation token
+					if (currentConnectionTokenSource != null)
+					{
+						try { currentConnectionTokenSource.Cancel(); }
+						catch { }
+						currentConnectionTokenSource.Dispose();
+						currentConnectionTokenSource = null;
+					}
+
+					currentConnectionToken = CancellationToken.None;
+				}
+				socket.Dispose();
+			}
+		} // func RunProtocolAsync
+
+		/// <summary>Prints a message to the debug console.</summary>
+		/// <param name="message"></param>
+		protected virtual void DebugPrint(string message)
+			=> Debug.Print(message);
+
+		/// <summary>Gets called on connection, or reconnection</summary>
+		protected virtual Task OnConnectedAsync(ClientWebSocket socket, CancellationToken cancellationToken)
+			=> Task.CompletedTask;
+
+		/// <summary>Gets called on communication exception.</summary>
+		/// <param name="e"></param>
+		protected virtual Task OnCommunicationExceptionAsync(Exception e)
+		{
+			DebugPrint($"Connection failed: {e}");
+			return Task.CompletedTask;
+		} // proc OnCommunicationExceptionAsync
+
+		/// <summary>Event if the connection gets lost.</summary>
+		protected virtual Task OnConnectionLostAsync()
+		{
+			DebugPrint("Connection lost.");
+			return Task.CompletedTask;
+		} // proc OnConnectionLostAsync 
+
+		/// <summary>Event if the connection is established.</summary>
+		protected virtual Task OnConnectionEstablishedAsync()
+		{
+			DebugPrint("Connection established.");
+			return Task.CompletedTask;
+		} // proc OnConnectionEstablishedAsync
+
+		/// <summary>Connection failed.</summary>
+		/// <param name="e"></param>
+		/// <returns><c>true</c>, for exception handled.</returns>
+		protected virtual Task<bool> OnConnectionFailureAsync(Exception e)
+		{
+			DebugPrint($"Connection failed: {e}");
+			return Task.FromResult(false);
+		} // proc OnConnectionFailureAsync
+
+		/// <summary>Process incoming message</summary>
+		/// <param name="recvBuffer"></param>
+		/// <param name="offset"></param>
+		/// <param name="count"></param>
+		/// <returns></returns>
+		protected abstract Task OnProcessMessageAsync(byte[] recvBuffer, int offset, int count);
+
+		/// <summary></summary>
+		/// <param name="timeout"></param>
+		/// <param name="cancellationToken"></param>
+		/// <returns></returns>
+		protected CancellationTokenSource GetSendCancellationTokenSource(int timeout, CancellationToken cancellationToken)
+		{
+			CancellationTokenSource cancellationTokenSource = null;
+			if (cancellationToken == CancellationToken.None || cancellationToken == currentConnectionToken)
+			{
+				if (timeout > 0)
+				{
+					cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(currentConnectionToken);
+					cancellationTokenSource.CancelAfter(timeout);
+
+					cancellationToken = cancellationTokenSource.Token;
+				}
+				else
+				{
+					cancellationTokenSource = null;
+					cancellationToken = currentConnectionToken;
+				}
+			}
+			else
+			{
+				cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(currentConnectionToken, cancellationToken);
+				cancellationToken = cancellationTokenSource.Token;
+			}
+
+			return cancellationTokenSource;
+		} // func GetSendCancellationTokenSource
+
+		/// <summary></summary>
+		/// <param name="socket"></param>
+		/// <returns></returns>
+		protected bool TryGetSocket(out ClientWebSocket socket)
+		{
+			lock (socketLock)
+			{
+				socket = clientSocket;
+				return socket != null && socket.State == WebSocketState.Open;
+			}
+		} // func TryGetSocket
+
+		/// <summary></summary>
+		/// <returns></returns>
+		protected ClientWebSocket GetSocket()
+			=> TryGetSocket(out var s) ? s : throw new ArgumentException("SocketSession is disconnected.");
+
+		/// <summary>Return the sub-protocol for the socket.</summary>
+		protected abstract string SubProtocol { get; }
+
+		/// <summary>Is client socket connected.</summary>
+		public bool IsConnected
+		{
+			get
+			{
+				lock (socketLock)
+					return clientSocket != null && clientSocket.State == WebSocketState.Open;
+			}
+		} // prop IsConnected
+
+		#endregion
 	} // class DEHttpSocket
+
+	#endregion
+
+	#region -- class HttpResponseException --------------------------------------------
+
+	/// <summary></summary>
+	public class HttpResponseException : Exception
+	{
+		/// <summary></summary>
+		/// <param name="statusCode"></param>
+		/// <param name="message"></param>
+		/// <param name="innerException"></param>
+		public HttpResponseException(HttpStatusCode statusCode, string message, Exception innerException = null)
+			: base(message, innerException)
+		{
+			StatusCode = statusCode;
+		} // ctor
+
+		/// <summary></summary>
+		public HttpStatusCode StatusCode { get; }
+	} // class HttpResponseException
 
 	#endregion
 
@@ -545,9 +858,11 @@ namespace TecWare.DE.Networking
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
-		private DEHttpClient(DEClientHandler messageHandler, Uri baseUri, Encoding defaultEncoding = null)
+		private DEHttpClient(DEClientHandler messageHandler, ICredentials credentials, Uri baseUri, Encoding defaultEncoding = null)
 			: base(messageHandler, true)
 		{
+			this.Credentials = credentials;
+
 			DefaultEncoding = defaultEncoding ?? Encoding.UTF8;
 			BaseAddress = CheckBaseUri(baseUri);
 
@@ -556,11 +871,6 @@ namespace TecWare.DE.Networking
 			DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue("gzip"));
 			DefaultRequestHeaders.Add("des-multiple-authentifications", "true");
 		} // ctor
-
-		//public Task<DEHttpSocket> CreateConnectionAsync()
-		//{
-		//	throw new NotImplementedException();
-		//}
 
 		#endregion
 
@@ -600,7 +910,10 @@ namespace TecWare.DE.Networking
 		{
 			var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
 			request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue(acceptedMimeType));
-			return await SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+			var response = await SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+			if (!response.IsSuccessStatusCode)
+				throw new HttpResponseException(response.StatusCode, response.ReasonPhrase);
+			return response;
 		} // func GetResponseAsync
 
 		#endregion
@@ -1058,6 +1371,8 @@ namespace TecWare.DE.Networking
 
 		/// <summary>Default encoding, when no encoding is givven.</summary>
 		public Encoding DefaultEncoding { get; }
+		/// <summary></summary>
+		public ICredentials Credentials { get; }
 
 		/// <summary>Create new http client.</summary>
 		/// <param name="baseUri">Base uri for the request.</param>
@@ -1071,7 +1386,7 @@ namespace TecWare.DE.Networking
 
 			try
 			{
-				return new DEHttpClient(new DEClientHandler(httpHandler), baseUri, defaultEncoding);
+				return new DEHttpClient(new DEClientHandler(httpHandler), credentials, baseUri, defaultEncoding);
 			}
 			catch
 			{
@@ -1094,7 +1409,7 @@ namespace TecWare.DE.Networking
 		/// <returns></returns>
 		public static HttpClientHandler GetDefaultMessageHandler()
 			=> new HttpClientHandler();
-	} // class HttpDE
+	} // class DEHttpClient
 
 	#endregion
 
@@ -1112,7 +1427,7 @@ namespace TecWare.DE.Networking
 			if (acceptedMimeType == null)
 				return response;
 
-			var mediaType = response.Content.Headers.ContentType.MediaType;
+			var mediaType = response.Content.Headers.ContentType?.MediaType;
 			if (mediaType != acceptedMimeType)
 				throw new ArgumentException($"Expected: {acceptedMimeType}; received: {mediaType}");
 
@@ -1244,6 +1559,51 @@ namespace TecWare.DE.Networking
 		public static async Task<XElement> GetXmlAsync(this Task<HttpResponseMessage> t, string acceptedMimeType = MimeTypes.Text.Xml, XName rootName = null)
 			=> await GetXmlAsync(await t, acceptedMimeType, rootName);
 
+		/// <summary></summary>
+		/// <param name="arguments"></param>
+		/// <returns></returns>
+		public static string MakeRelativeUri(params PropertyValue[] arguments)
+			=> MakeRelativeUri(String.Empty, (IEnumerable<PropertyValue>)arguments);
+
+		/// <summary></summary>
+		/// <param name="requestUri"></param>
+		/// <param name="arguments"></param>
+		/// <returns></returns>
+		public static string MakeRelativeUri(string requestUri, params PropertyValue[] arguments)
+			=> MakeRelativeUri(requestUri, (IEnumerable<PropertyValue>)arguments);
+
+		/// <summary></summary>
+		/// <param name="requestUri"></param>
+		/// <param name="arguments"></param>
+		/// <returns></returns>
+		public static string MakeRelativeUri(string requestUri, IEnumerable<PropertyValue> arguments)
+		{
+			var sb = new StringBuilder();
+			if (!String.IsNullOrEmpty(requestUri))
+				sb.Append(requestUri);
+
+			var firstAdded = requestUri.Contains('?');
+
+			foreach(var a in arguments)
+			{
+				if (firstAdded)
+					sb.Append('&');
+				else
+				{
+					sb.Append('?');
+					firstAdded = true;
+				}
+
+				if (a.Value == null)
+					continue;
+				sb.Append(Uri.EscapeUriString(a.Name))
+					.Append('=');
+
+				sb.Append(a.Value.ChangeType<string>());
+			}
+
+			return sb.ToString();
+		} // func MakeRelativeUri
 	} // func HttpStuff
 
 	#endregion

@@ -31,4 +31,7 @@
   <ItemGroup>
     <Folder Include="Properties\" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\Server\des.licenseheader" Link="des.licenseheader" />
+  </ItemGroup>
 </Project>
