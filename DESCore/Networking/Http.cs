@@ -37,6 +37,23 @@ using TecWare.DE.Stuff;
 
 namespace TecWare.DE.Networking
 {
+	#region -- enum DEHttpReturnState -------------------------------------------------
+
+	/// <summary>State field of an request.</summary>
+	public enum DEHttpReturnState
+	{
+		/// <summary>Unknown state.</summary>
+		None,
+		/// <summary>No errors. Action is commited.</summary>
+		Ok,
+		/// <summary>User friendly error. Action is rollbacked.</summary>
+		User,
+		/// <summary>Fatal error. Action is rollbacked.</summary>
+		Error
+	} // enum DEHttpReturnState
+
+	#endregion
+
 	#region -- class MimeTypeInfoAttribute --------------------------------------------
 
 	[AttributeUsage(AttributeTargets.Field)]
@@ -430,6 +447,39 @@ namespace TecWare.DE.Networking
 		/// <param name="info"></param>
 		/// <param name="autoDisposeResponse"></param>
 		/// <returns></returns>
+		public static bool TryGet(HttpResponseException e, ref ClientAuthentificationInformation info, bool autoDisposeResponse = true)
+		{
+			var t = Get(e);
+			if (t != null)
+			{
+				info = t;
+				return true;
+			}
+			else
+				return false;
+		} // func TryGet
+
+		/// <summary></summary>
+		/// <param name="e"></param>
+		/// <returns></returns>
+		public static ClientAuthentificationInformation Get(HttpResponseException e)
+		{
+			// get the response
+			return e.StatusCode == HttpStatusCode.Unauthorized
+				? new ClientAuthentificationInformation(
+					e.Headers != null && e.Headers.TryGetValues("WWW-Authenticate", out var values)
+						? String.Join(",", values)
+						: null
+				)
+				: null;
+		} // func Get
+
+
+		/// <summary></summary>
+		/// <param name="e"></param>
+		/// <param name="info"></param>
+		/// <param name="autoDisposeResponse"></param>
+		/// <returns></returns>
 		public static bool TryGet(WebException e, ref ClientAuthentificationInformation info, bool autoDisposeResponse = true)
 		{
 			var t = Get(e);
@@ -785,12 +835,40 @@ namespace TecWare.DE.Networking
 		public HttpResponseException(HttpStatusCode statusCode, string message, Exception innerException = null)
 			: base(message, innerException)
 		{
+			Headers = null;
 			StatusCode = statusCode;
 		} // ctor
 
 		/// <summary></summary>
+		/// <param name="response"></param>
+		public HttpResponseException(HttpResponseMessage response)
+			: base((response ?? throw new ArgumentNullException(nameof(response))).ReasonPhrase, null)
+		{
+			Headers = response.Headers;
+			StatusCode = response.StatusCode;
+		} // ctor
+
+		/// <summary></summary>
 		public HttpStatusCode StatusCode { get; }
+		/// <summary>Optional response headers</summary>
+		public HttpHeaders Headers { get; }
 	} // class HttpResponseException
+
+	#endregion
+
+	#region -- class HttpUserResponseException ----------------------------------------
+
+	/// <summary>Exception, that is returned marked as user</summary>
+	public class HttpUserResponseException : Exception, ILuaUserRuntimeException
+	{
+		/// <summary></summary>
+		/// <param name="message"></param>
+		/// <param name="innerException"></param>
+		public HttpUserResponseException(string message, Exception innerException = null)
+			: base(message, innerException)
+		{
+		}
+	} // class HttpUserResponseException
 
 	#endregion
 
@@ -912,7 +990,16 @@ namespace TecWare.DE.Networking
 			request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue(acceptedMimeType));
 			var response = await SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
 			if (!response.IsSuccessStatusCode)
-				throw new HttpResponseException(response.StatusCode, response.ReasonPhrase);
+			{
+				try
+				{
+					throw new HttpResponseException(response);
+				}
+				finally
+				{
+					response.Dispose();
+				}
+			}
 			return response;
 		} // func GetResponseAsync
 
@@ -1443,6 +1530,66 @@ namespace TecWare.DE.Networking
 		} //func GetEncodingFromCharset
 
 		/// <summary></summary>
+		/// <param name="value"></param>
+		/// <param name="state"></param>
+		/// <returns></returns>
+		public static bool TryParseReturnState(string value, out DEHttpReturnState state)
+		{
+			if (value == null || String.Compare(value, "ok", StringComparison.OrdinalIgnoreCase) == 0)
+			{
+				state = DEHttpReturnState.Ok;
+				return true;
+			}
+			else if (String.Compare(value, "user", StringComparison.OrdinalIgnoreCase) == 0)
+			{
+				state = DEHttpReturnState.User;
+				return true;
+			}
+			else if (String.Compare(value, "error", StringComparison.OrdinalIgnoreCase) == 0)
+			{
+				state = DEHttpReturnState.Error;
+				return true;
+			}
+			else
+			{
+				state = DEHttpReturnState.Error;
+				return false;
+			}
+		} // func TryParseReturnState
+
+		/// <summary></summary>
+		/// <param name="state"></param>
+		/// <returns></returns>
+		public static string FormatReturnState(DEHttpReturnState state)
+		{
+			switch(state)
+			{
+				case DEHttpReturnState.Ok:
+					return "ok";
+				case DEHttpReturnState.User:
+					return "user";
+				case DEHttpReturnState.Error:
+					return "error";
+				default:
+					throw new ArgumentOutOfRangeException(nameof(state), state, "Unknown state value.");
+			}
+		} // func FormatReturnState
+
+		private static void CheckForExceptionResult(string stateValue, string text)
+		{
+			if (TryParseReturnState(stateValue, out var state) && state != DEHttpReturnState.Ok)
+			{
+				if (String.IsNullOrEmpty(text))
+					text = "unknown message";
+
+				if (state == DEHttpReturnState.User)
+					throw new HttpUserResponseException(text);
+				else
+					throw new HttpResponseException(HttpStatusCode.InternalServerError, text);
+			}
+		} // proc CheckForExceptionResult
+
+		/// <summary></summary>
 		/// <param name="x"></param>
 		/// <param name="rootName"></param>
 		/// <returns></returns>
@@ -1451,12 +1598,7 @@ namespace TecWare.DE.Networking
 			if (x == null)
 				throw new ArgumentNullException(nameof(x), "No result parsed.");
 
-			var xStatus = x.Attribute("status");
-			if (xStatus != null && xStatus.Value != "ok")
-			{
-				var xText = x.Attribute("text");
-				throw new ArgumentException(String.Format("Server returns an error: {0}", xText?.Value ?? "unknown"));
-			}
+			CheckForExceptionResult(x.Attribute("status")?.Value, x.Attribute("text")?.Value);
 
 			if (rootName != null && x.Name != rootName)
 				throw new ArgumentOutOfRangeException(nameof(rootName), x.Name, $"Root element expected '{rootName}', but '{x.Name}' found.");
@@ -1472,15 +1614,11 @@ namespace TecWare.DE.Networking
 			if (t == null)
 				throw new ArgumentNullException(nameof(t), "No result parsed.");
 
-
-			if (t.GetMemberValue("status", rawGet: true) is string s && s != null && s != "ok")
-			{
-				var text = t.GetMemberValue("text", rawGet: true) as string;
-				throw new ArgumentException($"Server returns an error: {text ?? "Unknown"}");
-			}
+			CheckForExceptionResult(t.GetMemberValue("status", rawGet: true) as string, t.GetMemberValue("text", rawGet: true) as string);
 
 			return t;
 		} // func CheckForExceptionResult
+
 		private static async Task<TextReader> GetTextReaderAsync(HttpResponseMessage response)
 		{
 			var enc = GetEncodingFromCharset(response.Content.Headers.ContentType?.CharSet);
@@ -1549,7 +1687,10 @@ namespace TecWare.DE.Networking
 		/// <param name="settings"></param>
 		/// <returns></returns>
 		public static async Task<XmlReader> GetXmlStreamAsync(this Task<HttpResponseMessage> t, string acceptedMimeType = MimeTypes.Text.Xml, XmlReaderSettings settings = null)
-			=> await GetXmlStreamAsync(await t, acceptedMimeType, settings);
+		{
+			using (var r = await t)
+				return await GetXmlStreamAsync(r, acceptedMimeType, settings);
+		} // func GetXmlStreamAsync
 
 		/// <summary></summary>
 		/// <param name="t"></param>
@@ -1557,7 +1698,10 @@ namespace TecWare.DE.Networking
 		/// <param name="rootName"></param>
 		/// <returns></returns>
 		public static async Task<XElement> GetXmlAsync(this Task<HttpResponseMessage> t, string acceptedMimeType = MimeTypes.Text.Xml, XName rootName = null)
-			=> await GetXmlAsync(await t, acceptedMimeType, rootName);
+		{
+			using (var r = await t)
+				return await GetXmlAsync(r, acceptedMimeType, rootName);
+		} // func GetXmlAsync
 
 		/// <summary></summary>
 		/// <param name="arguments"></param>

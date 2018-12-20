@@ -26,27 +26,21 @@ using System.Collections;
 
 namespace TecWare.DE.Stuff
 {
-	#region -- class Procs --------------------------------------------------------------
+	#region -- class Procs ------------------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
 	public static partial class Procs
 	{
-		/// <summary></summary>
+		/// <summary>Get a nice formatted exception.</summary>
 		/// <param name="e"></param>
 		/// <returns></returns>
 		public static string GetMessageString(this Exception e)
-		{
-			return ExceptionFormatter.FormatPlainText(e);
-		} // func GetMessageString
+			=> ExceptionFormatter.FormatPlainText(e);
 
 		/// <summary>Gibt die Nachricht via <c>Debug.Print</c> aus.</summary>
 		/// <param name="e"></param>
 		[Conditional("DEBUG")]
 		public static void DebugOut(this Exception e)
-		{
-			Debug.WriteLine("Exception:\n{0}", e.GetMessageString());
-		} // proc DebugOut
+			=> Debug.WriteLine("Exception:\n{0}", e.GetMessageString());
 
 		/// <summary>.</summary>
 		/// <param name="condition"></param>
@@ -106,29 +100,24 @@ namespace TecWare.DE.Stuff
 
 	#endregion
 
-	#region -- class ExceptionFormatter -------------------------------------------------
+	#region -- class ExceptionFormatter -----------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Exception formatter.</summary>
 	public abstract class ExceptionFormatter
 	{
-		#region -- class PlainTextExceptionFormatter --------------------------------------
+		#region -- class PlainTextExceptionFormatter ----------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
 		private class PlainTextExceptionFormatter : ExceptionFormatter
 		{
-			private StringBuilder sb;
+			private readonly StringBuilder sb;
 
 			public PlainTextExceptionFormatter(StringBuilder sb)
 			{
-				this.sb = sb;
+				this.sb = sb ?? throw new ArgumentNullException(nameof(sb));
 			} // ctor
 
 			protected override void AppendSection(bool first, string sectionName, Exception ex)
-			{
-				sb.WriteSeperator(sectionName + ": " + ex.GetType().Name);
-			} // proc AppendSection
+				=> sb.WriteSeperator(sectionName + ": " + ex.GetType().Name);
 
 			private static string ReplaceNoneVisibleChars(string value)
 				=> value.Replace("\n", "\\n")
@@ -140,8 +129,7 @@ namespace TecWare.DE.Stuff
 				sb.Append((name + ":").PadRight(20, ' ')).Append(' ');
 				try
 				{
-					object v = value();
-
+					var v = value();
 					if (v == null)
 						sb.AppendLine("<null>");
 					else
@@ -183,9 +171,7 @@ namespace TecWare.DE.Stuff
 			} // proc AppendProperty
 
 			protected override object Compile()
-			{
-				return sb;
-			} // func Compile
+				=> sb;
 		} // class PlainTextExceptionFormatter
 
 		#endregion
@@ -195,25 +181,25 @@ namespace TecWare.DE.Stuff
 		{
 		} // ctor
 
-		/// <summary>Wird geschrieben, wenn eine neue Exception begonnen wird.</summary>
-		/// <param name="isFirst">Handelt es sich um die erste Sektion</param>
-		/// <param name="sectionName"></param>
-		/// <param name="ex"></param>
+		/// <summary>Appends a new exception to the formatter.</summary>
+		/// <param name="isFirst"><c>true</c>, if this is the first exception, added.</param>
+		/// <param name="sectionName">Name of the section.</param>
+		/// <param name="ex">Exception, that will be emitted next.</param>
 		protected abstract void AppendSection(bool isFirst, string sectionName, Exception ex);
 
-		/// <summary>Schreibt eine Eigenschaft</summary>
-		/// <param name="name"></param>
-		/// <param name="type"></param>
-		/// <param name="value"></param>
+		/// <summary>Append a property.</summary>
+		/// <param name="name">Name of the property.</param>
+		/// <param name="type">Type of the property.</param>
+		/// <param name="value">Value of the property.</param>
 		protected abstract void AppendProperty(string name, Type type, Func<object> value);
 
-		/// <summary>Schließt die Verarbeitung ab.</summary>
+		/// <summary>Finish the result.</summary>
 		/// <returns></returns>
 		protected abstract object Compile();
 
-		/// <summary>Formatiert die Fehlermeldung in das entsprechende Format</summary>
-		/// <param name="e"></param>
-		/// <returns></returns>
+		/// <summary>Format a exception with this formatter.</summary>
+		/// <param name="e">Exception to format.</param>
+		/// <returns>Returns the result.</returns>
 		public object Format(Exception e)
 		{
 			if (e == null)
@@ -221,7 +207,7 @@ namespace TecWare.DE.Stuff
 
 			var exceptions = new Stack<KeyValuePair<string, Exception>>();
 
-			// Exception Titel
+			// Exception title
 			AppendSection(true, e.GetType().Name, e);
 
 			while (true)
@@ -324,6 +310,67 @@ namespace TecWare.DE.Stuff
 			return sb.ToString();
 		} // func FormatPainText
 	} // class ExceptionFormatter
+
+	#endregion
+
+	#region -- class ILuaUserRuntimeException -----------------------------------------
+
+	/// <summary>Marks a exception as a friendly exception for the user.</summary>
+	public interface ILuaUserRuntimeException
+	{
+		/// <summary></summary>
+		string Message { get; }
+	} // interface ILuaUserRuntimeException
+
+	#endregion
+
+	#region -- class LuaUserRuntimeException ------------------------------------------
+
+	/// <summary></summary>
+	public sealed class LuaUserRuntimeException : LuaRuntimeException, ILuaUserRuntimeException
+	{
+		/// <summary></summary>
+		/// <param name="message"></param>
+		/// <param name="innerException"></param>
+		public LuaUserRuntimeException(string message, Exception innerException)
+			: base(message, innerException)
+		{
+		}
+
+		/// <summary></summary>
+		/// <param name="message"></param>
+		/// <param name="level"></param>
+		/// <param name="skipClrFrames"></param>
+		public LuaUserRuntimeException(string message, int level, bool skipClrFrames)
+			: base(message, level, skipClrFrames)
+		{
+		}
+	} // class LuaUserRuntimeException
+
+	#endregion
+
+	#region -- class LuaAssertRuntimeException ----------------------------------------
+
+	/// <summary></summary>
+	public sealed class LuaAssertRuntimeException : LuaRuntimeException
+	{
+		/// <summary></summary>
+		/// <param name="message"></param>
+		/// <param name="innerException"></param>
+		public LuaAssertRuntimeException(string message, Exception innerException)
+			: base(message, innerException)
+		{
+		}
+
+		/// <summary></summary>
+		/// <param name="message"></param>
+		/// <param name="level"></param>
+		/// <param name="skipClrFrames"></param>
+		public LuaAssertRuntimeException(string message, int level, bool skipClrFrames)
+			: base(message, level, skipClrFrames)
+		{
+		}
+	} // class LuaAssertRuntimeException
 
 	#endregion
 }
