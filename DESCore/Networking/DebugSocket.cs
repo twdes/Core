@@ -39,7 +39,7 @@ namespace TecWare.DE.Networking
 		private readonly Type type; // is null if the value is not converted
 		private readonly object coreValue;
 		private readonly Lazy<object> value;
-
+		
 		internal DebugMemberValue(string name, string typeName, Type type, object coreValue)
 		{
 			this.name = name;
@@ -87,6 +87,36 @@ namespace TecWare.DE.Networking
 		public bool IsValueList => coreValue is DebugMemberValue[][];
 		/// <summary>Is value a array.</summary>
 		public bool IsValueArray => coreValue is DebugMemberValue[];
+		
+		internal static Type GetType(string typeString)
+		{
+			var lastIndex = typeString.LastIndexOfAny(new char[] { ']', ',' });
+			if (lastIndex == -1 || typeString[lastIndex] == ']')
+				return LuaType.GetType(typeString);
+			else
+			{
+				return Type.GetType(typeString,
+					name =>
+					{
+						// do not load new assemblies
+						var asm = AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(c => c.FullName == name.FullName);
+						if (asm == null)
+							throw new TypeLoadException("Assembly is not loaded.");
+						return asm;
+					},
+					(asm, name, ignorecase) => LuaType.GetType(typeString).Type,
+					false
+				);
+			}
+		} // func GetType
+
+		/// <summary></summary>
+		/// <param name="name"></param>
+		/// <param name="typeName"></param>
+		/// <param name="coreValue"></param>
+		/// <returns></returns>
+		public static DebugMemberValue Create(string name, string typeName, object coreValue)
+			=> new DebugMemberValue(name, typeName, GetType(typeName), coreValue);
 	} // class DebugMemberValue
 
 	#endregion
@@ -328,7 +358,7 @@ namespace TecWare.DE.Networking
 			{
 				this.token = token;
 				this.source = new TaskCompletionSource<XElement>();
-				cancellationToken.Register(source.SetCanceled);
+				cancellationToken.Register(() => source.TrySetCanceled());
 			} // ctor
 
 			public int Token => token;
@@ -411,7 +441,7 @@ namespace TecWare.DE.Networking
 				else // other messages
 				{
 					var w = GetWait(token);
-					if (w != null)
+					if (w != null && !w.Source.Task.IsCompleted)
 					{
 						if (x.Name == "exception")
 							ThreadPool.QueueUserWorkItem(s => w.Source.SetException(new DebugSocketException(x)), null);
@@ -548,28 +578,6 @@ namespace TecWare.DE.Networking
 
 		#region -- GetMemberValue, ParseReturn ----------------------------------------
 
-		private static Type GetType(string typeString)
-		{
-			var lastIndex = typeString.LastIndexOfAny(new char[] { ']', ',' });
-			if (lastIndex == -1 || typeString[lastIndex] == ']')
-				return LuaType.GetType(typeString);
-			else
-			{
-				return Type.GetType(typeString,
-					name =>
-					{
-						// do not load new assemblies
-						var asm = AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(c => c.FullName == name.FullName);
-						if (asm == null)
-							throw new TypeLoadException("Assembly is not loaded.");
-						return asm;
-					},
-					(asm, name, ignorecase) => LuaType.GetType(typeString).Type,
-					false
-				);
-			}
-		} // func GetType
-
 		private static DebugMemberValue GetMemberValue(XElement x, int index)
 		{
 			// get the member name or index
@@ -580,7 +588,7 @@ namespace TecWare.DE.Networking
 			// get type
 			var typeString = x.GetAttribute("t", "object");
 			var contentType = x.GetAttribute("ct", typeString);
-			var type = typeString == "table" ? null : GetType(typeString);
+			var type = typeString == "table" ? null : DebugMemberValue.GetType(typeString);
 
 			// check if the value is convertible (only convert core types)
 			object value;
@@ -596,7 +604,7 @@ namespace TecWare.DE.Networking
 						from xField in xFields.Elements()
 						let n = xField.GetAttribute("n", (j++).ToString())
 						let t = xField.GetAttribute("t", "object")
-						select new Tuple<string, string, string, Type>(xField.Name.LocalName, n, t, GetType(t))
+						select new Tuple<string, string, string, Type>(xField.Name.LocalName, n, t, DebugMemberValue.GetType(t))
 					).ToArray();
 
 					var rows = new List<DebugMemberValue[]>();
