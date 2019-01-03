@@ -13,7 +13,9 @@
 // specific language governing permissions and limitations under the Licence.
 //
 #endregion
+#define DEBUGSOCKET
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.WebSockets;
@@ -38,6 +40,11 @@ namespace TecWare.DE.Networking
 			Index = xEvent.Attribute("index")?.Value;
 			Values = xEvent.Elements().FirstOrDefault();
 		} // ctor
+
+		/// <summary></summary>
+		/// <returns></returns>
+		public override string ToString()
+			=> $"SocketEvent[{Path},{Index}]: {Values?.ToString()}";
 
 		/// <summary>Node path</summary>
 		public string Path { get; }
@@ -122,8 +129,14 @@ namespace TecWare.DE.Networking
 			{
 				while (!cancellationToken.IsCancellationRequested)
 				{
-					await Task.Delay(1000, cancellationToken);
-					await SendAsync("/ping", cancellationToken);
+					await Task.Delay(1000);
+					if (!cancellationToken.IsCancellationRequested)
+					{
+						await SendAsync("/ping", cancellationToken);
+#if DEBUGSOCKET
+						Debug.Print("Ping");
+#endif
+					}
 				}
 			}
 			catch (TaskCanceledException)
@@ -193,7 +206,12 @@ namespace TecWare.DE.Networking
 		/// <summary></summary>
 		/// <param name="e"></param>
 		protected virtual void OnNotify(DEHttpSocketEventArgs e)
-			=> Notify?.Invoke(this, e);
+		{
+#if DEBUGSOCKET
+			Debug.Print(e.ToString());
+#endif
+			Notify?.Invoke(this, e);
+		} // proc OnNotify
 
 		#endregion
 
