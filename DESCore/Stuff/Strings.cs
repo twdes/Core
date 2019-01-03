@@ -158,7 +158,7 @@ namespace TecWare.DE.Stuff
 			var state = 0;
 
 			var i = 0;
-			var l = value.Length;
+			var l = value?.Length ?? 0;
 			while (i < l)
 			{
 				var c = value[i];
