@@ -1465,9 +1465,11 @@ namespace TecWare.DE.Networking
 		/// <param name="baseUri">Base uri for the request.</param>
 		/// <param name="credentials">Optional credentials</param>
 		/// <param name="defaultEncoding">Default encoding.</param>
-		public static DEHttpClient Create(Uri baseUri, ICredentials credentials = null, Encoding defaultEncoding = null)
+		/// <param name="httpHandler">Defines a http client handler.</param>
+		public static DEHttpClient Create(Uri baseUri, ICredentials credentials = null, Encoding defaultEncoding = null, HttpClientHandler httpHandler = null)
 		{
-			var httpHandler = GetDefaultMessageHandler();
+			if (httpHandler == null)
+				httpHandler = GetDefaultMessageHandler();
 			if (credentials != null)
 				httpHandler.Credentials = credentials;
 
