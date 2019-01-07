@@ -1675,6 +1675,7 @@ namespace TecWare.DE.Networking
 		public static async Task<LuaTable> GetTableAsync(this Task<HttpResponseMessage> t, XName rootName = null)
 		{
 			var r = await t;
+			// ToDo: if the server returns an error, ContentType is null!
 			if (r.Content.Headers.ContentType.MediaType == MimeTypes.Text.Lson)
 				return await GetTableAsync(r);
 			else if (r.Content.Headers.ContentType.MediaType == MimeTypes.Text.Xml)
