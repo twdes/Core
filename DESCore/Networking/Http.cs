@@ -980,15 +980,22 @@ namespace TecWare.DE.Networking
 
 		#region -- GetResponseAsync ---------------------------------------------------
 
-		/// <summary></summary>
-		/// <param name="requestUri"></param>
-		/// <param name="acceptedMimeType"></param>
+		/// <summary>Core http request handler, that supports error handling on http-base.</summary>
+		/// <param name="requestUri">Relative request uri.</param>
+		/// <param name="acceptedMimeType">Accepted mime types, that will send to the server.</param>
+		/// <param name="putContent">Content of a http put.</param>
 		/// <returns></returns>
-		public async Task<HttpResponseMessage> GetResponseAsync(string requestUri, string acceptedMimeType)
+		public async Task<HttpResponseMessage> GetResponseAsync(string requestUri, string acceptedMimeType, HttpContent putContent = null)
 		{
-			var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
-			request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue(acceptedMimeType));
+			var httpPut = putContent != null;
+			var request = new HttpRequestMessage(httpPut ? HttpMethod.Put : HttpMethod.Get, requestUri);
+			if (acceptedMimeType != null)
+				request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue(acceptedMimeType));
+			if (httpPut)
+				request.Content = putContent;
+
 			var response = await SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+
 			if (!response.IsSuccessStatusCode)
 			{
 				try
@@ -1066,10 +1073,11 @@ namespace TecWare.DE.Networking
 
 		/// <summary>Put a xml writer.</summary>
 		/// <param name="requesturi"></param>
-		/// <param name="inputMimeType"></param>
 		/// <param name="xmlWriter"></param>
+		/// <param name="inputMimeType"></param>
+		/// <param name="acceptedMimeType"></param>
 		/// <returns></returns>
-		public async Task<HttpResponseMessage> PutResponseXmlAsync(string requesturi, Action<XmlWriter> xmlWriter, string inputMimeType = null)
+		public async Task<HttpResponseMessage> PutResponseXmlAsync(string requesturi, Action<XmlWriter> xmlWriter, string inputMimeType = null, string acceptedMimeType = null)
 		{
 			using (var sw = new StringWriter())
 			using (var xw = XmlWriter.Create(sw))
@@ -1077,32 +1085,34 @@ namespace TecWare.DE.Networking
 				await Task.Run(() => xmlWriter(xw));
 				xw.Flush();
 				sw.Flush();
-				return await PutResponseTextAsync(requesturi, inputMimeType ?? MimeTypes.Text.Xml, sw.GetStringBuilder().ToString());
+				return await PutResponseTextAsync(requesturi, sw.GetStringBuilder().ToString(), inputMimeType ?? MimeTypes.Text.Xml, acceptedMimeType ?? MimeTypes.Text.Xml);
 			}
 		} // func PutXmlAsync
 
 		/// <summary></summary>
 		/// <param name="requestUri"></param>
-		/// <param name="inputMimeType"></param>
 		/// <param name="x"></param>
+		/// <param name="inputMimeType"></param>
+		/// <param name="acceptedMimeType"></param>
 		/// <returns></returns>
-		public async Task<HttpResponseMessage> PutResponseXmlAsync(string requestUri, XDocument x, string inputMimeType = null)
+		public async Task<HttpResponseMessage> PutResponseXmlAsync(string requestUri, XDocument x, string inputMimeType = null, string acceptedMimeType = null)
 		{
 			using (var sw = new StringWriter())
 			{
 				await Task.Run(() => x.Save(sw));
 				sw.Flush();
-				return await PutResponseTextAsync(requestUri, inputMimeType ?? MimeTypes.Text.Xml, sw.GetStringBuilder().ToString());
+				return await PutResponseTextAsync(requestUri, sw.GetStringBuilder().ToString(), inputMimeType ?? MimeTypes.Text.Xml, acceptedMimeType ?? MimeTypes.Text.Xml);
 			}
 		} // func PutXmlAsync
 
 		/// <summary></summary>
 		/// <param name="requestUri"></param>
-		/// <param name="inputMimeType"></param>
 		/// <param name="content"></param>
-		/// <returns></returns>
-		public Task<HttpResponseMessage> PutResponseTextAsync(string requestUri, string content, string inputMimeType = null)
-			=> PutAsync(requestUri, CreateStringContent(content, inputMimeType));
+		/// <param name="inputMimeType"></param>
+		/// <param name="acceptedMimeType"></param>
+		/// /// <returns></returns>
+		public Task<HttpResponseMessage> PutResponseTextAsync(string requestUri, string content, string inputMimeType = null, string acceptedMimeType = null)
+			=> GetResponseAsync(requestUri, acceptedMimeType, CreateStringContent(content, inputMimeType));
 
 		/// <summary></summary>
 		/// <param name="requestUri"></param>
@@ -1111,8 +1121,8 @@ namespace TecWare.DE.Networking
 		/// <returns></returns>
 		public Task<HttpResponseMessage> PutResponseTableAsync(string requestUri, LuaTable table, bool toXml = false)
 			=> toXml
-				? PutResponseXmlAsync(requestUri, new XDocument(table.ToXml()), MimeTypes.Text.Xml)
-				: PutResponseTextAsync(requestUri, table.ToLson(false), MimeTypes.Text.Lson);
+				? PutResponseXmlAsync(requestUri, new XDocument(table.ToXml()), MimeTypes.Text.Xml, MimeTypes.Text.Xml)
+				: PutResponseTextAsync(requestUri, table.ToLson(false), MimeTypes.Text.Lson, MimeTypes.Text.Lson);
 
 		/// <summary></summary>
 		/// <param name="requestUri"></param>
@@ -1121,8 +1131,8 @@ namespace TecWare.DE.Networking
 		/// <returns></returns>
 		public Task<LuaTable> PutTableAsync(string requestUri, LuaTable table, bool toXml = false)
 			=> (toXml
-				? PutResponseXmlAsync(requestUri, new XDocument(table.ToXml()), MimeTypes.Text.Xml)
-				: PutResponseTextAsync(requestUri, table.ToLson(false), MimeTypes.Text.Lson)).GetTableAsync();
+				? PutResponseXmlAsync(requestUri, new XDocument(table.ToXml()), MimeTypes.Text.Xml, MimeTypes.Text.Xml)
+				: PutResponseTextAsync(requestUri, table.ToLson(false), MimeTypes.Text.Lson, MimeTypes.Text.Lson)).GetTableAsync();
 
 		#endregion
 
@@ -1675,14 +1685,13 @@ namespace TecWare.DE.Networking
 		public static async Task<LuaTable> GetTableAsync(this Task<HttpResponseMessage> t, XName rootName = null)
 		{
 			var r = await t;
-			// ToDo: if the server returns an error, ContentType is null!
-			if (r.Content.Headers.ContentType.MediaType == MimeTypes.Text.Lson)
+			if (r.Content.Headers.ContentType?.MediaType == MimeTypes.Text.Lson)
 				return await GetTableAsync(r);
-			else if (r.Content.Headers.ContentType.MediaType == MimeTypes.Text.Xml)
+			else if (r.Content.Headers.ContentType?.MediaType == MimeTypes.Text.Xml)
 				return Procs.CreateLuaTable(await GetXmlAsync(r, MimeTypes.Text.Xml, rootName));
 			else
 				throw new ArgumentException();
-		} // func Get
+		} // func GetTableAsync
 
 		/// <summary></summary>
 		/// <param name="t"></param>
