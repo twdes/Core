@@ -5,16 +5,18 @@
     <RootNamespace>TecWare.DE</RootNamespace>
     <TargetFrameworks>net47;netstandard2.0;netcoreapp2.0</TargetFrameworks>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <Description>Basic contracts and helper to build a server or client application for the data exchange server.</Description>
-    <copyright>Copyright © TecWare Gesellschaft für Softwareentwicklung mbH 2002-2018</copyright>
-    <Company>TecWare GmbH</Company>
-    <Product>DEServer</Product>
-    <Authors>TecWare</Authors>
-    <Version>3.4.27.274</Version>
-    <AssemblyVersion>3.4.0.0</AssemblyVersion>
     <SignAssembly>true</SignAssembly>
-    <AssemblyOriginatorKeyFile>Temp.snk</AssemblyOriginatorKeyFile>
-  </PropertyGroup>
+		<PackageId>TecWare.DES.Core</PackageId>
+		<PackageProjectUrl>https://github.com/twdes/des</PackageProjectUrl>
+		<Company>TecWare GmbH</Company>
+		<Product>DEServer</Product>
+		<Authors>TecWare</Authors>
+		<Description>Basic contracts and helper to build a server or client application for the data exchange server.</Description>
+		<copyright>Copyright © TecWare Gesellschaft für Softwareentwicklung mbH 2002-2018</copyright>
+		<AssemblyOriginatorKeyFile>Temp.snk</AssemblyOriginatorKeyFile>
+		<IncludeSymbols>true</IncludeSymbols>
+		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+	</PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net47|AnyCPU'">
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
@@ -22,7 +24,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="NeoLua" Version="1.3.5-beta" />
+    <PackageReference Include="NeoLua" Version="1.3.7" />
     <PackageReference Include="System.Net.Http" Version="4.3.4" Condition="'$(TargetFramework)' != 'net47'" />
   </ItemGroup>
   <ItemGroup>
