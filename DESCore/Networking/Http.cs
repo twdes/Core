@@ -941,7 +941,7 @@ namespace TecWare.DE.Networking
 		{
 			this.Credentials = credentials;
 
-			DefaultEncoding = defaultEncoding ?? Encoding.UTF8;
+			DefaultEncoding = defaultEncoding ?? Procs.Utf8Encoding;
 			BaseAddress = CheckBaseUri(baseUri);
 
 			// add add encoding

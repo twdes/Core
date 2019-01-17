@@ -268,5 +268,8 @@ namespace TecWare.DE.Stuff
 		} // func FileFilterToRegex
 
 		#endregion
+
+		/// <summary>Utf-8 encoder/decoder that not emits the utf-8 header.</summary>
+		public static Encoding Utf8Encoding { get; } = new UTF8Encoding(false);
 	} // class Procs
 }
