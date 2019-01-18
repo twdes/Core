@@ -132,7 +132,8 @@ namespace TecWare.DE.Networking
 					await Task.Delay(1000);
 					if (!cancellationToken.IsCancellationRequested)
 					{
-						await SendAsync("/ping", cancellationToken);
+						using (var timeout = new CancellationTokenSource(3000))
+							await SendAsync("/ping", timeout.Token);
 #if DEBUGSOCKET
 						Debug.Print("Ping");
 #endif
