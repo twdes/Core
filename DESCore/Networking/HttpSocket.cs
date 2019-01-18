@@ -139,7 +139,7 @@ namespace TecWare.DE.Networking
 					}
 				}
 			}
-			catch (TaskCanceledException)
+			catch (OperationCanceledException)
 			{
 			}
 		} // proc SendPingAsync
