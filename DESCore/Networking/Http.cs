@@ -519,6 +519,21 @@ namespace TecWare.DE.Networking
 
 	#endregion
 
+	#region -- enum DEHttpTableFormat -------------------------------------------------
+
+	/// <summary>Text format to represent a lua table.</summary>
+	public enum DEHttpTableFormat
+	{
+		/// <summary>Use xml (can only used within de-server environment).</summary>
+		Xml,
+		/// <summary>Use lson (compatible to all lua dialects).</summary>
+		Lson,
+		/// <summary>Use json (compatible to json, but looses context)</summary>
+		Json
+	} // enum DEHttpTableFormat
+
+	#endregion
+
 	#region -- class DEHttpSocketBase -------------------------------------------------
 
 	/// <summary>Socket communication base class for data exchange server sockets</summary>
@@ -1117,22 +1132,42 @@ namespace TecWare.DE.Networking
 		/// <summary></summary>
 		/// <param name="requestUri"></param>
 		/// <param name="table"></param>
-		/// <param name="toXml"></param>
+		/// <param name="tableFormat"></param>
 		/// <returns></returns>
-		public Task<HttpResponseMessage> PutResponseTableAsync(string requestUri, LuaTable table, bool toXml = false)
-			=> toXml
-				? PutResponseXmlAsync(requestUri, new XDocument(table.ToXml()), MimeTypes.Text.Xml, MimeTypes.Text.Xml)
-				: PutResponseTextAsync(requestUri, table.ToLson(false), MimeTypes.Text.Lson, MimeTypes.Text.Lson);
+		public Task<HttpResponseMessage> PutResponseTableAsync(string requestUri, LuaTable table, DEHttpTableFormat tableFormat = DEHttpTableFormat.Lson)
+		{
+			switch (tableFormat)
+			{
+				case DEHttpTableFormat.Xml:
+					return PutResponseXmlAsync(requestUri, new XDocument(table.ToXml()), MimeTypes.Text.Xml, MimeTypes.Text.Xml);
+				case DEHttpTableFormat.Lson:
+					return PutResponseTextAsync(requestUri, table.ToLson(false), MimeTypes.Text.Lson, MimeTypes.Text.Lson);
+				case DEHttpTableFormat.Json:
+					return PutResponseTextAsync(requestUri, table.ToJson(false), MimeTypes.Text.Json, MimeTypes.Text.Json);
+				default:
+					throw new ArgumentOutOfRangeException(nameof(tableFormat), tableFormat, "Invalid table format.");
+			}
+		} // func PutResponseTableAsync
 
 		/// <summary></summary>
 		/// <param name="requestUri"></param>
 		/// <param name="table"></param>
-		/// <param name="toXml"></param>
+		/// <param name="tableFormat"></param>
 		/// <returns></returns>
-		public Task<LuaTable> PutTableAsync(string requestUri, LuaTable table, bool toXml = false)
-			=> (toXml
-				? PutResponseXmlAsync(requestUri, new XDocument(table.ToXml()), MimeTypes.Text.Xml, MimeTypes.Text.Xml)
-				: PutResponseTextAsync(requestUri, table.ToLson(false), MimeTypes.Text.Lson, MimeTypes.Text.Lson)).GetTableAsync();
+		public Task<LuaTable> PutTableAsync(string requestUri, LuaTable table, DEHttpTableFormat tableFormat = DEHttpTableFormat.Lson)
+		{
+			switch (tableFormat)
+			{
+				case DEHttpTableFormat.Xml:
+					return PutResponseXmlAsync(requestUri, new XDocument(table.ToXml()), MimeTypes.Text.Xml, MimeTypes.Text.Xml).GetTableAsync();
+				case DEHttpTableFormat.Lson:
+					return PutResponseTextAsync(requestUri, table.ToLson(false), MimeTypes.Text.Lson, MimeTypes.Text.Lson).GetTableAsync();
+				case DEHttpTableFormat.Json:
+					return PutResponseTextAsync(requestUri, table.ToJson(false), MimeTypes.Text.Json, MimeTypes.Text.Json).GetTableAsync();
+				default:
+					throw new ArgumentOutOfRangeException(nameof(tableFormat), tableFormat, "Invalid table format.");
+			}
+		} // func PutResponseTableAsync
 
 		#endregion
 
@@ -1671,6 +1706,12 @@ namespace TecWare.DE.Networking
 
 		} // func GetTableAsync
 
+		private static async Task<LuaTable> GetJsonTableAsync(HttpResponseMessage response)
+		{
+			using (var tr = await GetTextReaderAsync(response))
+				return CheckForExceptionResult(LuaTable.FromJson(tr));
+		} // func GetJsonTableAsync
+
 		/// <summary></summary>
 		/// <param name="t"></param>
 		/// <param name="acceptedMimeType"></param>
@@ -1687,6 +1728,8 @@ namespace TecWare.DE.Networking
 			var r = await t;
 			if (r.Content.Headers.ContentType?.MediaType == MimeTypes.Text.Lson)
 				return await GetTableAsync(r);
+			else if (r.Content.Headers.ContentType?.MediaType == MimeTypes.Text.Json)
+				return await GetJsonTableAsync(r);
 			else if (r.Content.Headers.ContentType?.MediaType == MimeTypes.Text.Xml)
 				return Procs.CreateLuaTable(await GetXmlAsync(r, MimeTypes.Text.Xml, rootName));
 			else
