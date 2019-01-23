@@ -1759,6 +1759,51 @@ namespace TecWare.DE.Networking
 			}
 		} // func GetXmlAsync
 
+		/// <summary>Get the content disposition or creates a default.</summary>
+		/// <param name="r"></param>
+		/// <returns></returns>
+		public static ContentDispositionHeaderValue GetContentDisposition(this HttpResponseMessage r)
+		{
+			var contentDisposition = r.Content.Headers.ContentDisposition;
+
+			if (contentDisposition == null
+				|| contentDisposition.FileName == null)
+			{
+				var cd = new ContentDispositionHeaderValue("attachment");
+
+				// try to get a filename
+				var path = r.RequestMessage.RequestUri.AbsolutePath;
+				var pos = -1;
+				if (!String.IsNullOrEmpty(path))
+					pos = path.LastIndexOf('/', path.Length - 1);
+				if (pos >= 0)
+					cd.FileName = path.Substring(pos + 1);
+				else
+					cd.FileName = path;
+
+				// set the date
+				cd.ModificationDate = GetLastModified(r);
+
+				return cd;
+			}
+			else
+				return contentDisposition;
+		} // func GetContentDisposition
+
+		/// <summary>Small helper to get last modified as date time</summary>
+		/// <param name="headers"></param>
+		/// <returns></returns>
+		public static DateTime GetLastModified(this HttpContentHeaders headers)
+		{
+			var lastModified = headers.LastModified;
+			return lastModified.HasValue ? lastModified.Value.DateTime : DateTime.Now;
+		} // func GetLastModified
+
+		/// <summary>Small helper to get last modified as date time</summary>
+		/// <param name="r"></param>
+		/// <returns></returns>
+		public static DateTime GetLastModified(this HttpResponseMessage r)
+			=> GetLastModified(r.Content.Headers);
 
 		/// <summary></summary>
 		/// <param name="arguments"></param>
