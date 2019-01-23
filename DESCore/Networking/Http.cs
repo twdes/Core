@@ -240,7 +240,7 @@ namespace TecWare.DE.Networking
 
 		private static IEnumerable<string> GetCleanExtensions(string[] extensions)
 		{
-			foreach(var c in extensions)
+			foreach (var c in extensions)
 			{
 				// check syntax
 				if (!extensionRegEx.IsMatch(c))
@@ -352,9 +352,9 @@ namespace TecWare.DE.Networking
 			}
 		} // func TryGetExtensionFromMimeType
 
-		  /// <summary>Is the content of the mime type text based.</summary>
-		  /// <param name="mimeType"></param>
-		  /// <returns></returns>
+		/// <summary>Is the content of the mime type text based.</summary>
+		/// <param name="mimeType"></param>
+		/// <returns></returns>
 		public static bool GetIsCompressedContent(string mimeType)
 			=> TryGetMapping(mimeType, out var mapping) ? mapping.IsCompressedContent : false;
 
@@ -363,7 +363,7 @@ namespace TecWare.DE.Networking
 		{
 			get
 			{
-				lock(mimeTypeMappings)
+				lock (mimeTypeMappings)
 				{
 					foreach (var m in mimeTypeMappings)
 						yield return m;
@@ -597,7 +597,7 @@ namespace TecWare.DE.Networking
 
 		/// <summary>Start socket.</summary>
 		public void Start()
-			=> Task.Run(() => RunProtocolAsync()).ContinueWith(t => OnCommunicationExceptionAsync(t.Exception).Wait(),TaskContinuationOptions.OnlyOnFaulted);
+			=> Task.Run(() => RunProtocolAsync()).ContinueWith(t => OnCommunicationExceptionAsync(t.Exception).Wait(), TaskContinuationOptions.OnlyOnFaulted);
 
 		/// <summary>Main loop for the debug session, that runs the protocol handlers.</summary>
 		/// <returns></returns>
@@ -1032,30 +1032,42 @@ namespace TecWare.DE.Networking
 		/// <summary></summary>
 		/// <param name="requestUri"></param>
 		/// <returns></returns>
-		public Task<TextReader> GetTextReaderAsync(string requestUri)
-			=> GetAsync(requestUri, HttpCompletionOption.ResponseHeadersRead).GetTextReaderAsync();
+		public async Task<TextReader> GetTextReaderAsync(string requestUri)
+		{
+			using (var r = await GetAsync(requestUri, HttpCompletionOption.ResponseHeadersRead))
+				return await r.GetTextReaderAsync();
+		} // func GetTextReaderAsync
 
 		/// <summary></summary>
 		/// <param name="requestUri"></param>
 		/// <param name="acceptedMimeType"></param>
 		/// <param name="settings"></param>
 		/// <returns></returns>
-		public Task<XmlReader> GetXmlReaderAsync(string requestUri, string acceptedMimeType = MimeTypes.Text.Xml, XmlReaderSettings settings = null)
-			=> GetResponseAsync(requestUri, acceptedMimeType).GetXmlStreamAsync(acceptedMimeType, settings);
+		public async Task<XmlReader> GetXmlReaderAsync(string requestUri, string acceptedMimeType = MimeTypes.Text.Xml, XmlReaderSettings settings = null)
+		{
+			using (var r = await GetResponseAsync(requestUri, acceptedMimeType))
+				return await r.GetXmlStreamAsync(acceptedMimeType, settings);
+		} // func GetXmlReaderAsync
 
 		/// <summary></summary>
 		/// <param name="requestUri"></param>
 		/// <param name="acceptedMimeType"></param>
 		/// <param name="rootName"></param>
 		/// <returns></returns>
-		public Task<XElement> GetXmlAsync(string requestUri, string acceptedMimeType = MimeTypes.Text.Xml, XName rootName = null)
-			=> GetResponseAsync(requestUri, acceptedMimeType).GetXmlAsync(acceptedMimeType, rootName);
+		public async Task<XElement> GetXmlAsync(string requestUri, string acceptedMimeType = MimeTypes.Text.Xml, XName rootName = null)
+		{
+			using (var r = await GetResponseAsync(requestUri, acceptedMimeType))
+				return await r.GetXmlAsync(acceptedMimeType, rootName);
+		} // func GetXmlAsync
 
 		/// <summary></summary>
 		/// <param name="requestUri"></param>
 		/// <returns></returns>
-		public Task<LuaTable> GetTableAsync(string requestUri)
-			=> GetResponseAsync(requestUri, MimeTypes.Text.Lson).GetTableAsync();
+		public async Task<LuaTable> GetTableAsync(string requestUri)
+		{
+			using (var r = await GetResponseAsync(requestUri, MimeTypes.Text.Lson))
+				return await r.GetTableAsync();
+		} // func GetTableAsync
 
 		#endregion
 
@@ -1154,16 +1166,19 @@ namespace TecWare.DE.Networking
 		/// <param name="table"></param>
 		/// <param name="tableFormat"></param>
 		/// <returns></returns>
-		public Task<LuaTable> PutTableAsync(string requestUri, LuaTable table, DEHttpTableFormat tableFormat = DEHttpTableFormat.Lson)
+		public async Task<LuaTable> PutTableAsync(string requestUri, LuaTable table, DEHttpTableFormat tableFormat = DEHttpTableFormat.Lson)
 		{
 			switch (tableFormat)
 			{
 				case DEHttpTableFormat.Xml:
-					return PutResponseXmlAsync(requestUri, new XDocument(table.ToXml()), MimeTypes.Text.Xml, MimeTypes.Text.Xml).GetTableAsync();
+					using (var r = await PutResponseXmlAsync(requestUri, new XDocument(table.ToXml()), MimeTypes.Text.Xml, MimeTypes.Text.Xml))
+						return await r.GetTableAsync();
 				case DEHttpTableFormat.Lson:
-					return PutResponseTextAsync(requestUri, table.ToLson(false), MimeTypes.Text.Lson, MimeTypes.Text.Lson).GetTableAsync();
+					using (var r = await PutResponseTextAsync(requestUri, table.ToLson(false), MimeTypes.Text.Lson, MimeTypes.Text.Lson))
+						return await r.GetTableAsync();
 				case DEHttpTableFormat.Json:
-					return PutResponseTextAsync(requestUri, table.ToJson(false), MimeTypes.Text.Json, MimeTypes.Text.Json).GetTableAsync();
+					using (var r = await PutResponseTextAsync(requestUri, table.ToJson(false), MimeTypes.Text.Json, MimeTypes.Text.Json))
+						return await r.GetTableAsync();
 				default:
 					throw new ArgumentOutOfRangeException(nameof(tableFormat), tableFormat, "Invalid table format.");
 			}
@@ -1609,7 +1624,7 @@ namespace TecWare.DE.Networking
 		/// <returns></returns>
 		public static string FormatReturnState(DEHttpReturnState state)
 		{
-			switch(state)
+			switch (state)
 			{
 				case DEHttpReturnState.Ok:
 					return "ok";
@@ -1672,38 +1687,10 @@ namespace TecWare.DE.Networking
 			return new StreamReader(await response.Content.ReadAsStreamAsync(), enc ?? Encoding.UTF8, enc != null, 1024, false);
 		} // func GetTextReaderAsync
 
-		private static async Task<XmlReader> GetXmlStreamAsync(HttpResponseMessage response, string acceptedMimeType, XmlReaderSettings settings)
-		{
-			if (settings == null)
-			{
-				settings = new XmlReaderSettings()
-				{
-					IgnoreComments = acceptedMimeType != MimeTypes.Application.Xaml,
-					IgnoreWhitespace = acceptedMimeType != MimeTypes.Application.Xaml
-				};
-			}
-			settings.CloseInput = true;
-
-			var baseUri = response.RequestMessage.RequestUri.GetComponents(UriComponents.Scheme | UriComponents.Host | UriComponents.Port | UriComponents.Path, UriFormat.SafeUnescaped);
-			var context = new XmlParserContext(null, null, null, null, null, null, baseUri, null, XmlSpace.Default);
-
-			return XmlReader.Create(await GetTextReaderAsync(CheckMimeType(response, acceptedMimeType)), settings, context);
-		} // func GetXmlStreamAsync
-
-		private static async Task<XElement> GetXmlAsync(HttpResponseMessage response, string acceptedMimeType, XName rootName)
-		{
-			using (var xml = await GetXmlStreamAsync(response, acceptedMimeType, null))
-			{
-				var xDoc = await Task.Run(() => XDocument.Load(xml, LoadOptions.SetBaseUri));
-				return CheckForExceptionResult(xDoc?.Root, rootName);
-			}
-		} // func GetXmlAsync
-
 		private static async Task<LuaTable> GetTableAsync(HttpResponseMessage response)
 		{
 			using (var tr = await GetTextReaderAsync(response))
 				return CheckForExceptionResult(LuaTable.FromLson(tr));
-
 		} // func GetTableAsync
 
 		private static async Task<LuaTable> GetJsonTableAsync(HttpResponseMessage response)
@@ -1713,19 +1700,18 @@ namespace TecWare.DE.Networking
 		} // func GetJsonTableAsync
 
 		/// <summary></summary>
-		/// <param name="t"></param>
+		/// <param name="r"></param>
 		/// <param name="acceptedMimeType"></param>
 		/// <returns></returns>
-		public static async Task<TextReader> GetTextReaderAsync(this Task<HttpResponseMessage> t, string acceptedMimeType = null)
-			=> await GetTextReaderAsync(CheckMimeType(await t, acceptedMimeType));
+		public static async Task<TextReader> GetTextReaderAsync(this HttpResponseMessage r, string acceptedMimeType = null)
+			=> await GetTextReaderAsync(CheckMimeType(r, acceptedMimeType));
 
 		/// <summary></summary>
-		/// <param name="t"></param>
+		/// <param name="r"></param>
 		/// <param name="rootName"></param>
 		/// <returns></returns>
-		public static async Task<LuaTable> GetTableAsync(this Task<HttpResponseMessage> t, XName rootName = null)
+		public static async Task<LuaTable> GetTableAsync(this HttpResponseMessage r, XName rootName = null)
 		{
-			var r = await t;
 			if (r.Content.Headers.ContentType?.MediaType == MimeTypes.Text.Lson)
 				return await GetTableAsync(r);
 			else if (r.Content.Headers.ContentType?.MediaType == MimeTypes.Text.Json)
@@ -1737,26 +1723,42 @@ namespace TecWare.DE.Networking
 		} // func GetTableAsync
 
 		/// <summary></summary>
-		/// <param name="t"></param>
+		/// <param name="r"></param>
 		/// <param name="acceptedMimeType"></param>
 		/// <param name="settings"></param>
 		/// <returns></returns>
-		public static async Task<XmlReader> GetXmlStreamAsync(this Task<HttpResponseMessage> t, string acceptedMimeType = MimeTypes.Text.Xml, XmlReaderSettings settings = null)
+		public static async Task<XmlReader> GetXmlStreamAsync(this HttpResponseMessage r, string acceptedMimeType = MimeTypes.Text.Xml, XmlReaderSettings settings = null)
 		{
-			using (var r = await t)
-				return await GetXmlStreamAsync(r, acceptedMimeType, settings);
+			if (settings == null)
+			{
+				settings = new XmlReaderSettings()
+				{
+					IgnoreComments = acceptedMimeType != MimeTypes.Application.Xaml,
+					IgnoreWhitespace = acceptedMimeType != MimeTypes.Application.Xaml
+				};
+			}
+			settings.CloseInput = true;
+
+			var baseUri = r.RequestMessage.RequestUri.GetComponents(UriComponents.Scheme | UriComponents.Host | UriComponents.Port | UriComponents.Path, UriFormat.SafeUnescaped);
+			var context = new XmlParserContext(null, null, null, null, null, null, baseUri, null, XmlSpace.Default);
+
+			return XmlReader.Create(await GetTextReaderAsync(CheckMimeType(r, acceptedMimeType)), settings, context);
 		} // func GetXmlStreamAsync
 
 		/// <summary></summary>
-		/// <param name="t"></param>
+		/// <param name="r"></param>
 		/// <param name="acceptedMimeType"></param>
 		/// <param name="rootName"></param>
 		/// <returns></returns>
-		public static async Task<XElement> GetXmlAsync(this Task<HttpResponseMessage> t, string acceptedMimeType = MimeTypes.Text.Xml, XName rootName = null)
+		public static async Task<XElement> GetXmlAsync(this HttpResponseMessage r, string acceptedMimeType = MimeTypes.Text.Xml, XName rootName = null)
 		{
-			using (var r = await t)
-				return await GetXmlAsync(r, acceptedMimeType, rootName);
+			using (var xml = await GetXmlStreamAsync(r, acceptedMimeType, null))
+			{
+				var xDoc = await Task.Run(() => XDocument.Load(xml, LoadOptions.SetBaseUri));
+				return CheckForExceptionResult(xDoc?.Root, rootName);
+			}
 		} // func GetXmlAsync
+
 
 		/// <summary></summary>
 		/// <param name="arguments"></param>
@@ -1783,7 +1785,7 @@ namespace TecWare.DE.Networking
 
 			var firstAdded = requestUri.Contains('?');
 
-			foreach(var a in arguments)
+			foreach (var a in arguments)
 			{
 				if (firstAdded)
 					sb.Append('&');
