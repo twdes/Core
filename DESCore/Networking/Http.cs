@@ -1000,7 +1000,7 @@ namespace TecWare.DE.Networking
 		/// <param name="acceptedMimeType">Accepted mime types, that will send to the server.</param>
 		/// <param name="putContent">Content of a http put.</param>
 		/// <returns></returns>
-		public async Task<HttpResponseMessage> GetResponseAsync(string requestUri, string acceptedMimeType, HttpContent putContent = null)
+		public async Task<HttpResponseMessage> GetResponseAsync(string requestUri, string acceptedMimeType = null, HttpContent putContent = null)
 		{
 			var httpPut = putContent != null;
 			var request = new HttpRequestMessage(httpPut ? HttpMethod.Put : HttpMethod.Get, requestUri);
@@ -1034,8 +1034,8 @@ namespace TecWare.DE.Networking
 		/// <returns></returns>
 		public async Task<TextReader> GetTextReaderAsync(string requestUri)
 		{
-			using (var r = await GetAsync(requestUri, HttpCompletionOption.ResponseHeadersRead))
-				return await r.GetTextReaderAsync();
+			var r =  await GetResponseAsync(requestUri);
+			return await r.GetTextReaderAsync(); // creates a dispose context for r
 		} // func GetTextReaderAsync
 
 		/// <summary></summary>
@@ -1045,8 +1045,8 @@ namespace TecWare.DE.Networking
 		/// <returns></returns>
 		public async Task<XmlReader> GetXmlReaderAsync(string requestUri, string acceptedMimeType = MimeTypes.Text.Xml, XmlReaderSettings settings = null)
 		{
-			using (var r = await GetResponseAsync(requestUri, acceptedMimeType))
-				return await r.GetXmlStreamAsync(acceptedMimeType, settings);
+			var r = await GetResponseAsync(requestUri, acceptedMimeType);
+			return await r.GetXmlStreamAsync(acceptedMimeType, settings); // creates a dispose context for r
 		} // func GetXmlReaderAsync
 
 		/// <summary></summary>
@@ -1567,6 +1567,61 @@ namespace TecWare.DE.Networking
 	/// <summary></summary>
 	public static class HttpStuff
 	{
+		#region -- class HttpResponseTextReader ---------------------------------------
+
+		private sealed class HttpResponseTextReader : TextReader
+		{
+			private readonly HttpResponseMessage response;
+			private readonly TextReader tr;
+
+			public HttpResponseTextReader(HttpResponseMessage response, TextReader tr)
+			{
+				this.response = response ?? throw new ArgumentNullException(nameof(response));
+				this.tr = tr ?? throw new ArgumentNullException(nameof(tr));
+			} // ctor
+
+			protected override void Dispose(bool disposing)
+			{
+				try
+				{
+					if (disposing)
+					{
+						tr.Dispose();
+						response.Dispose();
+					}
+				}
+				finally
+				{
+					base.Dispose(disposing);
+				}
+			} // proc Dispose
+
+			public override void Close()
+				=> tr.Close();
+			public override int Peek()
+				=> tr.Peek();
+			public override int Read()
+				=> tr.Read();
+			public override int Read(char[] buffer, int index, int count)
+				=> tr.Read(buffer, index, count);
+			public override Task<int> ReadAsync(char[] buffer, int index, int count)
+				=> tr.ReadAsync(buffer, index, count);
+			public override int ReadBlock(char[] buffer, int index, int count)
+				=> tr.ReadBlock(buffer, index, count);
+			public override Task<int> ReadBlockAsync(char[] buffer, int index, int count)
+				=> tr.ReadBlockAsync(buffer, index, count);
+			public override string ReadLine()
+				=> tr.ReadLine();
+			public override Task<string> ReadLineAsync()
+				=> tr.ReadLineAsync();
+			public override string ReadToEnd()
+				=> tr.ReadToEnd();
+			public override Task<string> ReadToEndAsync()
+				=> tr.ReadToEndAsync();
+		} // class HttpResponseTextReader
+
+		#endregion
+
 		/// <summary>Check if the content.type is equal to the expected content-type</summary>
 		/// <param name="response"></param>
 		/// <param name="acceptedMimeType"></param>
@@ -1684,7 +1739,10 @@ namespace TecWare.DE.Networking
 		private static async Task<TextReader> GetTextReaderAsync(HttpResponseMessage response)
 		{
 			var enc = GetEncodingFromCharset(response.Content.Headers.ContentType?.CharSet);
-			return new StreamReader(await response.Content.ReadAsStreamAsync(), enc ?? Encoding.UTF8, enc != null, 1024, false);
+			return new HttpResponseTextReader(
+				response,
+				new StreamReader(await response.Content.ReadAsStreamAsync(), enc ?? Encoding.UTF8, enc != null, 1024, false)
+			);
 		} // func GetTextReaderAsync
 
 		private static async Task<LuaTable> GetTableAsync(HttpResponseMessage response)
