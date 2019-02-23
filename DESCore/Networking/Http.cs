@@ -951,6 +951,11 @@ namespace TecWare.DE.Networking
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
+		/// <summary>Build http client for des</summary>
+		/// <param name="messageHandler"></param>
+		/// <param name="credentials"></param>
+		/// <param name="baseUri"></param>
+		/// <param name="defaultEncoding"></param>
 		private DEHttpClient(DEClientHandler messageHandler, ICredentials credentials, Uri baseUri, Encoding defaultEncoding = null)
 			: base(messageHandler, true)
 		{
@@ -1526,12 +1531,12 @@ namespace TecWare.DE.Networking
 		/// <param name="credentials">Optional credentials</param>
 		/// <param name="defaultEncoding">Default encoding.</param>
 		/// <param name="httpHandler">Defines a http client handler.</param>
-		public static DEHttpClient Create(Uri baseUri, ICredentials credentials = null, Encoding defaultEncoding = null, HttpClientHandler httpHandler = null)
+		public static DEHttpClient Create(Uri baseUri, ICredentials credentials = null, Encoding defaultEncoding = null, HttpMessageHandler httpHandler = null)
 		{
 			if (httpHandler == null)
 				httpHandler = GetDefaultMessageHandler();
-			if (credentials != null)
-				httpHandler.Credentials = credentials;
+			if (credentials != null && httpHandler is HttpClientHandler httpClientHandler)
+				httpClientHandler.Credentials = credentials;
 
 			try
 			{

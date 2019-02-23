@@ -435,7 +435,7 @@ namespace TecWare.DE.Stuff
 
 		#endregion
 
-		private ILogger logger;
+		private readonly ILogger logger;
 
 		/// <summary></summary>
 		/// <param name="logger"></param>
