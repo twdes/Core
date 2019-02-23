@@ -13,7 +13,7 @@
 // specific language governing permissions and limitations under the Licence.
 //
 #endregion
-#define DEBUGSOCKET
+#define _DEBUGSOCKET
 using System;
 using System.Diagnostics;
 using System.Linq;
