@@ -1009,8 +1009,13 @@ namespace TecWare.DE.Networking
 		{
 			var httpPut = putContent != null;
 			var request = new HttpRequestMessage(httpPut ? HttpMethod.Put : HttpMethod.Get, requestUri);
-			if (acceptedMimeType != null)
-				request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue(acceptedMimeType));
+			if (!String.IsNullOrEmpty(acceptedMimeType))
+			{
+				if (MediaTypeWithQualityHeaderValue.TryParse(acceptedMimeType, out var mediaTypeWithQuality))
+					request.Headers.Accept.Add(mediaTypeWithQuality);
+				else
+					request.Headers.Accept.TryParseAdd(acceptedMimeType);
+			}
 			if (httpPut)
 				request.Content = putContent;
 
