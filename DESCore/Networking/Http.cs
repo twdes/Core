@@ -106,6 +106,9 @@ namespace TecWare.DE.Networking
 			/// <summary></summary>
 			[MimeTypeInfo(false)]
 			public const string DataSet = "text/dataset";
+			/// <summary></summary>
+			[MimeTypeInfo(false)]
+			public const string Markdown = "text/markdown";
 		} // class Text
 
 		/// <summary>All image mime types</summary>

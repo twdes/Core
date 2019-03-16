@@ -34,12 +34,32 @@ namespace TecWare.DE.Stuff
 		/// <param name="properties"></param>
 		public LuaPropertiesTable(IPropertyReadOnlyDictionary properties)
 			=> this.properties = properties;
-		
+
 		/// <summary></summary>
 		/// <param name="key"></param>
 		/// <returns></returns>
 		protected override object OnIndex(object key)
-			=> base.OnIndex(key) ?? properties?.GetProperty(key?.ToString(), null);
+		{
+			var v = base.OnIndex(key);
+			if (v == null && properties != null && key != null)
+			{
+				if (properties.TryGetProperty(key.ToString(), out var t))
+					v = t;
+			}
+
+			switch (v)
+			{
+				case IPropertyReadOnlyDictionary p:
+					return new LuaPropertiesTable(p);
+				case IEnumerable<IPropertyReadOnlyDictionary> r:
+					var t = new LuaTable();
+					foreach (var c in r)
+						t.ArrayList.Add(new LuaPropertiesTable(c));
+					return t;
+				default:
+					return v;
+			}
+		} // func OnIndex
 	} // class LuaPropertiesTable
 
 	#endregion

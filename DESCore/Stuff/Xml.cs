@@ -875,7 +875,7 @@ namespace TecWare.DE.Stuff
 		private static string[] EmptyArray(string[] a, bool emptyArrayToNull)
 		{
 			if (a == null)
-				return emptyArrayToNull ? null : new string[0];
+				return emptyArrayToNull ? null : Array.Empty<string>();
 			else if (a.Length == 0)
 				return emptyArrayToNull ? null : a;
 			else
@@ -888,8 +888,14 @@ namespace TecWare.DE.Stuff
 		/// <param name="emptyArrayToNull"></param>
 		/// <returns></returns>
 		public static string[] GetStrings(this XElement x, XName attribute, bool emptyArrayToNull = false)
+			=> GetStrings(x?.GetAttribute(attribute, null), emptyArrayToNull);
+
+		/// <summary></summary>
+		/// <param name="list"></param>
+		/// <param name="emptyArrayToNull"></param>
+		/// <returns></returns>
+		public static string[] GetStrings(string list, bool emptyArrayToNull = false)
 		{
-			var list = x?.GetAttribute(attribute, (string)null);
 			return String.IsNullOrEmpty(list)
 				? EmptyArray(null, emptyArrayToNull)
 				: EmptyArray(list.Split(new char[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries), emptyArrayToNull);

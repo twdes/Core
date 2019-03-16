@@ -65,8 +65,7 @@ namespace TecWare.DE.Networking
 				return null;
 			}
 		} // func ConvertType
-
-
+		
 		/// <summary>Name of the member</summary>
 		public string Name => name;
 		/// <summary>Type name of the member.</summary>
@@ -90,6 +89,9 @@ namespace TecWare.DE.Networking
 		
 		internal static Type GetType(string typeString)
 		{
+			if (String.IsNullOrEmpty(typeString))
+				return typeof(string);
+
 			var lastIndex = typeString.LastIndexOfAny(new char[] { ']', ',' });
 			if (lastIndex == -1 || typeString[lastIndex] == ']')
 				return LuaType.GetType(typeString);
