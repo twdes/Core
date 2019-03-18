@@ -89,7 +89,11 @@ namespace TecWare.DE.Stuff
 				return value == null ? DateTime.MinValue : DateTime.Parse((string)value, CultureInfo.InvariantCulture);
 			else if (typeTo == typeof(XDocument) && (value == null || value is string))
 				return value == null ? null : XDocument.Parse((string)value);
+			else if (typeTo == typeof(XElement) && (value == null || value is string))
+				return value == null ? null : XElement.Parse((string)value);
 			else if (typeTo == typeof(string) && (value == null || value is XDocument))
+				return value?.ToString();
+			else if (typeTo == typeof(string) && (value == null || value is XElement))
 				return value?.ToString();
 
 			else if (typeTo == typeof(Type) && (value == null || value is string))
