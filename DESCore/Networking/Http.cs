@@ -999,6 +999,25 @@ namespace TecWare.DE.Networking
 			return uri;
 		} // func GetFullUri
 
+		/// <summary>Create a relative uri from an absolute.</summary>
+		/// <param name="uri"></param>
+		/// <param name="path"></param>
+		/// <returns></returns>
+		public bool TryMakeRelative(Uri uri, out string path)
+		{
+			if (!uri.IsAbsoluteUri)
+				path = uri.ToString();
+			else
+				path = BaseAddress.MakeRelativeUri(uri).ToString();
+			return !path.StartsWith("..");
+		} // func MakeRelative
+
+		/// <summary>Create a relative uri from an absolute.</summary>
+		/// <param name="uri"></param>
+		/// <returns></returns>
+		public string MakeRelative(Uri uri)
+			=> TryMakeRelative(uri, out var path) ? path : throw new ArgumentException("Path escape!");
+
 		#endregion
 
 		#region -- GetResponseAsync ---------------------------------------------------
@@ -1858,7 +1877,12 @@ namespace TecWare.DE.Networking
 				return cd;
 			}
 			else
+			{
+				if (contentDisposition.FileName != null)
+					contentDisposition.FileName = contentDisposition.FileName.Trim('"');
+
 				return contentDisposition;
+			}
 		} // func GetContentDisposition
 
 		/// <summary>Small helper to get last modified as date time</summary>
