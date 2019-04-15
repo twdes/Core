@@ -18,7 +18,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Xml;
 using System.Xml.Linq;
+using Neo.IronLua;
 
 namespace TecWare.DE.Stuff
 {
@@ -57,6 +59,36 @@ namespace TecWare.DE.Stuff
 		/// <returns></returns>
 		public override string ToString()
 			=> $"{name}:{type.Name} = {value}";
+		
+		/// <summary>Create a xml element.</summary>
+		/// <param name="tagName"></param>
+		/// <returns></returns>
+		public XElement ToXml(XName tagName = null)
+		{
+			if (value == null)
+				return null;
+
+			return new XElement(tagName ?? "attribute",
+				new XAttribute("name", name),
+				new XAttribute("dataType", LuaType.GetType(type).AliasOrFullName),
+				new XText(value.ChangeType<string>())
+			);
+		} // func CreateAttributeInfo
+
+		internal void Write(XmlWriter xml, XName tagName = null)
+		{
+			if (value == null)
+				return;
+
+			if (tagName != null)
+				xml.WriteStartElement(tagName.LocalName, tagName.NamespaceName);
+			else
+				xml.WriteStartElement("attribute");
+			xml.WriteAttributeString("name", name);
+			xml.WriteAttributeString("dataType", LuaType.GetType(type).AliasOrFullName);
+			xml.WriteValue(value.ChangeType<string>());
+			xml.WriteEndElement();
+		} // proc Write
 
 		/// <summary>Property name.</summary>
 		public string Name => name;
@@ -671,7 +703,14 @@ namespace TecWare.DE.Stuff
 		} // func GetDictionaryProperties
 
 		#endregion
-	}
+
+		/// <summary>Write property to an xml stream.</summary>
+		/// <param name="xml"></param>
+		/// <param name="property"></param>
+		/// <param name="tagName"></param>
+		public static void WriteElementProperty(this XmlWriter xml, PropertyValue property, XName tagName = null)
+			=> property.Write(xml, tagName);
+	} // class Procs
 
 	#endregion
 }
