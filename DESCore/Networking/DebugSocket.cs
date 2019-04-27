@@ -773,16 +773,26 @@ namespace TecWare.DE.Networking
 
 		/// <summary>Return all members</summary>
 		/// <param name="memberPath"></param>
+		/// <param name="maxLevel"></param>
 		/// <returns></returns>
-		public Task<IEnumerable<DebugMemberValue>> MembersAsync(string memberPath)
-			=> MembersAsync(memberPath, CancellationToken.None);
+		public Task<IEnumerable<DebugMemberValue>> MembersAsync(string memberPath = null, int maxLevel = -1)
+			=> MembersAsync(memberPath, maxLevel, CancellationToken.None);
 
 		/// <summary>Return all members</summary>
 		/// <param name="memberPath"></param>
+		/// <param name="maxLevel"></param>
 		/// <param name="cancellationToken"></param>
 		/// <returns></returns>
-		public async Task<IEnumerable<DebugMemberValue>> MembersAsync(string memberPath, CancellationToken cancellationToken)
-			=> ParseReturn(await SendAsync(new XElement("member"), cancellationToken));
+		public async Task<IEnumerable<DebugMemberValue>> MembersAsync(string memberPath, int maxLevel, CancellationToken cancellationToken)
+		{
+			var x = new XElement("member");
+			if (!String.IsNullOrEmpty(memberPath))
+				x.Add(new XAttribute("p", memberPath));
+			if (maxLevel > 0)
+				x.Add(new XAttribute("l", maxLevel));
+
+			return ParseReturn(await SendAsync(x, cancellationToken));
+		} // func MembersAsync
 
 		#endregion
 

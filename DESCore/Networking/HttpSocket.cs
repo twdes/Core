@@ -106,6 +106,7 @@ namespace TecWare.DE.Networking
 		{
 			DisposePingServer();
 
+			Debug.Print("ResetPingServer");
 			pingTokenReset = new CancellationTokenSource();
 			SendPingAsync(pingTokenReset.Token);
 		} // proc ResetPingServer
@@ -114,12 +115,14 @@ namespace TecWare.DE.Networking
 		{
 			try
 			{
+				Debug.Print("DisposePingServer");
 				pingTokenReset?.Cancel();
 				pingTokenReset?.Dispose();
 				pingTokenReset = null;
 			}
-			catch
+			catch (Exception e)
 			{
+				Debug.Print(e.ToString());
 			}
 		} // proc DisposePingServer
 
