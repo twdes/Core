@@ -14,6 +14,8 @@
 //
 #endregion
 
+using System;
+
 namespace TecWare.DE.Data
 {
 	#region -- enum CsvQuotation ------------------------------------------------------
@@ -57,6 +59,23 @@ namespace TecWare.DE.Data
 		public int[] Lengths { get; set; } = null;
 		/// <summary>Padding</summary>
 		public char Padding { get; set; } = ' ';
+
+		internal int CreateOffsets(out int[] offsets)
+		{
+			if (Lengths == null || Lengths.Length == 0)
+				throw new ArgumentNullException(nameof(Lengths));
+
+			offsets = new int[Lengths.Length];
+
+			var ofs = 0;
+			for (var i = 0; i < Lengths.Length; i++)
+			{
+				offsets[i] = ofs;
+				ofs += Lengths[i];
+			}
+
+			return ofs;
+		} // func CreateOffsets
 	} // class TextFixedSettings
 
 	#endregion

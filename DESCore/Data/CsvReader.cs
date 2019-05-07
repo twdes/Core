@@ -128,7 +128,7 @@ namespace TecWare.DE.Data
 		private readonly int recordLength;
 		private readonly int[] recordOffsets;
 
-		private char[] currentRecord;
+		private readonly char[] currentRecord;
 
 		/// <summary></summary>
 		/// <param name="tr"></param>
@@ -136,20 +136,8 @@ namespace TecWare.DE.Data
 		public TextFixedReader(TextReader tr, TextFixedSettings settings)
 			: base(tr, settings)
 		{
-			if (settings.Lengths == null || settings.Lengths.Length == 0)
-				throw new ArgumentNullException("columnLengths");
-
-			this.recordOffsets = new int[settings.Lengths.Length];
-
-			var ofs = 0;
-			for (var i = 0; i < settings.Lengths.Length; i++)
-			{
-				recordOffsets[i] = ofs;
-				ofs += settings.Lengths[i];
-			}
-
-			this.recordLength = ofs;
-			this.currentRecord = new char[recordLength];
+			recordLength = settings.CreateOffsets(out recordOffsets);
+			currentRecord = new char[recordLength];
 		} // ctor
 
 		private bool ReadRecord(bool throwInvalidBlockLength)
@@ -198,7 +186,7 @@ namespace TecWare.DE.Data
 				for (var i = end; i >= ofs; i--)
 				{
 					if (currentRecord[i] != padding)
-						return new String(currentRecord, ofs, i - ofs + 1);
+						return new string(currentRecord, ofs, i - ofs + 1);
 				}
 
 				return String.Empty;
@@ -474,7 +462,7 @@ namespace TecWare.DE.Data
 		/// <param name="coreReader"></param>
 		public TextRowEnumerator(ITextCoreReader coreReader)
 		{
-			this.coreReader = coreReader;
+			this.coreReader = coreReader ?? throw new ArgumentNullException(nameof(coreReader));
 		} // ctor
 
 		/// <summary></summary>
