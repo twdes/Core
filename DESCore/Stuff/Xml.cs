@@ -991,6 +991,47 @@ namespace TecWare.DE.Stuff
 
 		#endregion
 
+		#region -- RemoveInvalidXmlChars ----------------------------------------------
+
+		/// <summary>Removes not parsable chars from the string.</summary>
+		/// <param name="value">String value to check.</param>
+		/// <param name="replace">Replace character or zero for no replacement.</param>
+		/// <returns>Clean string.</returns>
+		public static string RemoveInvalidXmlChars(string value, char replace = '\0')
+		{
+			if (String.IsNullOrEmpty(value))
+				return value;
+
+			StringBuilder sb = null;
+			var len = value.Length;
+			var startAt = 0;
+			for (var i = 0; i < len; i++)
+			{
+				// test for invalid char
+				if (!XmlConvert.IsXmlChar(value[i]) &&
+					(i == 0 || !XmlConvert.IsXmlSurrogatePair(value[i], value[i - 1])))
+				{
+
+					if (sb == null)
+						sb = new StringBuilder();
+					sb.Append(value, startAt, i - startAt);
+					if (replace != '\0')
+						sb.Append(replace);
+					startAt = i + 1;
+				}
+			}
+
+			if (startAt == 0)
+				return value;
+			else
+			{
+				sb.Append(value, startAt, len - startAt);
+				return sb.ToString();
+			}
+		} // func RemoveInvalidXmlChars
+
+		#endregion
+
 		// -- Ctor ---------------------------------------------------------------
 
 		private static readonly Type typeBaseUriAnnotation;

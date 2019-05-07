@@ -153,7 +153,7 @@ namespace TecWare.DE.Data
 	/// <summary>Write a csv file.</summary>
 	public sealed class TextCsvWriter : TextCoreWriter<TextCsvSettings>
 	{
-		private Func<string, bool?, bool> quoteValue;
+		private readonly Func<string, bool?, bool> quoteValue;
 
 		/// <summary></summary>
 		/// <param name="sw"></param>
@@ -176,8 +176,6 @@ namespace TecWare.DE.Data
 					quoteValue = new Func<string, bool?, bool>((v, isText) => false);
 					break;
 			}
-
-
 		} // ctor
 
 		private static bool GetQuotedNormal(string v, char quote)
