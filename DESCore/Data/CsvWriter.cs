@@ -229,12 +229,12 @@ namespace TecWare.DE.Data
 		/// <param name="isText"></param>
 		public void WriteRow(IEnumerable<string> values, bool[] isText = null)
 		{
-			var quote = Settings.Quote;
+			var delemiter = Settings.Delemiter;
 			var i = 0;
 			foreach (var v in values)
 			{
 				WriteRowValue(v, isText == null || i >= isText.Length ? (bool?)null : isText[i]);
-				BaseWriter.Write(quote);
+				BaseWriter.Write(delemiter);
 				i++;
 			}
 			BaseWriter.WriteLine();
@@ -299,88 +299,6 @@ namespace TecWare.DE.Data
 	/// <summary></summary>
 	public sealed class TextDataRowWriter : TextObjectWriter
 	{
-		//#region -- class TextDataRow --------------------------------------------------
-
-		//private sealed class TextDataRow : DynamicDataRow
-		//{
-		//	private readonly TextDataRowEnumerator enumerator;
-
-		//	public TextDataRow(TextDataRowEnumerator enumerator)
-		//	{
-		//		this.enumerator = enumerator ?? throw new ArgumentNullException(nameof(enumerator));
-		//	} // ctor
-
-		//	private object GetValueIntern(int index)
-		//	{
-		//		// get value
-		//		var value = enumerator.CoreReader[index];
-		//		var column = enumerator.Columns?[index];
-		//		if (column == null)
-		//			return null; // no column defined
-
-		//		// convert
-		//		if (column.Converter != null)
-		//			return column.Converter(value);
-		//		else if (column.DataType == typeof(decimal))
-		//			return Decimal.Parse(value, NumberStyles.Currency | NumberStyles.Float, column.FormatProvider);
-		//		else if (column.DataType == typeof(double))
-		//			return Double.Parse(value, NumberStyles.Currency | NumberStyles.Float, column.FormatProvider);
-		//		else if (column.DataType == typeof(float))
-		//			return Single.Parse(value, NumberStyles.Currency | NumberStyles.Float, column.FormatProvider);
-
-		//		else if (column.DataType == typeof(byte))
-		//			return Byte.Parse(value, NumberStyles.Integer, column.FormatProvider);
-		//		else if (column.DataType == typeof(sbyte))
-		//			return SByte.Parse(value, NumberStyles.Integer, column.FormatProvider);
-		//		else if (column.DataType == typeof(ushort))
-		//			return UInt16.Parse(value, NumberStyles.Integer, column.FormatProvider);
-		//		else if (column.DataType == typeof(short))
-		//			return Int16.Parse(value, NumberStyles.Integer, column.FormatProvider);
-		//		else if (column.DataType == typeof(uint))
-		//			return UInt32.Parse(value, NumberStyles.Integer, column.FormatProvider);
-		//		else if (column.DataType == typeof(int))
-		//			return Int32.Parse(value, NumberStyles.Integer, column.FormatProvider);
-		//		else if (column.DataType == typeof(ulong))
-		//			return UInt64.Parse(value, NumberStyles.Integer, column.FormatProvider);
-		//		else if (column.DataType == typeof(long))
-		//			return Int64.Parse(value, NumberStyles.Integer, column.FormatProvider);
-
-		//		else if (column.DataType == typeof(DateTime))
-		//			return DateTime.Parse(value, column.FormatProvider, DateTimeStyles.AssumeLocal);
-
-		//		else if (column.DataType == typeof(string))
-		//			return value;
-
-		//		else
-		//			return Procs.ChangeType(value, column.DataType);
-		//	} // func GetValueIntern
-
-		//	public override object this[int index]
-		//	{
-		//		get
-		//		{
-		//			try
-		//			{
-		//				return GetValueIntern(index);
-		//			}
-		//			catch (Exception e)
-		//			{
-		//				Debug.WriteLine(String.Format("[{0}] {1}", e.GetType().Name, e.Message));
-		//				if (enumerator.IsParsedStrict)
-		//					throw;
-		//				else
-		//					return null;
-		//			}
-		//		}
-		//	} // func this
-
-		//	public override bool IsDataOwner => false;
-
-		//	public override IReadOnlyList<IDataColumn> Columns => enumerator.Columns;
-		//} // class TextDataRow
-
-		//#endregion
-
 		#region -- class ValueGet -----------------------------------------------------
 
 		private abstract class ValueGet
