@@ -233,8 +233,9 @@ namespace TecWare.DE.Data
 			var i = 0;
 			foreach (var v in values)
 			{
+				if (i > 0)
+					BaseWriter.Write(delemiter);
 				WriteRowValue(v, isText == null || i >= isText.Length ? (bool?)null : isText[i]);
-				BaseWriter.Write(delemiter);
 				i++;
 			}
 			BaseWriter.WriteLine();
