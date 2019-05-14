@@ -1891,7 +1891,7 @@ namespace TecWare.DE.Networking
 		public static DateTime GetLastModified(this HttpContentHeaders headers)
 		{
 			var lastModified = headers.LastModified;
-			return lastModified.HasValue ? lastModified.Value.DateTime : DateTime.Now;
+			return lastModified.HasValue ? lastModified.Value.UtcDateTime : DateTime.UtcNow;
 		} // func GetLastModified
 
 		/// <summary>Small helper to get last modified as date time</summary>
