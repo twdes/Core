@@ -1220,291 +1220,11 @@ namespace TecWare.DE.Networking
 
 		#region -- CreateViewDataReader -----------------------------------------------
 
-		#region -- class ViewDataReader -----------------------------------------------
+		#region -- class XmlViewHttpReader --------------------------------------------
 
 		/// <summary></summary>
-		public class ViewDataReader : IEnumerable<IDataRow>
+		private sealed class XmlViewHttpReader : XmlViewDataReader
 		{
-			#region -- class ViewDataColumn -------------------------------------------
-
-			/// <summary></summary>
-			private sealed class ViewDataColumn : IDataColumn
-			{
-				private readonly string name;
-				private readonly Type dataType;
-				private readonly PropertyDictionary attributes;
-
-				#region -- Ctor/Dtor --------------------------------------------------
-
-				public ViewDataColumn(string name, Type dataType, PropertyDictionary attributes)
-				{
-					this.name = name;
-					this.dataType = dataType;
-					this.attributes = attributes;
-				} // ctor
-
-				#endregion
-
-				#region -- IDataColumn ------------------------------------------------
-
-				public string Name => name;
-				public Type DataType => dataType;
-				public IPropertyEnumerableDictionary Attributes => attributes;
-
-				#endregion
-			} // class ViewDataColumn
-
-			#endregion
-
-			#region -- class ViewDataRow ----------------------------------------------
-
-			///////////////////////////////////////////////////////////////////////////////
-			/// <summary></summary>
-			private sealed class ViewDataRow : DynamicDataRow
-			{
-				private readonly ViewDataEnumerator enumerator;
-				private readonly object[] columnValues;
-
-				#region -- Ctor/Dtor --------------------------------------------------
-
-				public ViewDataRow(ViewDataEnumerator enumerator, object[] columnValues)
-				{
-					this.enumerator = enumerator;
-					this.columnValues = columnValues;
-				} // ctor
-
-				#endregion
-
-				#region -- IDataRow ---------------------------------------------------
-
-				public override IReadOnlyList<IDataColumn> Columns => enumerator.Columns;
-				public override object this[int index] => columnValues[index];
-
-				public override bool IsDataOwner => true;
-
-				#endregion
-			} // class ViewDataRow
-
-			#endregion
-
-			#region -- class ViewDataEnumerator ---------------------------------------
-
-			/// <summary></summary>
-			private sealed class ViewDataEnumerator : IEnumerator<IDataRow>, IDataColumns
-			{
-				#region -- enum ReadingState ------------------------------------------
-
-				/// <summary></summary>
-				private enum ReadingState
-				{
-					/// <summary>Nothing read until now</summary>
-					Unread,
-					/// <summary>Read first row</summary>
-					FetchFirstRow,
-					/// <summary>Fetch more rows</summary>
-					FetchRows,
-					/// <summary>Done</summary>
-					Complete,
-				} // enum ReadingState
-
-				#endregion
-
-				private readonly XName xnView = "view";
-				private readonly XName xnFields = "fields";
-				private readonly XName xnRows = "rows";
-				private readonly XName xnRow = "r";
-
-				private readonly ViewDataReader owner;
-				private XmlReader xml;
-				private ViewDataColumn[] columns;
-				private ReadingState state;
-				private ViewDataRow currentRow;
-
-				#region -- Ctor/Dtor --------------------------------------------------
-
-				public ViewDataEnumerator(ViewDataReader owner)
-				{
-					this.owner = owner;
-				} // ctor
-
-				public void Dispose()
-					=> Dispose(true);
-
-				private void Dispose(bool disposing)
-				{
-					if (disposing)
-						xml?.Dispose();
-				} // proc Dispose
-
-				#endregion
-
-				#region -- IEnumerator ------------------------------------------------
-
-				private bool MoveNext(bool headerOnly)
-				{
-					switch (state)
-					{
-						#region -- ReadingState.Unread --
-						case ReadingState.Unread:
-							// open the xml stream
-							xml = owner.request.GetXmlReaderAsync(owner.path, owner.acceptedMimeType).Result;
-
-							xml.Read();
-							if (xml.NodeType == XmlNodeType.XmlDeclaration)
-								xml.Read();
-
-							if (xml.NodeType != XmlNodeType.Element || xml.LocalName != xnView.LocalName)
-								throw new InvalidDataException($"Expected \"{xnView}\", read \"{xml.LocalName}\".");
-
-							xml.Read();
-							if (xml.NodeType != XmlNodeType.Element || xml.LocalName != xnFields.LocalName)
-								throw new InvalidDataException($"Expected \"{xnFields}\", read \"{xml.LocalName}\".");
-
-							var viewColumns = new List<ViewDataColumn>();
-							var fields = (XElement)XNode.ReadFrom(xml);
-							foreach (var field in fields.Elements())
-							{
-								var columnName = field.Name.LocalName;
-								var columnDataType = LuaType.GetType(field.GetAttribute("type", "string"), lateAllowed: false).Type;
-								var columnId = field.GetAttribute("field", String.Empty);
-
-								var attributes = new PropertyDictionary();
-
-								// add colum id
-								if (!String.IsNullOrEmpty(columnId))
-									attributes.SetProperty("field", typeof(string), columnId);
-
-								foreach (var c in field.Elements("attribute"))
-								{
-									if (c.IsEmpty)
-										continue;
-
-									var attributeName = c.GetAttribute("name", String.Empty);
-									if (String.IsNullOrEmpty(attributeName))
-										continue;
-
-									attributes.SetProperty(attributeName, LuaType.GetType(c.GetAttribute("type", "string"), lateAllowed: false).Type, c.Value);
-								} // foreach c
-
-								viewColumns.Add(new ViewDataColumn(columnName, columnDataType, attributes));
-							} // foreach field
-
-							if (viewColumns.Count < 1)
-								throw new InvalidDataException("No header found.");
-							columns = viewColumns.ToArray();
-
-							state = ReadingState.FetchFirstRow;
-							if (headerOnly)
-								return true;
-							else
-								goto case ReadingState.FetchFirstRow;
-						#endregion
-						#region -- ReadingState.FetchFirstRow --
-						case ReadingState.FetchFirstRow:
-							if (xml.NodeType != XmlNodeType.Element || xml.LocalName != xnRows.LocalName)
-								throw new InvalidDataException($"Expected \"{xnRows}\", read \"{xml.LocalName}\".");
-
-							if (xml.IsEmptyElement)
-							{
-								xml.Read();
-								if (xml.NodeType != XmlNodeType.EndElement || xml.LocalName != xnView.LocalName)
-									throw new InvalidDataException($"Expected \"{xnView}\", read \"{xml.LocalName}\".");
-
-								xml.Read();
-								if (!xml.EOF)
-									throw new InvalidDataException("Unexpected eof.");
-
-								state = ReadingState.Complete;
-								goto case ReadingState.Complete;
-							} // if xml.IsEmptyElement
-							else
-							{
-								xml.Read();
-								state = ReadingState.FetchRows;
-								goto case ReadingState.FetchRows;
-							}
-						#endregion
-						#region -- ReadingState.FetchRows --
-						case ReadingState.FetchRows:
-							if (xml.NodeType != XmlNodeType.Element || xml.LocalName != xnRow.LocalName)
-								throw new InvalidDataException($"Expected \"r\", read \"{xml.LocalName}\".");
-
-							var values = new object[columns.Length];
-
-							if (!xml.IsEmptyElement)
-							{
-								var rowData = (XElement)XNode.ReadFrom(xml);
-								foreach (var column in rowData.Elements())
-								{
-									var columnIndex = Array.FindIndex(columns, c => String.Compare(c.Name, column.Name.LocalName, StringComparison.OrdinalIgnoreCase) == 0);
-									if (columnIndex != -1)
-										values[columnIndex] = Procs.ChangeType(column.Value, columns[columnIndex].DataType);
-								}
-							} // if xml.IsEmptyElement
-							else
-								// Without a call to XNode.ReadFrom() it's necessary to read to the next node.
-								xml.Read();
-
-							currentRow = new ViewDataRow(this, values);
-
-							if (xml.NodeType == XmlNodeType.Element && xml.LocalName == xnRow.LocalName)
-								return true;
-
-							if (xml.NodeType != XmlNodeType.EndElement || xml.LocalName != xnRows.LocalName)
-								throw new InvalidDataException($"Expected \"{xnRows}\", read \"{xml.LocalName}\".");
-
-							xml.Read();
-							if (xml.NodeType != XmlNodeType.EndElement || xml.LocalName != xnView.LocalName)
-								throw new InvalidDataException($"Expected \"{xnView}\", read \"{xml.LocalName}\".");
-
-							xml.Read();
-							if (!xml.EOF)
-								throw new InvalidDataException("Unexpected eof.");
-
-							state = ReadingState.Complete;
-							return true;
-						#endregion
-						case ReadingState.Complete:
-							return false;
-						default:
-							throw new InvalidOperationException("The state of the object is invalid.");
-					} // switch state
-				} // func MoveNext 
-
-				public bool MoveNext()
-					=> MoveNext(false);
-
-				void IEnumerator.Reset()
-				{
-					xml?.Dispose();
-					xml = null;
-					columns = null;
-					currentRow = null;
-					state = ReadingState.Unread;
-				} // proc Reset
-
-				public IDataRow Current => currentRow;
-				object IEnumerator.Current => Current;
-
-				#endregion
-
-				#region -- IDataColumns -----------------------------------------------
-
-				public IReadOnlyList<IDataColumn> Columns
-				{
-					get
-					{
-						if (state == ReadingState.Unread)
-							MoveNext(true);
-						return columns;
-					}
-				} // prop Columns
-
-				#endregion
-			} // class ViewDataEnumerator
-
-			#endregion
-
 			private readonly DEHttpClient request;
 			private readonly string path;
 			private readonly string acceptedMimeType;
@@ -1515,24 +1235,15 @@ namespace TecWare.DE.Networking
 			/// <param name="request"></param>
 			/// <param name="path"></param>
 			/// <param name="acceptedMimeType"></param>
-			public ViewDataReader(DEHttpClient request, string path, string acceptedMimeType = MimeTypes.Text.Xml)
+			public XmlViewHttpReader(DEHttpClient request, string path, string acceptedMimeType = MimeTypes.Text.Xml)
 			{
 				this.request = request;
 				this.path = path;
 				this.acceptedMimeType = acceptedMimeType;
 			} // ctor
 
-			#endregion
-
-			#region -- IEnumerable ----------------------------------------------------
-
-			/// <summary></summary>
-			/// <returns></returns>
-			public IEnumerator<IDataRow> GetEnumerator()
-				=> new ViewDataEnumerator(this);
-
-			IEnumerator IEnumerable.GetEnumerator()
-				=> GetEnumerator();
+			protected override XmlReader CreateXmlReader()
+				=> request.GetXmlReaderAsync(path, acceptedMimeType).Result;
 
 			#endregion
 		} // class ViewDataReader
@@ -1544,7 +1255,7 @@ namespace TecWare.DE.Networking
 		/// <param name="acceptedMimeType"></param>
 		/// <returns></returns>
 		public IEnumerable<IDataRow> CreateViewDataReader(string path, string acceptedMimeType = MimeTypes.Text.Xml)
-			=> new ViewDataReader(this, path, acceptedMimeType);
+			=> new XmlViewHttpReader(this, path, acceptedMimeType);
 
 		#endregion
 
