@@ -102,6 +102,7 @@ namespace TecWare.DE.Data
 			private readonly XName xnRow = "r";
 
 			private readonly XmlViewDataReader owner;
+			private bool disposeXml = true;
 			private XmlReader xml;
 			private XmlViewDataColumn[] columns;
 			private ReadingState state;
@@ -134,7 +135,7 @@ namespace TecWare.DE.Data
 					#region -- ReadingState.Unread --
 					case ReadingState.Unread:
 						// open the xml stream
-						xml = owner.CreateXmlReader();
+						xml = owner.CreateXmlReader(out disposeXml);
 
 						xml.Read();
 						if (xml.NodeType == XmlNodeType.XmlDeclaration)
@@ -263,7 +264,8 @@ namespace TecWare.DE.Data
 
 			void IEnumerator.Reset()
 			{
-				xml?.Dispose();
+				if (disposeXml)
+					xml?.Dispose();
 				xml = null;
 				columns = null;
 				currentRow = null;
@@ -300,8 +302,9 @@ namespace TecWare.DE.Data
 		} // ctor
 
 		/// <summary>Create reader source</summary>
+		/// <param name="doDispose"></param>
 		/// <returns></returns>
-		protected abstract XmlReader CreateXmlReader();
+		protected abstract XmlReader CreateXmlReader(out bool doDispose);
 
 		#endregion
 
@@ -317,6 +320,8 @@ namespace TecWare.DE.Data
 
 		#endregion
 
+		#region -- Create -------------------------------------------------------------
+
 		#region -- class XmlViewFileReader --------------------------------------------
 
 		private sealed class XmlViewFileReader : XmlViewDataReader
@@ -328,8 +333,11 @@ namespace TecWare.DE.Data
 				this.fileName = fileName ?? throw new ArgumentNullException(nameof(fileName));
 			} // ctor
 
-			protected override XmlReader CreateXmlReader()
-				=> XmlReader.Create(fileName, Procs.XmlReaderSettings);
+			protected override XmlReader CreateXmlReader(out bool disposeXml)
+			{
+				disposeXml = true;
+				return XmlReader.Create(fileName, Procs.XmlReaderSettings);
+			} // func CreateXmlReader
 		} // class XmlViewFileReader
 
 		#endregion
@@ -339,14 +347,20 @@ namespace TecWare.DE.Data
 		private sealed class XmlViewTextReader : XmlViewDataReader
 		{
 			private readonly TextReader tr;
+			private readonly XmlReaderSettings settings;
 
-			public XmlViewTextReader(TextReader tr)
+			public XmlViewTextReader(TextReader tr, bool disposeTextReader)
 			{
 				this.tr = tr ?? throw new ArgumentNullException(nameof(tr));
+				settings = Procs.XmlReaderSettings.Clone();
+				settings.CloseInput = disposeTextReader;
 			} // ctor
 
-			protected override XmlReader CreateXmlReader()
-				=> XmlReader.Create(tr, Procs.XmlReaderSettings);
+			protected override XmlReader CreateXmlReader(out bool disposeXml)
+			{
+				disposeXml = true;
+				return XmlReader.Create(tr, settings);
+			} // func CreateXmlReader
 		} // class XmlViewTextReader
 
 		#endregion
@@ -356,15 +370,43 @@ namespace TecWare.DE.Data
 		private sealed class XmlViewStreamReader : XmlViewDataReader
 		{
 			private readonly Stream stream;
+			private readonly XmlReaderSettings settings;
 
-			public XmlViewStreamReader(Stream stream)
+			public XmlViewStreamReader(Stream stream, bool disposeStream)
 			{
 				this.stream = stream ?? throw new ArgumentNullException(nameof(stream));
+				settings = Procs.XmlReaderSettings.Clone();
+				settings.CloseInput = disposeStream;
 			} // ctor
 
-			protected override XmlReader CreateXmlReader()
-				=> XmlReader.Create(stream, Procs.XmlReaderSettings);
+			protected override XmlReader CreateXmlReader(out bool disposeXml)
+			{
+				disposeXml = true;
+				return XmlReader.Create(stream, settings);
+			} // func CreateXmlReader
 		} // class XmlViewStreamReader
+
+		#endregion
+
+		#region -- class XmlViewXmlReader ---------------------------------------------
+
+		private sealed class XmlViewXmlReader : XmlViewDataReader
+		{
+			private readonly bool disposeXml;
+			private readonly XmlReader xml;
+
+			public XmlViewXmlReader(XmlReader xml, bool disposeXml)
+			{
+				this.xml = xml ?? throw new ArgumentNullException(nameof(xml));
+				this.disposeXml = disposeXml;
+			} // ctor
+
+			protected override XmlReader CreateXmlReader(out bool doDispose)
+			{
+				doDispose = disposeXml;
+				return xml;
+			} // func CreateXmlReader
+		} // class XmlViewXmlReader
 
 		#endregion
 
@@ -376,15 +418,26 @@ namespace TecWare.DE.Data
 
 		/// <summary></summary>
 		/// <param name="tr"></param>
+		/// <param name="disposeTextReader"></param>
 		/// <returns></returns>
-		public static XmlViewDataReader Create(TextReader tr)
-			=> new XmlViewTextReader(tr);
+		public static XmlViewDataReader Create(TextReader tr, bool disposeTextReader = true)
+			=> new XmlViewTextReader(tr, disposeTextReader);
 
 		/// <summary></summary>
 		/// <param name="stream"></param>
+		/// <param name="disposeStream"></param>
 		/// <returns></returns>
-		public static XmlViewDataReader Create(Stream stream)
-			=> new XmlViewStreamReader(stream);
+		public static XmlViewDataReader Create(Stream stream, bool disposeStream = true)
+			=> new XmlViewStreamReader(stream, disposeStream);
+
+		/// <summary></summary>
+		/// <param name="xml"></param>
+		/// <param name="disposeXml"></param>
+		/// <returns></returns>
+		public static XmlViewDataReader Create(XmlReader xml, bool disposeXml = true)
+			=> new XmlViewXmlReader(xml, disposeXml);
+
+		#endregion
 	} // class ViewDataReader
 
 	#endregion
