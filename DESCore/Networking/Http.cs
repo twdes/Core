@@ -1242,8 +1242,11 @@ namespace TecWare.DE.Networking
 				this.acceptedMimeType = acceptedMimeType;
 			} // ctor
 
-			protected override XmlReader CreateXmlReader()
-				=> request.GetXmlReaderAsync(path, acceptedMimeType).Result;
+			protected override XmlReader CreateXmlReader(out bool doDispose)
+			{
+				doDispose = true;
+				return request.GetXmlReaderAsync(path, acceptedMimeType).Result;
+			} // func CreateXmlReader
 
 			#endregion
 		} // class ViewDataReader
