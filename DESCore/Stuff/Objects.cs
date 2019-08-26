@@ -235,7 +235,7 @@ namespace TecWare.DE.Stuff
 			}
 
 			return data;
-		} // func ConvertToString
+		} // func ConvertToBytes
 
 		/// <summary></summary>
 		/// <param name="bytes"></param>

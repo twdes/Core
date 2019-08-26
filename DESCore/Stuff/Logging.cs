@@ -131,7 +131,7 @@ namespace TecWare.DE.Stuff
 				if (scope != null && stopWatch != null)
 				{
 					this.NewLine()
-						.WriteLine("=== Dauer = {0:N0}ms, {1:N0}ticks ===", stopWatch.ElapsedMilliseconds, stopWatch.ElapsedTicks);
+						.WriteLine("=== Duration = {0:N0}ms, {1:N0}ticks ===", stopWatch.ElapsedMilliseconds, stopWatch.ElapsedTicks);
 				}
 				scope?.Dispose();
 			}
