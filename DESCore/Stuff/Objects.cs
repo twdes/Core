@@ -18,6 +18,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
+using System.Threading.Tasks;
 using System.Xml.Linq;
 using Neo.IronLua;
 
@@ -529,6 +530,16 @@ namespace TecWare.DE.Stuff
 		/// <returns></returns>
 		public static IEnumerator<T> Dispose<T>(this IEnumerator<T> e, IDisposable disposable)
 			=> new DisposeEnumerator<T>(disposable, e);
+
+		#endregion
+
+		#region -- Enumerator helper --------------------------------------------------
+
+		/// <summary>Async enumeration</summary>
+		/// <param name="enumerator"></param>
+		/// <returns></returns>
+		public static Task<bool> MoveNextAsync(this IEnumerator enumerator)
+			=> Task.Run(new Func<bool>(enumerator.MoveNext));
 
 		#endregion
 	} // class Procs
