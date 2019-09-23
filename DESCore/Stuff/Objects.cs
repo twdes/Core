@@ -82,7 +82,7 @@ namespace TecWare.DE.Stuff
 					return true;
 				if (String.Compare(t, "f", StringComparison.OrdinalIgnoreCase) * String.Compare(t, "false", StringComparison.OrdinalIgnoreCase) * String.Compare(t, Boolean.FalseString, StringComparison.OrdinalIgnoreCase) == 0)
 					return false;
-				throw new ArgumentException(String.Format("Text '{0}' is neither False nor True.", t));
+				throw new FormatException(String.Format("Text '{0}' is neither False nor True.", t));
 			}
 			else if (typeTo == typeof(DateTimeOffset) && (value == null || value is string))
 				return value == null ? DateTimeOffset.MinValue : DateTimeOffset.Parse((string)value, CultureInfo.InvariantCulture);
