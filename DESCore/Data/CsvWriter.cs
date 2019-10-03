@@ -492,5 +492,4 @@ namespace TecWare.DE.Data
 	} // class TextDataRowEnumerator
 
 	#endregion
-
 }

@@ -44,7 +44,7 @@ namespace TecWare.DE.Networking
 		/// <summary></summary>
 		/// <returns></returns>
 		public override string ToString()
-			=> $"SocketEvent[{Path},{Index}]: {Values?.ToString()}";
+			=> $"SocketEvent[{Id}::{Path},{Index}]: {Values?.ToString()}";
 
 		/// <summary>Node path</summary>
 		public string Path { get; }

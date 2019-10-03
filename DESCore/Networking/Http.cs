@@ -1637,8 +1637,13 @@ namespace TecWare.DE.Networking
 			if (!String.IsNullOrEmpty(requestUri))
 				sb.Append(requestUri);
 
-			var firstAdded = requestUri.Contains('?');
+			MakeUriArguments(sb, requestUri.Contains('?'), arguments);
 
+			return sb.ToString();
+		} // func MakeRelativeUri
+
+		public static bool MakeUriArguments(StringBuilder sb, bool firstAdded, IEnumerable<PropertyValue> arguments)
+		{
 			foreach (var a in arguments)
 			{
 				if (firstAdded)
@@ -1654,11 +1659,11 @@ namespace TecWare.DE.Networking
 				sb.Append(Uri.EscapeUriString(a.Name))
 					.Append('=');
 
-				sb.Append(a.Value.ChangeType<string>());
+				sb.Append(Uri.EscapeDataString(a.Value.ChangeType<string>()));
 			}
 
-			return sb.ToString();
-		} // func MakeRelativeUri
+			return firstAdded;
+		} // func MakeUriArguments
 	} // func HttpStuff
 
 	#endregion

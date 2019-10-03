@@ -344,7 +344,7 @@ namespace TecWare.DE.Networking
 
 	#endregion
 
-	#region -- DebugSocket ------------------------------------------------------------
+	#region -- class DebugSocket ------------------------------------------------------
 
 	/// <summary></summary>
 	public abstract class DebugSocket : DEHttpSocketBase

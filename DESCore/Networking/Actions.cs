@@ -15,6 +15,7 @@
 #endregion
 using Neo.IronLua;
 using System;
+using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using TecWare.DE.Stuff;
@@ -82,33 +83,34 @@ namespace TecWare.DE.Networking
 			return sb;
 		} // func GetRequest
 
-		private StringBuilder AppendParameter(StringBuilder sb, DEActionParam parameter, object value)
-		{
-			sb.Append('&')
-				.Append(parameter.Name)
-				.Append('=')
-				.Append(Procs.ChangeType(value, parameter.Type).ChangeType<string>());
-			return sb;
-		} // func AppendParameter
-
-		private StringBuilder ToQueryByName(StringBuilder sb, IPropertyReadOnlyDictionary arguments)
+		private IEnumerable<PropertyValue> GetPropertyValuesByName(IPropertyReadOnlyDictionary arguments)
 		{
 			foreach (var param in parameters)
 			{
 				if (arguments.TryGetProperty(param.Name, out var value))
-					AppendParameter(sb, param, value);
+					yield return new PropertyValue(param.Name, Procs.ChangeType(value, param.Type));
 			}
+		} // func GetPropertyValuesByName
+
+		private StringBuilder ToQueryByName(StringBuilder sb, IPropertyReadOnlyDictionary arguments)
+		{
+			HttpStuff.MakeUriArguments(sb, true, GetPropertyValuesByName(arguments));
 			return sb;
 		} // proc ToQuery
 
-		private StringBuilder ToQueryByPosition(StringBuilder sb, object[] arguments)
+		private IEnumerable<PropertyValue> GetPropertyValuesByPosition(object[] arguments)
 		{
 			for (var i = 0; i < parameters.Length; i++)
 			{
 				var value = arguments != null && i < arguments.Length ? arguments[i] : null;
 				if (value != null)
-					AppendParameter(sb, parameters[i], value);
+					yield return new PropertyValue(parameters[i].Name, Procs.ChangeType(value, parameters[i].Type));
 			}
+		} // func GetPropertyValuesByPosition
+
+		private StringBuilder ToQueryByPosition(StringBuilder sb, object[] arguments)
+		{
+			HttpStuff.MakeUriArguments(sb, true, GetPropertyValuesByPosition(arguments));
 			return sb;
 		} // func ToQueryByPosition
 
@@ -132,7 +134,7 @@ namespace TecWare.DE.Networking
 			=> http.GetTableAsync(ToQuery(arguments));
 
 		/// <summary>Execute a action on http client.</summary>
-		/// <param name="http"></param>
+		/// <param name="http">Http client to use.</param>
 		/// <param name="arguments">Arguments to fill in.</param>
 		/// <returns></returns>
 		public Task<LuaTable> ExecuteAsync(DEHttpClient http, params object[] arguments)
