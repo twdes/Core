@@ -15,6 +15,7 @@
 #endregion
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace TecWare.DE.Stuff
@@ -171,7 +172,7 @@ namespace TecWare.DE.Stuff
 							state = 2;
 						break;
 					case 1:
-						yield return (startAt: startAt, len: i - startAt - 1);
+						yield return (startAt, i - startAt - 1);
 						state = 0;
 						if (c == '\r') // \n\r
 						{
@@ -184,7 +185,7 @@ namespace TecWare.DE.Stuff
 							goto case 0;
 						}
 					case 2:
-						yield return (startAt: startAt, len: i - startAt - 1);
+						yield return (startAt, i - startAt - 1);
 						state = 0;
 						if (c == '\n') // \r\n
 						{
@@ -201,8 +202,17 @@ namespace TecWare.DE.Stuff
 			}
 
 			if (startAt < l)
-				yield return (startAt: startAt, len: l - startAt);
-		} // func SplitNewLines
+				yield return (startAt, l - startAt);
+		} // func SplitNewLinesTokens
+
+		/// <summary></summary>
+		/// <param name="value"></param>
+		/// <returns></returns>
+		public static string GetFirstLine(this string value)
+		{
+			var (startAt, len) = SplitNewLinesTokens(value).FirstOrDefault(c => c.len > 0);
+			return len > 0 ? value.Substring(startAt, len) : String.Empty;
+		} // func GetFirstLine
 
 		#endregion
 	} // class Procs
