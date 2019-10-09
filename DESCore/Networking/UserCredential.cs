@@ -110,6 +110,22 @@ namespace TecWare.DE.Networking
 		public static ICredentials Wrap(NetworkCredential userInfo)
 			=> new CredentialWrapper(userInfo);
 
+		/// <summary>Wrap network credentials to compare also the authentification type.</summary>
+		/// <param name="userInfo"></param>
+		/// <returns></returns>
+		public static ICredentials Wrap(ICredentials userInfo)
+		{
+			switch (userInfo)
+			{
+				case NetworkCredential nc:
+					return new CredentialWrapper(nc);
+				case UserCredential uc:
+					return uc;
+				default:
+					return userInfo;
+			}
+		} // func Wrap
+
 		/// <summary>Create UserCredential from password and username.</summary>
 		/// <param name="userName"></param>
 		/// <param name="password"></param>
