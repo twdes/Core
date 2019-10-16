@@ -76,7 +76,7 @@ namespace TecWare.DE.Stuff
 			CheckThreading();
 
 			// enqueue task for execution
-			if (IsTaskRunning) // first task, execute
+			if (!IsTaskRunning) // first task, execute
 				Start(task);
 			else // add pending tasks
 				pendingTasks.Enqueue(task);
