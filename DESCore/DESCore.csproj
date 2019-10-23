@@ -16,6 +16,7 @@
 		<AssemblyOriginatorKeyFile>Temp.snk</AssemblyOriginatorKeyFile>
 		<IncludeSymbols>true</IncludeSymbols>
 		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+		<PackageLicenseExpression>EUPLv1.2</PackageLicenseExpression>
 	</PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net47|AnyCPU'">
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
