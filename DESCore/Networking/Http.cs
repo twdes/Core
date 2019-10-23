@@ -73,78 +73,70 @@ namespace TecWare.DE.Networking
 
 	#region -- class MimeTypes --------------------------------------------------------
 
+#pragma warning disable CA1034 // Nested types should not be visible
 	/// <summary>Static mime type definitons.</summary>
 	public static class MimeTypes
 	{
 		/// <summary>All text mime types</summary>
 		public static class Text
 		{
-			/// <summary></summary>
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 			[MimeTypeInfo(false, ".txt", ".ts")]
 			public const string Plain = "text/plain";
-			/// <summary></summary>
 			[MimeTypeInfo(false, ".xml")]
 			public const string Xml = "text/xml";
-			/// <summary></summary>
 			[MimeTypeInfo(false, ".js")]
 			public const string JavaScript = "application/javascript";
-			/// <summary></summary>
 			[MimeTypeInfo(false, ".css")]
 			public const string Css = "text/css";
-			/// <summary></summary>
 			[MimeTypeInfo(false, ".html", ".htm")]
 			public const string Html = "text/html";
-			/// <summary></summary>
 			[MimeTypeInfo(false, ".lua")]
 			public const string Lua = "text/x-lua";
-			/// <summary></summary>
 			[MimeTypeInfo(false, ".json", ".map")]
 			public const string Json = "text/json";
-			/// <summary></summary>
 			[MimeTypeInfo(false, ".lson")]
 			public const string Lson = "text/x-lson";
-			/// <summary></summary>
 			[MimeTypeInfo(false)]
 			public const string DataSet = "text/dataset";
-			/// <summary></summary>
 			[MimeTypeInfo(false)]
 			public const string Markdown = "text/markdown";
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 		} // class Text
 
 		/// <summary>All image mime types</summary>
 		public static class Image
 		{
-			/// <summary></summary>
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 			[MimeTypeInfo(false, ".bmp")]
 			public const string Bmp = "image/bmp";
-			/// <summary></summary>
 			[MimeTypeInfo(true, ".png")]
 			public const string Png = "image/png";
-			/// <summary></summary>
 			[MimeTypeInfo(true, ".jpg", ".jpeg", ".jpe")]
 			public const string Jpeg = "image/jpeg";
-			/// <summary></summary>
 			[MimeTypeInfo(true, ".gif")]
 			public const string Gif = "image/gif";
-			/// <summary></summary>
 			[MimeTypeInfo(false, ".ico")]
 			public const string Icon = "image/x-icon";
+			[MimeTypeInfo(false, ".svg")]
+			public const string Svg = "image/svg+xml";
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 		} // class Image
-
+		
 		/// <summary>All application mime types.</summary>
 		public static class Application
 		{
-			/// <summary>Pdf files.</summary>
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 			[MimeTypeInfo(false, ".pdf")]
 			public const string Pdf = "application/pdf";
-			/// <summary></summary>
 			[MimeTypeInfo(false, ".xaml")]
 			public const string Xaml = "application/xaml+xml";
-			/// <summary></summary>
 			[MimeTypeInfo(true, ".dat")]
 			public const string OctetStream = "application/octet-stream";
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 		} // class Application
 	} // class MimeTypes
+#pragma warning restore CA1034 // Nested types should not be visible
 
 	#endregion
 
