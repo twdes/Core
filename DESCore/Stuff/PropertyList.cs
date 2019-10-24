@@ -242,7 +242,7 @@ namespace TecWare.DE.Stuff
 		/// <param name="name"></param>
 		/// <param name="value"></param>
 		public void SetProperty(string name, object value) 
-			=> SetProperty(new PropertyValue(name, null, value));
+			=> SetProperty(new PropertyValue(name, value?.GetType(), value));
 
 		/// <summary></summary>
 		/// <param name="name"></param>
@@ -423,7 +423,7 @@ namespace TecWare.DE.Stuff
 		/// <returns>Wert</returns>
 		public object this[string name]
 		{
-			get => GetProperty(name, null);
+			get => GetProperty(name, (object)null);
 			set => SetProperty(name, value);
 		} // prop this
 
