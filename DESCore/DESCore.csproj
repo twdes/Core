@@ -16,7 +16,8 @@
 		<AssemblyOriginatorKeyFile>Temp.snk</AssemblyOriginatorKeyFile>
 		<IncludeSymbols>true</IncludeSymbols>
 		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
-		<PackageLicenseExpression>EUPLv1.2</PackageLicenseExpression>
+		<PackageLicenseExpression></PackageLicenseExpression>
+		<PackageLicenseFile>EUPL v1_2 EN.txt</PackageLicenseFile>
 	</PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net47|AnyCPU'">
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -36,5 +37,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\..\Server\des.licenseheader" Link="des.licenseheader" />
+    <None Include="..\..\..\EUPL v1_2 EN.txt">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
   </ItemGroup>
 </Project>

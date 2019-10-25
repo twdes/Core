@@ -724,7 +724,7 @@ namespace TecWare.DE.Stuff
 
 		private static void XCopyAnnonation(XElement xSource, XNode xDestination, Type typeAnnotation, bool recursive)
 		{
-			object baseUri = recursive ? xSource.FindAnnotation(typeAnnotation) : xSource.Annotation(typeAnnotation);
+			var baseUri = recursive ? xSource.FindAnnotation(typeAnnotation) : xSource.Annotation(typeAnnotation);
 			if (baseUri != null)
 			{
 				xDestination.RemoveAnnotations(typeAnnotation);
