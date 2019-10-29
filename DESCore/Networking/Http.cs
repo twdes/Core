@@ -842,8 +842,8 @@ namespace TecWare.DE.Networking
 		/// <param name="statusCode"></param>
 		/// <param name="message"></param>
 		/// <param name="innerException"></param>
-		public HttpResponseException(HttpStatusCode statusCode, string message, Exception innerException = null)
-			: base(message, innerException)
+		public HttpResponseException(HttpStatusCode statusCode, string message = null, Exception innerException = null)
+			: base(message ?? statusCode.ToString(), innerException)
 		{
 			Headers = null;
 			StatusCode = statusCode;

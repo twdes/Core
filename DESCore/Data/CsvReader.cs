@@ -460,7 +460,7 @@ namespace TecWare.DE.Data
 
 		/// <summary></summary>
 		/// <param name="coreReader"></param>
-		public TextRowEnumerator(ITextCoreReader coreReader)
+		protected TextRowEnumerator(ITextCoreReader coreReader)
 		{
 			this.coreReader = coreReader ?? throw new ArgumentNullException(nameof(coreReader));
 		} // ctor
