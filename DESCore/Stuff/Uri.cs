@@ -52,8 +52,10 @@ namespace TecWare.DE.Stuff
 				var c = statusDescription[i];
 				if (c == '\n')
 					sb.Append("<br/>");
-				else if (c > (char)0x1F || c == '\t')
+				else if (c > (char)0x1F && c < 0x80 || c == '\t') // only ascii
 					sb.Append(c);
+				else
+					sb.Append('_');
 			}
 			return sb.ToString();
 		} // func FilterHttpStatusDescription
