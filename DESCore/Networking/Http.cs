@@ -1634,6 +1634,11 @@ namespace TecWare.DE.Networking
 			return sb.ToString();
 		} // func MakeRelativeUri
 
+		/// <summary>Build uri query.</summary>
+		/// <param name="sb"></param>
+		/// <param name="firstAdded"></param>
+		/// <param name="arguments"></param>
+		/// <returns></returns>
 		public static bool MakeUriArguments(StringBuilder sb, bool firstAdded, IEnumerable<PropertyValue> arguments)
 		{
 			foreach (var a in arguments)
@@ -1656,6 +1661,44 @@ namespace TecWare.DE.Networking
 
 			return firstAdded;
 		} // func MakeUriArguments
+
+		/// <summary></summary>
+		/// <param name="header"></param>
+		/// <param name="name"></param>
+		/// <param name="value"></param>
+		/// <returns></returns>
+		public static bool TryGetValue(this HttpResponseHeaders header, string name, out string value)
+		{
+			if (header.TryGetValues(name, out var values))
+			{
+				value = String.Join(",", values);
+				return !String.IsNullOrEmpty(value);
+			}
+			else
+			{
+				value = null;
+				return false;
+			}
+		} // func TryGetValue
+
+		/// <summary></summary>
+		/// <param name="header"></param>
+		/// <param name="name"></param>
+		/// <param name="value"></param>
+		/// <returns></returns>
+		public static bool TryGetFirstValue(this HttpResponseHeaders header, string name, out string value)
+		{
+			if (header.TryGetValues(name, out var values))
+			{
+				value = values.FirstOrDefault();
+				return !String.IsNullOrEmpty(value);
+			}
+			else
+			{
+				value = null;
+				return false;
+			}
+		} // func TryGetValue
 	} // func HttpStuff
 
 	#endregion
