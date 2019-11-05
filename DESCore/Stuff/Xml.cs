@@ -901,6 +901,35 @@ namespace TecWare.DE.Stuff
 				: EmptyArray(list.Split(new char[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries), emptyArrayToNull);
 		} // func GetStrings
 
+		/// <summary></summary>
+		/// <param name="lists"></param>
+		/// <returns></returns>
+		public static string[] GetStrings(params string[] lists)
+		{
+			var result = new List<string>();
+			
+			void Combine(string list)
+			{
+				foreach (var cur in GetStrings(list))
+				{
+					var index = result.BinarySearch(cur, StringComparer.OrdinalIgnoreCase);
+					if (index < 0)
+						result.Insert(~index, cur);
+				}
+			} // proc Combine
+
+			Array.ForEach(lists, Combine);
+
+			return result.ToArray();
+		} // func GetStrings
+
+		/// <summary></summary>
+		/// <param name="lists"></param>
+		/// <returns></returns>
+		public static string JoinStrings(params string[] lists)
+			=> String.Join(" ", GetStrings(lists));
+
+
 		#endregion
 
 		#region -- GetPaths -----------------------------------------------------------
