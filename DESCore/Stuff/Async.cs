@@ -92,6 +92,80 @@ namespace TecWare.DE.Stuff
 
 	#endregion
 
+	#region -- class SequenceTimer ----------------------------------------------------
+
+	/// <summary>This timer invokes a action after an amound of time. It is ideal 
+	/// to delay a invocation.</summary>
+	public sealed class SequenceTimer
+	{
+		/// <summary>Is the flag waiting.</summary>
+		public event EventHandler IsEnabledChanged;
+
+		private readonly Action action;
+		private int seqToken = 0;
+		private bool isEnabled = false;
+
+		/// <summary>Action to invoke.</summary>
+		/// <param name="action"></param>
+		public SequenceTimer(Action action = null)
+		{
+			this.action = action;
+		} // ctor
+
+		/// <summary>Start the timer.</summary>
+		/// <param name="milliseconds"></param>
+		public void Start(int milliseconds)
+			=> Start(TimeSpan.FromMilliseconds(milliseconds));
+
+		/// <summary>Start the timer.</summary>
+		/// <param name="time"></param>
+		public void Start(TimeSpan time)
+		{
+			IsEnabled = true;
+
+			InvokeTimedTokenAsync(time, unchecked(++seqToken)).Silent();
+		} // proc Start
+
+		private async Task InvokeTimedTokenAsync(TimeSpan time, int token)
+		{
+			await Task.Delay(time);
+			if (token == seqToken)
+			{
+				try
+				{
+					action?.Invoke();
+				}
+				finally
+				{
+					IsEnabled = false;
+				}
+			}
+		} // func InvokeTimedTokenAsync
+
+		/// <summary>Stop the timer.</summary>
+		public void Stop()
+		{
+			seqToken++;
+			IsEnabled = false;
+		} // proc Stop
+
+		/// <summary>Is the timer active.</summary>
+		public bool IsEnabled
+		{
+			get => isEnabled;
+			set
+			{
+				if (isEnabled != value)
+				{
+					isEnabled = value;
+					IsEnabledChanged?.Invoke(this, EventArgs.Empty);
+				}
+			}
+		} // prop IsEnabeld
+	} // class SequenceTimer
+
+	#endregion
+
 	#region -- class Procs ------------------------------------------------------------
 
 	public static partial class Procs
@@ -109,7 +183,7 @@ namespace TecWare.DE.Stuff
 					else
 						Debug.Print(t.Exception.GetInnerException().ToString());
 				},
-				TaskContinuationOptions.OnlyOnFaulted
+				TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously
 			);
 		} // proc Silent
 	} // class Procs

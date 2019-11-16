@@ -70,7 +70,7 @@ namespace TecWare.DE.Stuff
 		/// <param name="format"></param>
 		/// <param name="formatProvider"></param>
 		/// <returns></returns>
-		public string ToString(string format, IFormatProvider formatProvider)
+		public string ToString(string format, IFormatProvider formatProvider = null)
 			=> Format(fileSize, format, formatProvider) ?? fileSize.ToString(format, formatProvider);
 
 		/// <summary>Core value of the file size in byte.</summary>
@@ -83,7 +83,7 @@ namespace TecWare.DE.Stuff
 
 		internal static string Format(long fileSize, string format, IFormatProvider formatProvider)
 		{
-			var byteBase = 0;
+			int byteBase;
 
 			#region -- calculate the best unit --
 			if (format == "XiB")
