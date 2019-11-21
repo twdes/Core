@@ -655,19 +655,19 @@ namespace TecWare.DE.Stuff
 		{
 			try
 			{
-				var valueString = GetAttribute(x, attributeName, (string)null);
+				var valueString = GetAttribute(x, attributeName, null);
 				if (valueString == null)
 				{
-					value = default(T);
+					value = default;
 					return false;
 				}
 
-				value = Procs.ChangeType<T>(valueString);
+				value = ChangeType<T>(valueString);
 				return true;
 			}
 			catch
 			{
-				value = default(T);
+				value = default;
 				return false;
 			}
 

@@ -245,7 +245,7 @@ namespace TecWare.DE.Stuff
 		/// <param name="value"></param>
 		/// <returns></returns>
 		public static T ChangeType<T>(this object value)
-			=> (T)Procs.ChangeType(value, typeof(T));
+			=> (T)ChangeType(value, typeof(T));
 		
 		#endregion
 
