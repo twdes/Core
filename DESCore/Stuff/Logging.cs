@@ -437,112 +437,121 @@ namespace TecWare.DE.Stuff
 
 		private readonly ILogger logger;
 
-		/// <summary></summary>
-		/// <param name="logger"></param>
+		/// <summary>Create a logger proxy</summary>
+		/// <param name="logger">Optional logger.</param>
 		protected LoggerProxy(ILogger logger)
 		{
 			this.logger = logger;
 		} // ctor
 
-		/// <summary></summary>
-		/// <param name="message"></param>
+		/// <summary>Write information message to the log system.</summary>
+		/// <param name="message">Message, that will be written to log.</param>
 		public void Info(string message) 
 			=> LogMsg(LogMsgType.Information, message);
-		/// <summary></summary>
-		/// <param name="message"></param>
-		/// <param name="args"></param>
+		/// <summary>Write information message to the log system.</summary>
+		/// <param name="message">Message, that will be written to log.</param>
+		/// <param name="args">Arguments to format.</param>
 		public void Info(string message, params object[] args) 
 			=> LogMsg(LogMsgType.Information, message, args);
 
-		/// <summary></summary>
-		/// <param name="message"></param>
+		/// <summary>Write debug message to the log system.</summary>
+		/// <param name="message">Message, that will be written to log.</param>
+		public void Debug(string message)
+			=> LogMsg(LogMsgType.Debug, message);
+
+		/// <summary>Write debug message to the log system.</summary>
+		/// <param name="message">Message, that will be written to log.</param>
+		/// <param name="args">Arguments to format.</param>
+		public void Debug(string message, params object[] args)
+			=> LogMsg(LogMsgType.Debug, message, args);
+
+		/// <summary>Write warning message to the log system.</summary>
+		/// <param name="message">Message, that will be written to log.</param>
 		public void Warn(string message) 
 			=> LogMsg(LogMsgType.Warning, message);
-		/// <summary></summary>
-		/// <param name="message"></param>
-		/// <param name="args"></param>
+		/// <summary>Write warning message to the log system.</summary>
+		/// <param name="message">Message, that will be written to log.</param>
+		/// <param name="args">Arguments to format.</param>
 		public void Warn(string message, params object[] args) 
 			=> LogMsg(LogMsgType.Warning, message, args);
-		/// <summary></summary>
-		/// <param name="e"></param>
+		/// <summary>Write warning message to the log system.</summary>
+		/// <param name="e">Exception, that will be written to log.</param>
 		public void Warn(Exception e) 
 			=> Procs.LogMsg(logger, LogMsgType.Warning, e);
-		/// <summary></summary>
-		/// <param name="message"></param>
-		/// <param name="e"></param>
+		/// <summary>Write warning message to the log system.</summary>
+		/// <param name="message">Message, that will be written to log.</param>
+		/// <param name="e">Exception, that will be added to the message.</param>
 		public void Warn(string message, Exception e) 
 			=> Procs.LogMsg(logger, LogMsgType.Warning, message, e);
 
-		/// <summary></summary>
-		/// <param name="message"></param>
+		/// <summary>Write error message to the log system.</summary>
+		/// <param name="message">Message, that will be written to log.</param>
 		public void Except(string message) 
 			=> LogMsg(LogMsgType.Error, message);
-		/// <summary></summary>
-		/// <param name="message"></param>
-		/// <param name="args"></param>
+		/// <summary>Write error message to the log system.</summary>
+		/// <param name="message">Message, that will be written to log.</param>
+		/// <param name="args">Arguments to format.</param>
 		public void Except(string message, params object[] args) 
 			=> LogMsg(LogMsgType.Error, message, args);
-		/// <summary></summary>
-		/// <param name="e"></param>
+		/// <summary>Write error message to the log system.</summary>
+		/// <param name="e">Exception, that will be written to log.</param>
 		public void Except(Exception e) 
 			=> Procs.LogMsg(logger, LogMsgType.Error, e);
-		/// <summary></summary>
-		/// <param name="message"></param>
-		/// <param name="e"></param>
+		/// <summary>Write error message to the log system.</summary>
+		/// <param name="message">Message, that will be written to log.</param>
+		/// <param name="e">Exception, that will be added to the message.</param>
 		public void Except(string message, Exception e) 
 			=> Procs.LogMsg(logger, LogMsgType.Error, message, e);
 
-		/// <summary></summary>
-		/// <param name="typ"></param>
-		/// <param name="message"></param>
+		/// <summary>Write a message to the log system.</summary>
+		/// <param name="typ">Type of the message.</param>
+		/// <param name="message">Message, that will be written to log.</param>
 		public abstract void LogMsg(LogMsgType typ, string message);
-		/// <summary></summary>
-		/// <param name="typ"></param>
-		/// <param name="message"></param>
-		/// <param name="args"></param>
+		/// <summary>Write a message to the log system.</summary>
+		/// <param name="typ">Type of the message.</param>
+		/// <param name="message">Message, that will be written to log.</param>
+		/// <param name="args">Arguments to format.</param>
 		public abstract void LogMsg(LogMsgType typ, string message, params object[] args);
 
-		/// <summary></summary>
-		/// <param name="typ"></param>
-		/// <param name="autoFlush"></param>
-		/// <param name="stopTime"></param>
-		/// <returns></returns>
+		/// <summary>Get a current log scope or create a new one.</summary>
+		/// <param name="typ">Type of the message.</param>
+		/// <param name="autoFlush">Should the message flushed to log, on dispose.</param>
+		/// <param name="stopTime">Should the scope stop the life time.</param>
+		/// <returns>Return a log scope, that collects all log message, and write it in one block.</returns>
 		public LogMessageScopeProxy GetScope(LogMsgType typ = LogMsgType.Information, bool autoFlush = true, bool stopTime = false)
 		{
-			if (logger is ILogger2 logger2)
-				return new LogMessageScopeProxy(logger2.GetScope(typ, autoFlush), stopTime);
-
-			return new LogMessageScopeProxy(new LogMessageScope(this, typ, autoFlush), stopTime);
+			return logger is ILogger2 logger2
+				? new LogMessageScopeProxy(logger2.GetScope(typ, autoFlush), stopTime)
+				: new LogMessageScopeProxy(new LogMessageScope(this, typ, autoFlush), stopTime);
 		} // func GetScope
 
-		/// <summary></summary>
-		/// <param name="typ"></param>
-		/// <param name="autoFlush"></param>
-		/// <param name="stopTime"></param>
-		/// <returns></returns>
+		/// <summary>Create a new log scope, that collections all messages.</summary>
+		/// <param name="typ">Type of the message.</param>
+		/// <param name="autoFlush">Should the message flushed to log, on dispose.</param>
+		/// <param name="stopTime">Should the scope stop the life time.</param>
+		/// <returns>Return a log scope, that collects all log messages, and write it in one block.</returns>
 		public LogMessageScopeProxy CreateScope(LogMsgType typ = LogMsgType.Information, bool autoFlush = true, bool stopTime = false)
 		{
-			if (logger is ILogger2 logger2)
-				return new LogMessageScopeProxy(logger2.CreateScope(typ, autoFlush), stopTime);
-
-			return new LogMessageScopeProxy(new LogMessageScope(this, typ, autoFlush), stopTime);
+			return logger is ILogger2 logger2
+				? new LogMessageScopeProxy(logger2.CreateScope(typ, autoFlush), stopTime)
+				: new LogMessageScopeProxy(new LogMessageScope(this, typ, autoFlush), stopTime);
 		} // func CreateScopy
 
-		/// <summary></summary>
+		/// <summary>Has this proxy a log-interface.</summary>
 		public bool IsEmpty => logger == null;
-		/// <summary></summary>
+		/// <summary>Log interface of this proxy.</summary>
 		public ILogger Logger => logger;
 
-		/// <summary></summary>
-		/// <param name="log"></param>
-		/// <returns></returns>
+		/// <summary>Create a new log-proxy for the logger.</summary>
+		/// <param name="log">Log or <c>null</c>.</param>
+		/// <returns>Log proxy for the logger.</returns>
 		public static LoggerProxy Create(ILogger log)
 			=> log == null ? Empty : new LoggerProxySimple(log);
 
-		/// <summary></summary>
-		/// <param name="log"></param>
-		/// <param name="prefix"></param>
-		/// <returns></returns>
+		/// <summary>Create a new log-proxy for the logger.</summary>
+		/// <param name="log">Log or <c>null</c>.</param>
+		/// <param name="prefix">Prefix for the log messages.</param>
+		/// <returns>Log proxy for the logger.</returns>
 		public static LoggerProxy Create(ILogger log, string prefix)
 		{
 			if (String.IsNullOrEmpty(prefix))
@@ -550,7 +559,7 @@ namespace TecWare.DE.Stuff
 			return log == null ? Empty : new LoggerProxyPrefix(log, prefix);
 		} // func Create
 
-		/// <summary></summary>
+		/// <summary>Instance of an empty log-proxy.</summary>
 		public static LoggerProxy Empty { get; } = new LoggerProxySimple(null);
 	} // class LoggerProxy
 
