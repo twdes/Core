@@ -343,6 +343,13 @@ namespace TecWare.DE.Stuff
 
 		/// <summary></summary>
 		/// <param name="bytes"></param>
+		/// <param name="data"></param>
+		/// <returns></returns>
+		public static bool TryConvertToBytes(string bytes, out byte[] data)
+			=> TryConvertToBytes(bytes, 0, bytes.Length, out data);
+
+		/// <summary></summary>
+		/// <param name="bytes"></param>
 		/// <param name="ofs"></param>
 		/// <param name="len"></param>
 		/// <returns></returns>
@@ -370,7 +377,51 @@ namespace TecWare.DE.Stuff
 				j++;
 			}
 
-			return data;
+			return null;
+		} // func ConvertToBytes
+
+		/// <summary></summary>
+		/// <param name="bytes"></param>
+		/// <param name="ofs"></param>
+		/// <param name="len"></param>
+		/// <param name="data"></param>
+		/// <returns></returns>
+		public static bool TryConvertToBytes(string bytes, int ofs, int len, out byte[] data)
+		{
+			if (ofs + len > bytes.Length)
+			{
+				data = null;
+				return false;
+			}
+
+			// move ofs for 0x
+			if (len > 2 && bytes[ofs] == '0' && (bytes[ofs + 1] == 'x' || bytes[ofs + 1] == 'X'))
+			{
+				ofs += 2;
+				len -= 2;
+			}
+
+			if ((len & 1) != 0) // even number expected
+			{
+				data = null;
+				return false;
+			}
+
+			data = new byte[len >> 1];
+			var j = 0;
+			while (j < data.Length)
+			{
+				if (!Byte.TryParse(bytes.Substring(ofs, 2), NumberStyles.AllowHexSpecifier, null, out var r))
+				{
+					data = null;
+					return false;
+				}
+				data[j] = r;
+				ofs += 2;
+				j++;
+			}
+
+			return true;
 		} // func ConvertToBytes
 
 		/// <summary></summary>
