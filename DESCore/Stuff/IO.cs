@@ -16,6 +16,7 @@
 using System;
 using System.IO;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace TecWare.DE.Stuff
@@ -171,6 +172,8 @@ namespace TecWare.DE.Stuff
 	/// <summary></summary>
 	public static partial class Procs
 	{
+		private static readonly Regex remotePathRegex = new Regex(@"^\\\\(?<m>\w+)\\(?<s>\w+)\\(?<p>.*)", RegexOptions.Compiled | RegexOptions.Singleline);
+
 		#region -- ReadInArray --------------------------------------------------------
 
 		/// <summary></summary>
@@ -268,6 +271,43 @@ namespace TecWare.DE.Stuff
 		} // func FileFilterToRegex
 
 		#endregion
+
+		/// <summary>Append the trailing directory seperator</summary>
+		/// <param name="path"></param>
+		/// <returns></returns>
+		public static string IncludeTrailingBackslash(string path)
+			=> String.IsNullOrEmpty(path) ? path : path[path.Length - 1] == Path.DirectorySeparatorChar ? path : path + Path.DirectorySeparatorChar;
+
+		/// <summary>Remove the trailing directory seperator</summary>
+		/// <param name="path"></param>
+		/// <returns></returns>
+		public static string ExcludeTrailingBackslash(string path)
+			=> String.IsNullOrEmpty(path) ? path : path[path.Length - 1] == Path.DirectorySeparatorChar ? path.Substring(0, path.Length - 1) : path;
+
+		/// <summary>Split a unc path in his parts.</summary>
+		/// <param name="remotePath"></param>
+		/// <param name="serverName"></param>
+		/// <param name="shareName"></param>
+		/// <param name="path"></param>
+		/// <returns></returns>
+		public static bool TrySplitUncPath(string remotePath, out string serverName, out string shareName, out string path)
+		{
+			var m = remotePathRegex.Match(remotePath);
+			if (m.Success)
+			{
+				serverName = m.Groups["m"].Value;
+				shareName = m.Groups["s"].Value;
+				path = m.Groups["p"].Value;
+				return true;
+			}
+			else
+			{
+				serverName = null;
+				shareName = null;
+				path = null;
+				return false;
+			}
+		} // func TrySplitUncPath
 
 		/// <summary>Utf-8 encoder/decoder that not emits the utf-8 header.</summary>
 		public static Encoding Utf8Encoding { get; } = new UTF8Encoding(false);

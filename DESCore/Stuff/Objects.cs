@@ -178,6 +178,54 @@ namespace TecWare.DE.Stuff
 
 	#endregion
 
+	#region -- class CachedProperty ---------------------------------------------------
+
+	/// <summary>Property that will be refresh from time to time.</summary>
+	/// <typeparam name="T"></typeparam>
+	public sealed class CachedProperty<T>
+		where T : class
+	{
+		private readonly Action<T> refresh;
+		private readonly int interval;
+		private readonly T value;
+
+		private int lastTimeReaded = 0;
+
+		/// <summary></summary>
+		/// <param name="init"></param>
+		/// <param name="refresh"></param>
+		/// <param name="interval"></param>
+		public CachedProperty(T init, Action<T> refresh, int interval)
+		{
+			this.interval = Math.Max(1, interval);
+			lastTimeReaded = unchecked(Environment.TickCount - interval * 2);
+			value = init ?? throw new ArgumentNullException(nameof(init));
+			this.refresh = refresh ?? throw new ArgumentNullException(nameof(refresh));
+		} // ctor
+
+		/// <summary>Return the value of the property.</summary>
+		public T Value
+		{
+			get
+			{
+				if (unchecked(Environment.TickCount - lastTimeReaded) > interval)
+				{
+					try
+					{
+						refresh(value);
+					}
+					finally
+					{
+						lastTimeReaded = Environment.TickCount;
+					}
+				}
+				return value;
+			}
+		} // prop Value
+	} // class CachedProperty
+
+	#endregion
+
 	/// <summary></summary>
 	public static partial class Procs
 	{
@@ -377,7 +425,7 @@ namespace TecWare.DE.Stuff
 				j++;
 			}
 
-			return null;
+			return data;
 		} // func ConvertToBytes
 
 		/// <summary></summary>
