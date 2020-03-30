@@ -201,7 +201,9 @@ namespace TecWare.DE.Stuff
 				i++;
 			}
 
-			if (startAt < l)
+			if (state > 0) // ends with newline
+				yield return (startAt, l - startAt - 1);
+			else if (startAt < l)
 				yield return (startAt, l - startAt);
 		} // func SplitNewLinesTokens
 
