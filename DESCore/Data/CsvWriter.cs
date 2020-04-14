@@ -293,10 +293,10 @@ namespace TecWare.DE.Data
 
 		private sealed class ValueGet
 		{
-			private readonly IValueConverter converter;
+			private readonly IStringConverter converter;
 			private readonly IFormatProvider formatProvider;
 
-			public ValueGet(string name, IValueConverter converter, IFormatProvider formatProvider)
+			public ValueGet(string name, IStringConverter converter, IFormatProvider formatProvider)
 			{
 				Index = -1;
 				Name = name ?? throw new ArgumentNullException(nameof(name));

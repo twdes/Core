@@ -50,7 +50,7 @@ namespace TecWare.DE.Data
 		/// <summary></summary>
 		IFormatProvider FormatProvider { get; }
 		/// <summary></summary>
-		IValueConverter Converter { get; }
+		IStringConverter Converter { get; }
 	} // interface IDataConverterColumn
 
 	#endregion
@@ -676,13 +676,13 @@ namespace TecWare.DE.Data
 		/// <summary></summary>
 		/// <param name="column"></param>
 		/// <returns><c>null</c>, if the property is not set.</returns>
-		public static IValueConverter GetConverter(this IDataColumn column)
+		public static IStringConverter GetConverter(this IDataColumn column)
 		{
 			if (column is IDataConverterColumn c)
 				return c.Converter;
 			else if (column.Attributes.TryGetProperty(nameof(IDataConverterColumn.Converter), out var conv))
 			{
-				if (conv is IValueConverter r)
+				if (conv is IStringConverter r)
 					return r;
 				else if (conv is Func<string, object> f1)
 					return SimpleValueConverter.Create(f1, null);
