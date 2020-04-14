@@ -22,25 +22,6 @@ using TecWare.DE.Stuff;
 
 namespace TecWare.DE.Data
 {
-	#region -- class TextDataRowColumn ------------------------------------------------
-
-	/// <summary>Column description</summary>
-	public sealed class TextDataRowColumn : IDataColumn
-	{
-		/// <summary>Name of the column</summary>
-		public string Name { get; set; }
-		/// <summary>Data type</summary>
-		public Type DataType { get; set; }
-		/// <summary>Optional special provider for the format of the value.</summary>
-		public IFormatProvider FormatProvider { get; set; }
-		/// <summary>Convert Type.</summary>
-		public Func<string, object> Converter { get; set; }
-		/// <summary>Empty attributes</summary>
-		public IPropertyEnumerableDictionary Attributes => PropertyDictionary.EmptyReadOnly;
-	} // class TextDataRowColumn
-
-	#endregion
-
 	#region -- class TextDataRowEnumerator --------------------------------------------
 
 	/// <summary></summary>
@@ -66,38 +47,39 @@ namespace TecWare.DE.Data
 					return null; // no column defined
 
 				// convert
-				if (column.Converter != null)
-					return column.Converter(value);
-				else if (column.DataType == typeof(decimal))
-					return Decimal.Parse(value, NumberStyles.Currency | NumberStyles.Float, column.FormatProvider);
+				var conv = column.GetConverter();
+				var formatProvider = column.GetFormatProvider();
+				if (conv != null)
+					return conv.Parse(value, formatProvider);
+				else  if (column.DataType == typeof(decimal))
+					return Decimal.Parse(value, NumberStyles.Currency | NumberStyles.Float, formatProvider);
 				else if (column.DataType == typeof(double))
-					return Double.Parse(value, NumberStyles.Currency | NumberStyles.Float, column.FormatProvider);
+					return Double.Parse(value, NumberStyles.Currency | NumberStyles.Float, formatProvider);
 				else if (column.DataType == typeof(float))
-					return Single.Parse(value, NumberStyles.Currency | NumberStyles.Float, column.FormatProvider);
+					return Single.Parse(value, NumberStyles.Currency | NumberStyles.Float, formatProvider);
 
 				else if (column.DataType == typeof(byte))
-					return Byte.Parse(value, NumberStyles.Integer, column.FormatProvider);
+					return Byte.Parse(value, NumberStyles.Integer, formatProvider);
 				else if (column.DataType == typeof(sbyte))
-					return SByte.Parse(value, NumberStyles.Integer, column.FormatProvider);
+					return SByte.Parse(value, NumberStyles.Integer, formatProvider);
 				else if (column.DataType == typeof(ushort))
-					return UInt16.Parse(value, NumberStyles.Integer, column.FormatProvider);
+					return UInt16.Parse(value, NumberStyles.Integer, formatProvider);
 				else if (column.DataType == typeof(short))
-					return Int16.Parse(value, NumberStyles.Integer, column.FormatProvider);
+					return Int16.Parse(value, NumberStyles.Integer, formatProvider);
 				else if (column.DataType == typeof(uint))
-					return UInt32.Parse(value, NumberStyles.Integer, column.FormatProvider);
+					return UInt32.Parse(value, NumberStyles.Integer, formatProvider);
 				else if (column.DataType == typeof(int))
-					return Int32.Parse(value, NumberStyles.Integer, column.FormatProvider);
+					return Int32.Parse(value, NumberStyles.Integer, formatProvider);
 				else if (column.DataType == typeof(ulong))
-					return UInt64.Parse(value, NumberStyles.Integer, column.FormatProvider);
+					return UInt64.Parse(value, NumberStyles.Integer, formatProvider);
 				else if (column.DataType == typeof(long))
-					return Int64.Parse(value, NumberStyles.Integer, column.FormatProvider);
+					return Int64.Parse(value, NumberStyles.Integer, formatProvider);
 
 				else if (column.DataType == typeof(DateTime))
-					return DateTime.Parse(value, column.FormatProvider, DateTimeStyles.AssumeLocal);
+					return DateTime.Parse(value, formatProvider, DateTimeStyles.AssumeLocal);
 
 				else if (column.DataType == typeof(string))
 					return value;
-
 				else
 					return Procs.ChangeType(value, column.DataType);
 			} // func GetValueIntern
@@ -128,7 +110,7 @@ namespace TecWare.DE.Data
 
 		#endregion
 
-		private TextDataRowColumn[] columns = null;
+		private IDataColumn[] columns = null;
 		private readonly TextDataRow currentRow;
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
@@ -171,15 +153,15 @@ namespace TecWare.DE.Data
 
 		/// <summary>Sets the column description.</summary>
 		/// <param name="columns"></param>
-		public void UpdateColumns(params TextDataRowColumn[] columns)
+		public void UpdateColumns(params IDataColumn[] columns)
 		{
-			this.columns = columns;
+			this.columns = columns ?? throw new ArgumentNullException(nameof(columns));
 		} // proc UpdateColumns
 
 		/// <summary>The returned reference is reused.</summary>
 		public override IDataRow Current => currentRow;
 		/// <summary>Column definition.</summary>
-		public TextDataRowColumn[] Columns => columns;
+		public IDataColumn[] Columns => columns;
 		/// <summary></summary>
 		public bool IsParsedStrict { get; set; } = false;
 	} // class TextDataRowEnumerator

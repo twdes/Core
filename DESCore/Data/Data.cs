@@ -16,10 +16,13 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Dynamic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Security.Cryptography;
+using Neo.IronLua;
 using TecWare.DE.Stuff;
 
 namespace TecWare.DE.Data
@@ -36,6 +39,19 @@ namespace TecWare.DE.Data
 		/// <summary>Extented attributes for the column.</summary>
 		IPropertyEnumerableDictionary Attributes { get; }
 	} // interface IDataColumn
+
+	#endregion
+
+	#region -- interface IDataConverterColumn -----------------------------------------
+
+	/// <summary>Column extension.</summary>
+	public interface IDataConverterColumn : IDataColumn
+	{
+		/// <summary></summary>
+		IFormatProvider FormatProvider { get; }
+		/// <summary></summary>
+		IValueConverter Converter { get; }
+	} // interface IDataConverterColumn
 
 	#endregion
 
@@ -266,35 +282,37 @@ namespace TecWare.DE.Data
 
 	#region -- class SimpleDataRow ----------------------------------------------------
 
-	/// <summary>Simple implementation for the DynamicDataRow</summary>
+	/// <summary>Simple implementation for the DynamicDataRow, that holds one set of values.</summary>
 	public sealed class SimpleDataRow : DynamicDataRow
 	{
 		private readonly object[] values;
-		private readonly SimpleDataColumn[] columns;
+		private readonly IDataColumns columns;
 
 		/// <summary></summary>
 		/// <param name="values"></param>
 		/// <param name="columns"></param>
-		public SimpleDataRow(object[] values, SimpleDataColumn[] columns)
+		public SimpleDataRow(object[] values, IDataColumn[] columns)
 		{
 			this.values = values ?? throw new ArgumentNullException(nameof(values));
-			this.columns = columns ?? throw new ArgumentNullException(nameof(values));
+			this.columns = new SimpleDataColumns(columns);
 		} // ctor
 
-		/// <summary></summary>
+		/// <summary>Creates a copy of the data-row.</summary>
 		/// <param name="row"></param>
 		public SimpleDataRow(IDataRow row)
 		{
 			var length = row.Columns.Count;
 
-			this.values = new object[length];
-			this.columns = new SimpleDataColumn[length];
+			values = new object[length];
+			var columns = new IDataColumn[length];
 
 			for (var i = 0; i < length; i++)
 			{
 				values[i] = row[i];
 				columns[i] = new SimpleDataColumn(row.Columns[i]);
 			}
+
+			this.columns = new SimpleDataColumns(columns);
 		} // ctor
 
 		/// <summary></summary>
@@ -304,7 +322,7 @@ namespace TecWare.DE.Data
 		/// <summary></summary>
 		public override bool IsDataOwner => true;
 		/// <summary></summary>
-		public override IReadOnlyList<IDataColumn> Columns => columns;
+		public override IReadOnlyList<IDataColumn> Columns => columns.Columns;
 	} // class SimpleDataRow
 
 	#endregion
@@ -354,7 +372,7 @@ namespace TecWare.DE.Data
 				var p = owner.GetProperty(name, false);
 				if (p != null)
 				{
-					value = p.GetValue(this.current);
+					value = p.GetValue(current);
 					return true;
 				}
 				else
@@ -401,7 +419,7 @@ namespace TecWare.DE.Data
 			if (property == null)
 			{
 				if (throwException)
-					throw new ArgumentNullException("propertyName", $"Property '{propertyName}' not found.");
+					throw new ArgumentNullException(nameof(propertyName), $"Property '{propertyName}' not found.");
 			}
 			return property;
 		} // proc GetProperty
@@ -443,15 +461,57 @@ namespace TecWare.DE.Data
 	/// <summary>Simple column implementation.</summary>
 	public class SimpleDataColumn : IDataColumn
 	{
+		#region -- class GenericAttributeWrapper --------------------------------------
+
+		private sealed class GenericAttributeWrapper : IPropertyEnumerableDictionary
+		{
+			private readonly SimpleDataColumn column;
+
+			public GenericAttributeWrapper(SimpleDataColumn column)
+				=> this.column = column ?? throw new ArgumentNullException(nameof(column));
+
+			public bool TryGetProperty(string name, out object value)
+			{
+				var pi = Array.Find(column.attributeProperties.Value, p => String.Compare(p.Name, name, StringComparison.OrdinalIgnoreCase) == 0);
+				if (pi != null)
+				{
+					value = pi.GetValue(column);
+					return true;
+				}
+				else
+					return (column.inheritedAttributes ?? PropertyDictionary.EmptyReadOnly).TryGetProperty(name, out value);
+			} // func TryGetProperty
+
+			public IEnumerator<PropertyValue> GetEnumerator()
+			{
+				var r = from pi in column.attributeProperties.Value
+						select new PropertyValue(pi.Name, pi.PropertyType, pi.GetValue(column));
+
+				if (column.inheritedAttributes != null)
+					r = r.Concat(column.inheritedAttributes);
+
+				return r.GetEnumerator();
+			} // func GetEnumerator
+
+			IEnumerator IEnumerable.GetEnumerator()
+				=> GetEnumerator();
+		} // class GenericAttributeWrapper
+
+		#endregion
+
 		private readonly string name;
 		private readonly Type dataType;
-		private readonly IPropertyEnumerableDictionary attributes;
+		private readonly IPropertyEnumerableDictionary inheritedAttributes;
+		private readonly GenericAttributeWrapper attributes;
+
+		private readonly Lazy<PropertyInfo[]> attributeProperties;
 
 		/// <summary></summary>
 		/// <param name="column"></param>
 		public SimpleDataColumn(IDataColumn column)
 			: this(column.Name, column.DataType, column.Attributes)
 		{
+			attributeProperties = new Lazy<PropertyInfo[]>(GetAttributeProperties);
 		} // ctor
 
 		/// <summary></summary>
@@ -461,17 +521,26 @@ namespace TecWare.DE.Data
 		public SimpleDataColumn(string name, Type dataType, IPropertyEnumerableDictionary attributes = null)
 		{
 			if (String.IsNullOrEmpty(name))
-				throw new ArgumentNullException("name");
+				throw new ArgumentNullException(nameof(name));
 
 			this.name = name;
 			this.dataType = dataType ?? throw new ArgumentNullException("dataType");
-			this.attributes = attributes ?? PropertyDictionary.EmptyReadOnly;
+			inheritedAttributes = attributes;
+			this.attributes = new GenericAttributeWrapper(this);
 		} // ctor
 
 		/// <summary></summary>
 		/// <returns></returns>
 		public override string ToString()
 			=> $"Column: {name} ({dataType.Name})";
+
+		private PropertyInfo[] GetAttributeProperties()
+		{
+			return (from pi in GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.GetProperty)
+					where pi.Name != nameof(Name) && pi.Name != nameof(DataType) && pi.Name != nameof(Attributes)
+						&& pi.GetCustomAttribute<DesignerSerializationVisibilityAttribute>(false) != DesignerSerializationVisibilityAttribute.Hidden
+					select pi).ToArray();
+		} // func GetAttributeProperties
 
 		/// <summary></summary>
 		public string Name => name;
@@ -485,7 +554,7 @@ namespace TecWare.DE.Data
 
 	#region -- class SimpleDataColumns ------------------------------------------------
 
-	/// <summary></summary>
+	/// <summary>Implements IDataColumns a round a IDataColumn array.</summary>
 	public class SimpleDataColumns : IDataColumns
 	{
 		private readonly IDataColumn[] columns;
@@ -603,6 +672,44 @@ namespace TecWare.DE.Data
 			=> row.IsDataOwner ? row : new SimpleDataRow(row);
 
 		#endregion
+
+		/// <summary></summary>
+		/// <param name="column"></param>
+		/// <returns><c>null</c>, if the property is not set.</returns>
+		public static IValueConverter GetConverter(this IDataColumn column)
+		{
+			if (column is IDataConverterColumn c)
+				return c.Converter;
+			else if (column.Attributes.TryGetProperty(nameof(IDataConverterColumn.Converter), out var conv))
+			{
+				if (conv is IValueConverter r)
+					return r;
+				else if (conv is Func<string, object> f1)
+					return SimpleValueConverter.Create(f1, null);
+				else if (conv is Func<object, string> f2)
+					return SimpleValueConverter.Create(null, f2);
+				else if (conv is Func<object, LuaResult> f3)
+					return SimpleValueConverter.Create(new Func<string, object>(v => f3(v)[0]), null);
+				else
+					return null;
+			}
+			else
+				return null;
+		} // func GetConverter
+
+		/// <summary></summary>
+		/// <param name="column"></param>
+		/// <returns><c>null</c>, if the property is not set.</returns>
+		public static IFormatProvider GetFormatProvider(this IDataColumn column)
+		{
+			if (column is IDataConverterColumn c)
+				return c.FormatProvider;
+			else if (column.Attributes.TryGetProperty<IFormatProvider>(nameof(IDataConverterColumn.FormatProvider), out var formatProvider))
+				return formatProvider;
+			else
+				return null;
+		} // func GetFormatProvider
+
 	} // class DataRowHelper
 
 	#endregion

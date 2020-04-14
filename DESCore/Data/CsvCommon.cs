@@ -15,6 +15,7 @@
 #endregion
 
 using System;
+using TecWare.DE.Stuff;
 
 namespace TecWare.DE.Data
 {
@@ -88,10 +89,58 @@ namespace TecWare.DE.Data
 		/// <summary>Delemitter for the columns (default: ';').</summary>
 		public char Delemiter { get; set; } = ';';
 		/// <summary>Quotation type</summary>
-		public CsvQuotation Quotation { get; } = CsvQuotation.Normal;
+		public CsvQuotation Quotation { get; set; } = CsvQuotation.Normal;
 		/// <summary>Quotation char (default: '"').</summary>
 		public char Quote { get; set; } = '"';
 	} // class TextCsvSettings
+
+	#endregion
+
+	#region -- class TextDataRowColumn ------------------------------------------------
+
+	/// <summary>Column description for csv import/export.</summary>
+	[Obsolete("Is only used in some lua extensions. Do not use in compiled languages.")]
+	public sealed class TextDataRowColumn : IDataColumn, IDataConverterColumn
+	{
+		/// <summary></summary>
+		public TextDataRowColumn()
+		{
+		} // ctor
+
+		IValueConverter IDataConverterColumn.Converter => SimpleValueConverter.Create(Converter, null);
+
+		/// <summary>Gets the name in this column.</summary>
+		public string Name { get; set; }
+		/// <summary>Gets the type of data in this column.</summary>
+		public Type DataType { get; set; }
+		/// <summary>Extented attributes for the column.</summary>
+		public IPropertyEnumerableDictionary Attributes => PropertyDictionary.EmptyReadOnly;
+
+		/// <summary>Optional, special provider for the format of the value.</summary>
+		public IFormatProvider FormatProvider { get; set; } = null;
+		/// <summary>Optional. Convert Type.</summary>
+		public Func<string, object> Converter { get; set; } = null;
+	} // class TextDataRowColumn
+
+	#endregion
+
+	#region -- class TextDataRowWriterColumn ------------------------------------------
+
+	/// <summary>Column description</summary>
+	[Obsolete("Is only used in some lua extensions. Do not use in compiled languages.")]
+	public sealed class TextDataRowWriterColumn : IDataColumn, IDataConverterColumn
+	{
+		IValueConverter IDataConverterColumn.Converter => SimpleValueConverter.Create(null, Converter);
+		Type IDataColumn.DataType => typeof(object);
+		IPropertyEnumerableDictionary IDataColumn.Attributes => PropertyDictionary.EmptyReadOnly;
+
+		/// <summary>Name of the column</summary>
+		public string Name { get; set; }
+		/// <summary>Optional special provider for the format of the value.</summary>
+		public IFormatProvider FormatProvider { get; set; }
+		/// <summary>Convert Type.</summary>
+		public Func<object, string> Converter { get; set; }
+	} // class TextDataRowWriterColumn
 
 	#endregion
 }

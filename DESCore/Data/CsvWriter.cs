@@ -15,9 +15,12 @@
 #endregion
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using TecWare.DE.Stuff;
 
 namespace TecWare.DE.Data
 {
@@ -60,7 +63,10 @@ namespace TecWare.DE.Data
 
 		/// <summary></summary>
 		public void Dispose()
-			=> Dispose(true);
+		{
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		} // proc Dispose
 
 		/// <summary></summary>
 		/// <param name="disposing"></param>
@@ -250,14 +256,17 @@ namespace TecWare.DE.Data
 
 		/// <summary></summary>
 		/// <param name="coreWriter"></param>
-		public TextObjectWriter(ITextCoreWriter coreWriter)
+		protected TextObjectWriter(ITextCoreWriter coreWriter)
 		{
 			this.coreWriter = coreWriter ?? throw new ArgumentNullException(nameof(coreWriter));
 		} // ctor
 
 		/// <summary></summary>
 		public void Dispose()
-			=> Dispose(true);
+		{
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		} // proc Dispose
 
 		/// <summary></summary>
 		/// <param name="disposing"></param>
@@ -275,21 +284,6 @@ namespace TecWare.DE.Data
 
 	#endregion
 
-	#region -- class TextDataRowWriterColumn ------------------------------------------
-
-	/// <summary>Column description</summary>
-	public sealed class TextDataRowWriterColumn
-	{
-		/// <summary>Name of the column</summary>
-		public string Name { get; set; }
-		/// <summary>Optional special provider for the format of the value.</summary>
-		public IFormatProvider FormatProvider { get; set; }
-		/// <summary>Convert Type.</summary>
-		public Func<object, string> Converter { get; set; }
-	} // class TextDataRowWriterColumn
-
-	#endregion
-
 	#region -- class TextDataRowWriter ------------------------------------------------
 
 	/// <summary></summary>
@@ -297,58 +291,25 @@ namespace TecWare.DE.Data
 	{
 		#region -- class ValueGet -----------------------------------------------------
 
-		private abstract class ValueGet
+		private sealed class ValueGet
 		{
-			public ValueGet(string name)
+			private readonly IValueConverter converter;
+			private readonly IFormatProvider formatProvider;
+
+			public ValueGet(string name, IValueConverter converter, IFormatProvider formatProvider)
 			{
 				Index = -1;
 				Name = name ?? throw new ArgumentNullException(nameof(name));
+				this.converter = converter ?? throw new ArgumentNullException(nameof(converter));
+				this.formatProvider = formatProvider ?? CultureInfo.InvariantCulture;
 			} // ctor
 
-			protected abstract string GetValueCore(object value);
-
 			public string Get(IDataRow row)
-				=> GetValueCore(Index >= 0 ? row[Index] : null);
+				=> converter.Format(Index >= 0 ? row[Index] : null);
 
 			public string Name { get; }
 			public int Index { get; set; }
 		} // class ValueGet
-
-		#endregion
-
-		#region -- class ValueConverterGet --------------------------------------------
-
-		private sealed class ValueConverterGet : ValueGet
-		{
-			private readonly Func<object, string> converter;
-
-			public ValueConverterGet(string name, Func<object, string> converter)
-				: base(name)
-			{
-				this.converter = converter ?? throw new ArgumentNullException(nameof(converter));
-			}
-
-			protected override string GetValueCore(object value)
-				=> converter(value);
-		} // class ValueConverterGet
-
-		#endregion
-
-		#region -- class ValueStringGet -----------------------------------------------
-
-		private sealed class ValueStringGet : ValueGet
-		{
-			private readonly IFormatProvider formatProvider;
-
-			public ValueStringGet(string name, IFormatProvider formatProvider = null)
-				: base(name)
-			{
-				this.formatProvider = formatProvider;
-			}
-
-			protected override string GetValueCore(object value)
-				=> Convert.ToString(value, formatProvider);
-		} // class ValueStringGet
 
 		#endregion
 
@@ -359,18 +320,18 @@ namespace TecWare.DE.Data
 		/// <summary></summary>
 		/// <param name="coreWriter"></param>
 		/// <param name="columns"></param>
-		public TextDataRowWriter(ITextCoreWriter coreWriter, params TextDataRowWriterColumn[] columns)
+		public TextDataRowWriter(ITextCoreWriter coreWriter, params IDataColumn[] columns)
 			: base(coreWriter)
 		{
 			if (columns != null && columns.Length >= 0)
-				GenerateColumnInfo(columns);
+				GenerateColumnInfo(columns, CultureInfo.InvariantCulture);
 		} // ctor
 
 		/// <summary></summary>
 		/// <param name="sw"></param>
 		/// <param name="settings"></param>
 		/// <param name="columns"></param>
-		public TextDataRowWriter(TextWriter sw, TextCsvSettings settings, params TextDataRowWriterColumn[] columns)
+		public TextDataRowWriter(TextWriter sw, TextCsvSettings settings, params IDataColumn[] columns)
 			: this(new TextCsvWriter(sw, settings), columns)
 		{
 		} // ctor
@@ -379,31 +340,23 @@ namespace TecWare.DE.Data
 		/// <param name="sw"></param>
 		/// <param name="settings"></param>
 		/// <param name="columns"></param>
-		public TextDataRowWriter(TextWriter sw, TextFixedSettings settings, params TextDataRowWriterColumn[] columns)
+		public TextDataRowWriter(TextWriter sw, TextFixedSettings settings, params IDataColumn[] columns)
 			: this(new TextFixedWriter(sw, settings), columns)
 		{
 		} // ctor
 
-		private void GenerateColumnInfo(IReadOnlyList<TextDataRowWriterColumn> columns)
+		private void GenerateColumnInfo(IReadOnlyList<IDataColumn> columns, CultureInfo defaultCulture)
 		{
 			columnsInfo = new ValueGet[columns.Count];
 			for (var i = 0; i < columnsInfo.Length; i++)
 			{
 				var col = columns[i];
-
-				columnsInfo[i] = col.Converter != null
-					? (ValueGet)new ValueConverterGet(col.Name, col.Converter)
-					: new ValueStringGet(col.Name, col.FormatProvider);
-			}
-		} // proc GenerateColumnInfo
-
-		private void GenerateColumnInfo(IReadOnlyList<IDataColumn> columns)
-		{
-			columnsInfo = new ValueGet[columns.Count];
-			for (var i = 0; i < columnsInfo.Length; i++)
-			{
-				var col = columns[i];
-				columnsInfo[i] = new ValueStringGet(col.Name, CultureInfo.InvariantCulture) { Index = i };
+				columnsInfo[i] = new ValueGet(
+					col.Name,
+					col.GetConverter() ?? SimpleValueConverter.Default,
+					col.GetFormatProvider() ?? defaultCulture
+				)
+				{ Index = i };
 			}
 		} // proc GenerateColumnInfo
 
@@ -456,7 +409,7 @@ namespace TecWare.DE.Data
 				else
 					columns = rowEnumerator.Current;
 
-				GenerateColumnInfo(columns.Columns);
+				GenerateColumnInfo(columns.Columns, CultureInfo.InvariantCulture);
 				doAttachIndex = false;
 			}
 			else

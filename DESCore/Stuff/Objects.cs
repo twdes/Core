@@ -226,6 +226,70 @@ namespace TecWare.DE.Stuff
 
 	#endregion
 
+	#region -- interface IValueConverter ----------------------------------------------
+
+	/// <summary>Simple value converter.</summary>
+	public interface IValueConverter
+	{
+		/// <summary>Convert a value to string.</summary>
+		/// <param name="value"></param>
+		/// <param name="formatProvider"></param>
+		/// <returns></returns>
+		string Format(object value, IFormatProvider formatProvider = null);
+		/// <summary>Try convert a value from string.</summary>
+		/// <param name="text"></param>
+		/// <param name="formatProvider"></param>
+		/// <param name="value"></param>
+		/// <returns></returns>
+		bool TryParse(string text, IFormatProvider formatProvider, out object value);
+	} // interface IPpsValueConverter
+
+	#endregion
+
+	#region -- class SimpleValueConverter ---------------------------------------------
+
+	/// <summary>Generic implementation for an value converter.</summary>
+	public sealed class SimpleValueConverter : IValueConverter
+	{
+		private readonly Func<string, object> parse;
+		private readonly Func<object, string> format;
+
+		private SimpleValueConverter(Func<string, object> parse, Func<object, string> format)
+		{
+			this.parse = parse;
+			this.format = format;
+		} // ctor
+
+		string IValueConverter.Format(object value, IFormatProvider formatProvider)
+			=> format?.Invoke(value) ?? Lua.RtFormatValue(value, false);
+
+		bool IValueConverter.TryParse(string text, IFormatProvider formatProvider, out object value)
+		{
+			try
+			{
+				value = parse?.Invoke(text) ?? Lua.RtReadValue(text);
+				return true;
+			}
+			catch
+			{
+				value = null;
+				return false;
+			}
+		} // func IValueConverter.TryParse
+
+		/// <summary></summary>
+		/// <param name="parse"></param>
+		/// <param name="format"></param>
+		/// <returns></returns>
+		public static IValueConverter Create(Func<string, object> parse, Func<object, string> format)
+			=> parse == null && format == null ? Default : new SimpleValueConverter(parse, format);
+
+		/// <summary></summary>
+		public static IValueConverter Default { get; } = new SimpleValueConverter(null, null);
+	} // class SimpleValueConverter
+
+	#endregion
+
 	/// <summary></summary>
 	public static partial class Procs
 	{
@@ -294,6 +358,14 @@ namespace TecWare.DE.Stuff
 		/// <returns></returns>
 		public static T ChangeType<T>(this object value)
 			=> (T)ChangeType(value, typeof(T));
+
+		/// <summary></summary>
+		/// <param name="converter"></param>
+		/// <param name="text"></param>
+		/// <param name="formatProvider"></param>
+		/// <returns></returns>
+		public static object Parse(this IValueConverter converter, string text, IFormatProvider formatProvider = null)
+			=> converter.TryParse(text, formatProvider, out var v) ? v : throw new FormatException();
 		
 		#endregion
 

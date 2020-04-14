@@ -64,7 +64,10 @@ namespace TecWare.DE.Data
 
 		/// <summary></summary>
 		public void Dispose()
-			=> Dispose(true);
+		{
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		} // proc Dispose
 
 		/// <summary></summary>
 		/// <param name="disposing"></param>
@@ -467,7 +470,10 @@ namespace TecWare.DE.Data
 
 		/// <summary></summary>
 		public void Dispose()
-			=> Dispose(true);
+		{
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		} // proc Dispose
 
 		/// <summary></summary>
 		/// <param name="disposing"></param>
