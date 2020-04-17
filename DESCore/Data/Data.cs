@@ -347,11 +347,12 @@ namespace TecWare.DE.Data
 		/// <returns></returns>
 		public virtual bool SetValue(int index, object value)
 		{
-			if (Equals(this[index], value))
+			var v = Procs.ChangeType(value, Columns[index].DataType);
+			if (Equals(this[index], v))
 				return false;
 			else
 			{
-				SetValueCore(index, value);
+				SetValueCore(index, v);
 				return true;
 			}
 		} // proc SetValue
