@@ -109,7 +109,22 @@ namespace TecWare.DE.Data
 			{
 			} // ctor
 
-			private DynamicMetaObject BindMember(string name, bool throwException)
+			private static DynamicMetaObject ThrowOutOfRangeException(string name, BindingRestrictions restriction)
+			{
+				return new DynamicMetaObject(
+					Expression.Throw(
+						Expression.New(Procs.ArgumentOutOfRangeConstructorInfo2,
+							new Expression[]
+							{
+								Expression.Constant(name),
+								Expression.Constant(String.Format("Could not resolve {0}.",name))
+							}
+						), typeof(object)
+					), restriction
+				);
+			} // func ThrowOutOfRangeException
+
+			private DynamicMetaObject BindGetMember(string name, bool throwException)
 			{
 				var row = (DynamicDataRow)Value;
 				var restriction = row.GetRowBindingRestriction(Expression);
@@ -119,19 +134,7 @@ namespace TecWare.DE.Data
 					if (column == -1) // column not found, return a null
 					{
 						if (throwException)
-						{
-							return new DynamicMetaObject(
-								Expression.Throw(
-									Expression.New(Procs.ArgumentOutOfRangeConstructorInfo2,
-										new Expression[]
-										{
-											Expression.Constant(name),
-											Expression.Constant(String.Format("Could not resolve {0}.",name))
-										}
-									), typeof(object)
-								), restriction
-							);
-						}
+							return ThrowOutOfRangeException(name, restriction);
 						else
 							return new DynamicMetaObject(Expression.Constant(null, typeof(object)), restriction);
 					}
@@ -162,14 +165,98 @@ namespace TecWare.DE.Data
 
 			public override DynamicMetaObject BindGetMember(GetMemberBinder binder)
 			{
-				if (binder.Name == nameof(Columns))
-					return base.BindGetMember(binder);
-				else
-					return BindMember(binder.Name, false);
+				return IsPublicMember(LimitType, binder.Name)
+					? base.BindGetMember(binder)
+					: BindGetMember(binder.Name, false);
 			} // func BindGetMember
+
+			public override DynamicMetaObject BindSetMember(SetMemberBinder binder, DynamicMetaObject value)
+			{
+				if (IsPublicMember(LimitType, binder.Name))
+					return base.BindSetMember(binder, value);
+				else
+				{
+					var row = (DynamicDataRow)Value;
+					var restriction = row.GetRowBindingRestriction(Expression);
+					if (restriction != null) // there is a row restriction, use the this[int]
+					{
+						var column = row.FindColumnIndex(binder.Name);
+						if (column == -1) // column not found, return a null
+							return ThrowOutOfRangeException(binder.Name, restriction);
+						else // the index of the column
+						{
+							return new DynamicMetaObject(
+								Expression.Convert(
+									Expression.Call(Expression.Convert(Expression, typeof(DynamicDataRow)),
+										setValueIntMethodInfo,
+										Expression.Constant(column, typeof(int)),
+										Expression.Convert(value.Expression, typeof(object))
+									),
+									typeof(object)
+								),
+								restriction
+							);
+						}
+					}
+					else // use the this.SetValue(string, value)
+					{
+						return new DynamicMetaObject(
+							Expression.Convert(
+								Expression.Call(Expression.Convert(Expression, typeof(DynamicDataRow)),
+									setValueStringMethodInfo,
+									Expression.Constant(binder.Name, typeof(string)),
+									Expression.Convert(value.Expression, typeof(object))
+								),
+								typeof(object)
+							),
+							BindingRestrictions.GetExpressionRestriction(Expression.TypeIs(Expression, typeof(DynamicDataRow))).Merge(value.Restrictions)
+						);
+					}
+				}
+			} // proc BindSetMember
+
+			public override DynamicMetaObject BindSetIndex(SetIndexBinder binder, DynamicMetaObject[] indexes, DynamicMetaObject value)
+			{
+				if (indexes.Length == 1)
+				{
+					if (indexes[0].LimitType == typeof(int))
+					{
+						return new DynamicMetaObject(
+							Expression.Convert(
+								Expression.Call(Expression.Convert(Expression, typeof(DynamicDataRow)),
+									setValueIntMethodInfo,
+									Expression.Convert(indexes[0].Expression, typeof(int)),
+									Expression.Convert(value.Expression, typeof(object))
+								),
+								typeof(object)
+							),
+							BindingRestrictions.GetExpressionRestriction(Expression.TypeIs(Expression, typeof(DynamicDataRow))).Merge(value.Restrictions).Merge(indexes[0].Restrictions)
+						);
+					}
+					else
+					{
+						return new DynamicMetaObject(
+							Expression.Convert(
+								Expression.Call(Expression.Convert(Expression, typeof(DynamicDataRow)),
+									setValueStringMethodInfo,
+									Expression.Convert(indexes[0].Expression, typeof(string)),
+									Expression.Convert(value.Expression, typeof(object))
+								),
+								typeof(object)
+							),
+							BindingRestrictions.GetExpressionRestriction(Expression.TypeIs(Expression, typeof(DynamicDataRow))).Merge(value.Restrictions).Merge(indexes[0].Restrictions)
+						);
+					}
+				}
+				else
+					return base.BindSetIndex(binder, indexes, value);
+			} // func BindSetIndex
 
 			private static bool IsPublicMember(Type type, string name)
 			{
+				if (name == nameof(Columns)) // optimization: columns is a known public properties)
+					return true;
+
 				return (
 					from mi in type.GetRuntimeMethods()
 					where mi.IsPublic && !mi.IsStatic
@@ -182,11 +269,12 @@ namespace TecWare.DE.Data
 			} // proc IsPublicMember
 
 			public override DynamicMetaObject BindInvokeMember(InvokeMemberBinder binder, DynamicMetaObject[] args)
-				=> args.Length > 0  // optimization: arguments should be a method call, we only add properties dynamic
-				|| binder.Name == nameof(Columns) // optimization: columns is a known public properties
-				|| IsPublicMember(LimitType, binder.Name) // test for non-dynamic members (methods, properties)
+			{
+				return args.Length > 0  // optimization: arguments should be a method call, we only add properties dynamic
+					|| IsPublicMember(LimitType, binder.Name) // test for non-dynamic members (methods, properties)
 					? base.BindInvokeMember(binder, args)
-					: BindMember(binder.Name, true);
+					: BindGetMember(binder.Name, true);
+			} // func BindInvokeMember
 		} // class DynamicDataRowMetaObjectProvider
 
 		#endregion
@@ -247,6 +335,40 @@ namespace TecWare.DE.Data
 			}
 		} // prop this
 
+		/// <summary>Set a property in this datarow</summary>
+		/// <param name="index"></param>
+		/// <param name="value"></param>
+		protected virtual void SetValueCore(int index, object value)
+			=> throw new NotSupportedException();
+
+		/// <summary>Set a property in this datarow</summary>
+		/// <param name="index"></param>
+		/// <param name="value"></param>
+		/// <returns></returns>
+		public virtual bool SetValue(int index, object value)
+		{
+			if (Equals(this[index], value))
+				return false;
+			else
+			{
+				SetValueCore(index, value);
+				return true;
+			}
+		} // proc SetValue
+
+		/// <summary>Set a property in this datarow</summary>
+		/// <param name="columnName"></param>
+		/// <param name="value"></param>
+		/// <returns></returns>
+		public virtual bool SetValue(string columnName, object value)
+		{
+			var index = this.FindColumnIndex(columnName);
+			if (index >= 0)
+				return SetValue(index, value);
+			else
+				throw new ArgumentOutOfRangeException(nameof(columnName), columnName, "Column not found.");
+		} // proc SetValue
+
 		/// <summary>Create a restriction to identify this datarow type.</summary>
 		/// <param name="expression">Expression to the DataRow (uncasted).</param>
 		/// <returns>Binding restriction, to check this DataRow-type.</returns>
@@ -270,11 +392,16 @@ namespace TecWare.DE.Data
 		private readonly static PropertyInfo thisStringPropertyInfo;
 		private readonly static PropertyInfo thisIntPropertyInfo;
 
+		private readonly static MethodInfo setValueStringMethodInfo;
+		private readonly static MethodInfo setValueIntMethodInfo;
+
 		static DynamicDataRow()
 		{
 			var ti = typeof(DynamicDataRow);
-			thisStringPropertyInfo = ti.GetProperty("Item", new Type[] { typeof(string), typeof(bool) });
-			thisIntPropertyInfo = ti.GetProperty("Item", new Type[] { typeof(int) });
+			thisStringPropertyInfo = ti.GetProperty("Item", new Type[] { typeof(string), typeof(bool) }) ?? throw new ArgumentNullException("item[string]");
+			thisIntPropertyInfo = ti.GetProperty("Item", new Type[] { typeof(int) }) ?? throw new ArgumentNullException("item[int]");
+			setValueStringMethodInfo = ti.GetMethod(nameof(SetValue), new Type[] { typeof(string), typeof(object) }) ?? throw new ArgumentNullException("SetValue(string, object)");
+			setValueIntMethodInfo = ti.GetMethod(nameof(SetValue), new Type[] { typeof(int), typeof(object) }) ?? throw new ArgumentNullException("SetValue(string, object)");
 		} // sctor
 	} // class DynamicDataRow
 
@@ -507,14 +634,6 @@ namespace TecWare.DE.Data
 		private readonly Lazy<PropertyInfo[]> attributeProperties;
 
 		/// <summary></summary>
-		/// <param name="column"></param>
-		public SimpleDataColumn(IDataColumn column)
-			: this(column.Name, column.DataType, column.Attributes)
-		{
-			attributeProperties = new Lazy<PropertyInfo[]>(GetAttributeProperties);
-		} // ctor
-
-		/// <summary></summary>
 		/// <param name="name"></param>
 		/// <param name="dataType"></param>
 		/// <param name="attributes"></param>
@@ -524,9 +643,17 @@ namespace TecWare.DE.Data
 				throw new ArgumentNullException(nameof(name));
 
 			this.name = name;
-			this.dataType = dataType ?? throw new ArgumentNullException("dataType");
+			this.dataType = dataType ?? throw new ArgumentNullException(nameof(dataType));
 			inheritedAttributes = attributes;
 			this.attributes = new GenericAttributeWrapper(this);
+			attributeProperties = new Lazy<PropertyInfo[]>(GetAttributeProperties);
+		} // ctor
+
+		/// <summary></summary>
+		/// <param name="column"></param>
+		public SimpleDataColumn(IDataColumn column)
+			: this(column.Name, column.DataType, column.Attributes)
+		{
 		} // ctor
 
 		/// <summary></summary>

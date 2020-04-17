@@ -260,14 +260,20 @@ namespace TecWare.DE.Stuff
 			this.format = format;
 		} // ctor
 
+		private static string FormatDefault(object value)
+			=> value == null ? null : Lua.RtFormatValue(value, false);
+
+		private static object ParseDefault(string text)
+			=> text == null ? null : Lua.RtReadValue(text);
+
 		string IStringConverter.Format(object value, IFormatProvider formatProvider)
-			=> format?.Invoke(value) ?? Lua.RtFormatValue(value, false);
+			=> format?.Invoke(value) ?? FormatDefault(value);
 
 		bool IStringConverter.TryParse(string text, IFormatProvider formatProvider, out object value)
 		{
 			try
 			{
-				value = parse?.Invoke(text) ?? Lua.RtReadValue(text);
+				value = parse?.Invoke(text) ?? ParseDefault(text);
 				return true;
 			}
 			catch
