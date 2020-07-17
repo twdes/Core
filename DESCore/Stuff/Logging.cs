@@ -109,8 +109,8 @@ namespace TecWare.DE.Stuff
 	/// <summary></summary>
 	public sealed class LogMessageScopeProxy : IDisposable
 	{
-		private ILogMessageScope scope;
-		private Stopwatch stopWatch;
+		private readonly ILogMessageScope scope;
+		private readonly Stopwatch stopWatch;
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 

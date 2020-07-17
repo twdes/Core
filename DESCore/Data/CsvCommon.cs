@@ -107,7 +107,18 @@ namespace TecWare.DE.Data
 		{
 		} // ctor
 
-		IStringConverter IDataConverterColumn.Converter => SimpleValueConverter.Create(Converter, null);
+		IStringConverter IDataConverterColumn.Converter
+		{
+			get
+			{
+				if (Converter != null)
+					return SimpleValueConverter.Create(Converter, null);
+				else if (DataType != typeof(string))
+					return SimpleValueConverter.Default;
+				else
+					return null;
+			}
+		} // prop IDataConverterColumn.Converter
 
 		/// <summary>Gets the name in this column.</summary>
 		public string Name { get; set; }
@@ -130,7 +141,17 @@ namespace TecWare.DE.Data
 	[Obsolete("Is only used in some lua extensions. Do not use in compiled languages.")]
 	public sealed class TextDataRowWriterColumn : IDataColumn, IDataConverterColumn
 	{
-		IStringConverter IDataConverterColumn.Converter => SimpleValueConverter.Create(null, Converter);
+		IStringConverter IDataConverterColumn.Converter
+		{
+			get
+			{
+				if (Converter != null)
+					return SimpleValueConverter.Create(null, Converter);
+				else
+					return null;
+			}
+		}// prop IDataConverterColumn.Converter
+		
 		Type IDataColumn.DataType => typeof(object);
 		IPropertyEnumerableDictionary IDataColumn.Attributes => PropertyDictionary.EmptyReadOnly;
 
