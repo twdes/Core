@@ -366,9 +366,21 @@ namespace TecWare.DE.Data
 							state = 11;
 						else if (c == quote && mode != CsvQuotation.None)
 						{
-							if (mode == CsvQuotation.Forced && sbValue.Length > 0) // parse error
-								throw new ArgumentException("todo: error text for invalid forced quote format (double quote).");
-							state = 5;
+							if (mode == CsvQuotation.Forced || mode == CsvQuotation.ForceText)
+							{
+								if (sbValue.Length > 0) // parse error
+									throw new ArgumentException("todo: error text for invalid forced quote format (double quote).");
+								state = 5;
+							}
+							else if (mode == CsvQuotation.Normal && sbValue.Length == 0)
+							{
+								state = 5;
+							}
+							else
+							{
+								sbValue.Append(c);
+								state = 7;
+							}
 						}
 						else if (mode != CsvQuotation.Forced)
 							sbValue.Append(c);
@@ -376,7 +388,7 @@ namespace TecWare.DE.Data
 						break;
 					#endregion
 
-					#region -- 5, 6 Quotes --
+					#region -- 5, 6, 7 Quotes --
 					case 5:
 						if (c == quote) // check for escaped quote
 							state = 6;
@@ -396,6 +408,12 @@ namespace TecWare.DE.Data
 							state = 0;
 							mode = CsvQuotation.Forced; // set quote to force, to ignore chars afterwards
 						}
+						break;
+					case 7:
+						if (c == quote)
+							state = 0; // ignore double quotes
+						else
+							goto case 0;
 						break;
 					#endregion
 

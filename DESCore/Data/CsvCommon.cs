@@ -113,8 +113,6 @@ namespace TecWare.DE.Data
 			{
 				if (Converter != null)
 					return SimpleValueConverter.Create(Converter, null);
-				else if (DataType != typeof(string))
-					return SimpleValueConverter.Default;
 				else
 					return null;
 			}
