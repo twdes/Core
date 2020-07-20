@@ -330,6 +330,7 @@ namespace TecWare.DE.Data
 			var delemiter = Settings.Delemiter;
 			var sbValue = new StringBuilder();
 			var mode = Settings.Quotation;
+			var returnStringEmpty = false;
 
 			while (true)
 			{
@@ -357,7 +358,7 @@ namespace TecWare.DE.Data
 					case 0: // collect all until quote
 						if (c == delemiter) // end of column
 						{
-							SetColumn(currentColumn, sbValue.ToString());
+							SetColumn(currentColumn, returnStringEmpty || sbValue.Length > 0 ? sbValue.ToString() : null);
 							return ReadColumnReturn.EoC;
 						}
 						else if (c == '\n')
@@ -371,9 +372,11 @@ namespace TecWare.DE.Data
 								if (sbValue.Length > 0) // parse error
 									throw new ArgumentException("todo: error text for invalid forced quote format (double quote).");
 								state = 5;
+								returnStringEmpty = true;
 							}
 							else if (mode == CsvQuotation.Normal && sbValue.Length == 0)
 							{
+								returnStringEmpty = true;
 								state = 5;
 							}
 							else
@@ -384,6 +387,8 @@ namespace TecWare.DE.Data
 						}
 						else if (mode != CsvQuotation.Forced)
 							sbValue.Append(c);
+						else if (!Char.IsWhiteSpace(c))
+							throw new ArgumentException("todo: error text for invalid forced quotes (quote expected.).");
 
 						break;
 					#endregion

@@ -38,6 +38,65 @@ namespace TecWare.DE.Data
 				this.enumerator = enumerator ?? throw new ArgumentNullException(nameof(enumerator));
 			} // ctor
 
+			private static object GetValueTypedCore(string value, Type dataType, IFormatProvider formatProvider)
+			{
+				if (dataType == typeof(decimal))
+					return Decimal.Parse(value, NumberStyles.Currency | NumberStyles.Float, formatProvider);
+				else if (dataType == typeof(double))
+					return Double.Parse(value, NumberStyles.Currency | NumberStyles.Float, formatProvider);
+				else if (dataType == typeof(float))
+					return Single.Parse(value, NumberStyles.Currency | NumberStyles.Float, formatProvider);
+
+				else if (dataType == typeof(byte))
+					return Byte.Parse(value, NumberStyles.Integer, formatProvider);
+				else if (dataType == typeof(sbyte))
+					return SByte.Parse(value, NumberStyles.Integer, formatProvider);
+				else if (dataType == typeof(ushort))
+					return UInt16.Parse(value, NumberStyles.Integer, formatProvider);
+				else if (dataType == typeof(short))
+					return Int16.Parse(value, NumberStyles.Integer, formatProvider);
+				else if (dataType == typeof(uint))
+					return UInt32.Parse(value, NumberStyles.Integer, formatProvider);
+				else if (dataType == typeof(int))
+					return Int32.Parse(value, NumberStyles.Integer, formatProvider);
+				else if (dataType == typeof(ulong))
+					return UInt64.Parse(value, NumberStyles.Integer, formatProvider);
+				else if (dataType == typeof(long))
+					return Int64.Parse(value, NumberStyles.Integer, formatProvider);
+
+				else if (dataType == typeof(DateTime))
+					return DateTime.Parse(value, formatProvider, DateTimeStyles.AssumeLocal);
+
+				else if (dataType == typeof(string))
+					return value;
+				else
+					return Procs.ChangeType(value, dataType);
+			} // func GetValueTypedCore
+
+			private static object GetValueTyped(string value, Type dataType, IFormatProvider formatProvider)
+			{
+				if (dataType.IsGenericType && !dataType.IsGenericTypeDefinition && dataType.GetGenericTypeDefinition() == typeof(Nullable<>))
+				{
+					var baseType = dataType.GetGenericArguments()[0];
+					if (value == null)
+						return null; // (Nullable<?>)null -> is boxed to (object)null
+					else
+						return GetValueTypedCore(value, baseType, formatProvider); // (Nullable<?>)value -> is boxed to (object)value
+				}
+				else
+				{
+					if (value == null)
+					{
+						if (dataType.IsValueType)
+							return Activator.CreateInstance(dataType);
+						else
+							return null;
+					}
+					else
+						return GetValueTypedCore(value, dataType, formatProvider);
+				}
+			} // func GetValueTypedCore
+
 			private object GetValueIntern(int index)
 			{
 				// get value
@@ -49,39 +108,9 @@ namespace TecWare.DE.Data
 				// convert
 				var conv = column.GetConverter();
 				var formatProvider = column.GetFormatProvider();
-				if (conv != null)
-					return conv.Parse(value, formatProvider);
-				else  if (column.DataType == typeof(decimal))
-					return Decimal.Parse(value, NumberStyles.Currency | NumberStyles.Float, formatProvider);
-				else if (column.DataType == typeof(double))
-					return Double.Parse(value, NumberStyles.Currency | NumberStyles.Float, formatProvider);
-				else if (column.DataType == typeof(float))
-					return Single.Parse(value, NumberStyles.Currency | NumberStyles.Float, formatProvider);
-
-				else if (column.DataType == typeof(byte))
-					return Byte.Parse(value, NumberStyles.Integer, formatProvider);
-				else if (column.DataType == typeof(sbyte))
-					return SByte.Parse(value, NumberStyles.Integer, formatProvider);
-				else if (column.DataType == typeof(ushort))
-					return UInt16.Parse(value, NumberStyles.Integer, formatProvider);
-				else if (column.DataType == typeof(short))
-					return Int16.Parse(value, NumberStyles.Integer, formatProvider);
-				else if (column.DataType == typeof(uint))
-					return UInt32.Parse(value, NumberStyles.Integer, formatProvider);
-				else if (column.DataType == typeof(int))
-					return Int32.Parse(value, NumberStyles.Integer, formatProvider);
-				else if (column.DataType == typeof(ulong))
-					return UInt64.Parse(value, NumberStyles.Integer, formatProvider);
-				else if (column.DataType == typeof(long))
-					return Int64.Parse(value, NumberStyles.Integer, formatProvider);
-
-				else if (column.DataType == typeof(DateTime))
-					return DateTime.Parse(value, formatProvider, DateTimeStyles.AssumeLocal);
-
-				else if (column.DataType == typeof(string))
-					return value;
-				else
-					return Procs.ChangeType(value, column.DataType);
+				return conv != null
+					? conv.Parse(value, formatProvider)
+					: GetValueTyped(value, column.DataType, formatProvider);
 			} // func GetValueIntern
 
 			public override object this[int index]
