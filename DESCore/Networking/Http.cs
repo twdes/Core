@@ -1643,6 +1643,9 @@ namespace TecWare.DE.Networking
 		{
 			foreach (var a in arguments)
 			{
+				if (a.Value == null)
+					continue;
+				
 				if (firstAdded)
 					sb.Append('&');
 				else
@@ -1651,8 +1654,6 @@ namespace TecWare.DE.Networking
 					firstAdded = true;
 				}
 
-				if (a.Value == null)
-					continue;
 				sb.Append(Uri.EscapeUriString(a.Name))
 					.Append('=');
 

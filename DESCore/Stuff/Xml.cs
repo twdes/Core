@@ -224,6 +224,48 @@ namespace TecWare.DE.Stuff
 				throw CreateXmlNodeException(xml, expectedNodeType);
 		} // proc MoveToContentAsync
 
+		/// <summary>Move reader to any xml-element</summary>
+		/// <param name="xml"></param>
+		public static void MoveToXmlElement(this XmlReader xml)
+		{
+			while (xml.NodeType != XmlNodeType.Element)
+			{
+				if (!xml.Read())
+					throw new ArgumentException();
+			}
+		} // proc MoveToXmlElement
+
+		/// <summary>Move to next xml item.</summary>
+		/// <param name="xml"></param>
+		public static void MoveToNextElement(this XmlReader xml)
+		{
+			if (xml.IsEmptyElement)
+				xml.Read();
+			else
+				xml.Skip();
+		} // proc MoveToNextElement
+
+		/// <summary>Read complete child element list.</summary>
+		/// <param name="xml"></param>
+		/// <param name="parseXml">Function that is called on an element. Return <c>true</c>, if the element was parsed.</param>
+		public static void ReadChildElements(this XmlReader xml, Func<XmlReader, bool> parseXml)
+		{
+			if (xml.IsEmptyElement)
+				return;
+			else
+			{
+				xml.Read();
+
+				while (xml.NodeType == XmlNodeType.Element)
+				{
+					if (parseXml(xml))
+						xml.MoveToNextElement();
+					else
+						xml.Skip();
+				}
+			}
+		} // func ReadChildElements
+
 		#endregion
 
 		#region -- ReadStartElement ---------------------------------------------------
