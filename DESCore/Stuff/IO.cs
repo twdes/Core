@@ -37,10 +37,10 @@ namespace TecWare.DE.Stuff
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		/// <summary></summary>
-		/// <param name="baseStream"></param>
-		/// <param name="offset"></param>
-		/// <param name="length"></param>
-		/// <param name="writeAble"></param>
+		/// <param name="baseStream">Stream to read from.</param>
+		/// <param name="offset">Offset within the base stream.</param>
+		/// <param name="length">Length to read/write.</param>
+		/// <param name="writeAble">Are write operations allowed.</param>
 		/// <param name="leaveOpen"></param>
 		public WindowStream(Stream baseStream, long offset, long length, bool writeAble, bool leaveOpen)
 		{
@@ -58,8 +58,7 @@ namespace TecWare.DE.Stuff
 				Seek(0, SeekOrigin.Begin);
 		} // ctor
 
-		/// <summary></summary>
-		/// <param name="disposing"></param>
+		/// <inheritdoc/>>
 		protected override void Dispose(bool disposing)
 		{
 			if (disposing)
@@ -74,15 +73,11 @@ namespace TecWare.DE.Stuff
 
 		#endregion
 
-		/// <summary></summary>
+		/// <inheritdoc/>
 		public override void Flush()
 			=> baseStream.Flush();
 
-		/// <summary></summary>
-		/// <param name="buffer"></param>
-		/// <param name="offset"></param>
-		/// <param name="count"></param>
-		/// <returns></returns>
+		/// <inheritdoc/>
 		public override int Read(byte[] buffer, int offset, int count)
 		{
 			// check upper bound
