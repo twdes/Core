@@ -16,6 +16,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace TecWare.DE.Stuff
@@ -74,7 +75,48 @@ namespace TecWare.DE.Stuff
 
 		private static Func<string, bool> GetFilterFunctionEx(string filterExpression)
 		{
-			throw new NotImplementedException();
+			var r = new StringBuilder();
+
+			for(var i = 0;i<filterExpression.Length;i++)
+			{
+				var c = filterExpression[i];
+				switch (c)
+				{
+					case '?':
+					case '(':
+					case ')':
+					case '[':
+					case ']':
+					case '<':
+					case '>':
+					case '.':
+					case '+':
+					case '$':
+					case '^':
+					case '#':
+					case '\\':
+						if (i == 0)
+							r.Append('^');
+
+						r.Append('\\').Append(c);
+						break;
+					case '*':
+						r.Append(".*");
+						break;
+					default:
+						if (i == 0)
+							r.Append('^');
+
+						r.Append(c);
+						break;
+				}
+			}
+
+			if (r.Length <= 2 || r[r.Length - 2] != '.' || r[r.Length - 1] != '*')
+				r.Append('$');
+
+			var regEx = new Regex(r.ToString(), RegexOptions.Singleline | RegexOptions.IgnoreCase);
+			return value => regEx.Match(value).Success;
 		} // func GetFilterFunctionEx
 		
 		/// <summary>Create for a simple star filter, a predicate</summary>
@@ -109,8 +151,12 @@ namespace TecWare.DE.Stuff
 					var testValue = filterExpression.Substring(0, p1);
 					return value => value.StartsWith(testValue, StringComparison.OrdinalIgnoreCase);
 				}
-				else
-					return GetFilterFunctionEx(filterExpression);
+				else // startswith, endswith
+				{
+					var testValue1 = filterExpression.Substring(0, p1);
+					var testValue2 = filterExpression.Substring(p1 + 1);
+					return value => value.StartsWith(testValue1, StringComparison.OrdinalIgnoreCase) && value.EndsWith(testValue2, StringComparison.OrdinalIgnoreCase);
+				}
 			}
 			else
 			{
