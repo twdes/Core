@@ -417,6 +417,9 @@ namespace TecWare.DE.Stuff
         /// <returns></returns>
         public static string HtmlToText(string htmlText)
         {
+            if (String.IsNullOrEmpty(htmlText))
+                return htmlText;
+
             var length = htmlText.Length;
             using (var tw = new StringWriter(new StringBuilder(length * 80 / 100)))
             {

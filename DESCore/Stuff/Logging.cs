@@ -555,7 +555,7 @@ namespace TecWare.DE.Stuff
 		public static LoggerProxy Create(ILogger log, string prefix)
 		{
 			if (String.IsNullOrEmpty(prefix))
-				throw new ArgumentNullException("prefix");
+				throw new ArgumentNullException(nameof(prefix));
 			return log == null ? Empty : new LoggerProxyPrefix(log, prefix);
 		} // func Create
 
