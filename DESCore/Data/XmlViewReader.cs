@@ -177,8 +177,6 @@ namespace TecWare.DE.Data
 							viewColumns.Add(new XmlViewDataColumn(columnName, columnDataType, attributes));
 						} // foreach field
 
-						if (viewColumns.Count < 1)
-							throw new InvalidDataException("No header found.");
 						columns = viewColumns.ToArray();
 
 						state = ReadingState.FetchFirstRow;
@@ -189,18 +187,17 @@ namespace TecWare.DE.Data
 					#endregion
 					#region -- ReadingState.FetchFirstRow --
 					case ReadingState.FetchFirstRow:
-						if (xml.NodeType != XmlNodeType.Element || xml.LocalName != xnRows.LocalName)
-							throw new InvalidDataException($"Expected \"{xnRows}\", read \"{xml.LocalName}\".");
+						if (xml.NodeType != XmlNodeType.Element || xml.LocalName != xnRows.LocalName) // rows is missing
+						{
+							CheckForCorrectEof();
 
-						if (xml.IsEmptyElement)
+							state = ReadingState.Complete;
+							goto case ReadingState.Complete;
+						}
+						else if (xml.IsEmptyElement) // rows is empty
 						{
 							xml.Read();
-							if (xml.NodeType != XmlNodeType.EndElement || xml.LocalName != xnView.LocalName)
-								throw new InvalidDataException($"Expected \"{xnView}\", read \"{xml.LocalName}\".");
-
-							xml.Read();
-							if (!xml.EOF)
-								throw new InvalidDataException("Unexpected eof.");
+							CheckForCorrectEof();
 
 							state = ReadingState.Complete;
 							goto case ReadingState.Complete;
@@ -211,6 +208,7 @@ namespace TecWare.DE.Data
 							state = ReadingState.FetchRows;
 							goto case ReadingState.FetchRows;
 						}
+						
 					#endregion
 					#region -- ReadingState.FetchRows --
 					case ReadingState.FetchRows:
@@ -259,6 +257,15 @@ namespace TecWare.DE.Data
 				} // switch state
 			} // func MoveNext 
 
+			private void CheckForCorrectEof()
+			{
+				if (xml.NodeType != XmlNodeType.EndElement || xml.LocalName != xnView.LocalName)
+					throw new InvalidDataException($"Expected \"{xnView}\", read \"{xml.LocalName}\".");
+				xml.Read();
+				if (!xml.EOF)
+					throw new InvalidDataException("Unexpected eof.");
+			} // proc CheckForCorrectEof
+
 			public bool MoveNext()
 				=> MoveNext(false);
 
@@ -297,7 +304,7 @@ namespace TecWare.DE.Data
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		/// <summary></summary>
-		public XmlViewDataReader()
+		protected XmlViewDataReader()
 		{
 		} // ctor
 

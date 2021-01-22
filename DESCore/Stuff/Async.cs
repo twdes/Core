@@ -123,7 +123,7 @@ namespace TecWare.DE.Stuff
 		{
 			IsEnabled = true;
 
-			InvokeTimedTokenAsync(time, unchecked(++seqToken)).Silent();
+			InvokeTimedTokenAsync(time, unchecked(++seqToken)).Spawn();
 		} // proc Start
 
 		private async Task InvokeTimedTokenAsync(TimeSpan time, int token)
@@ -170,12 +170,29 @@ namespace TecWare.DE.Stuff
 
 	public static partial class Procs
 	{
-		/// <summary></summary>
+		/// <summary>Fork a task from the current execution thread.</summary>
 		/// <param name="task"></param>
 		/// <param name="printException"></param>
-		public static void Silent(this Task task, Action<Exception> printException = null)
+		public static void Spawn(this Task task, Action<Exception> printException = null)
 		{
 			task.ContinueWith(
+				t =>
+				{
+					if (printException != null)
+						printException.Invoke(t.Exception);
+					else
+						Debug.Print(t.Exception.GetInnerException().ToString());
+				},
+				TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously
+			);
+		} // proc Silent
+
+		/// <summary>Ignores any exceptions of an task.</summary>
+		/// <param name="task"></param>
+		/// <param name="printException"></param>
+		public static Task Silent(this Task task, Action<Exception> printException = null)
+		{
+			return task.ContinueWith(
 				t => 
 				{
 					if (printException != null)
@@ -186,6 +203,83 @@ namespace TecWare.DE.Stuff
 				TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously
 			);
 		} // proc Silent
+
+		/// <summary>Ignores any exceptions of an task. And returns a default value for the task.</summary>
+		/// <param name="task"></param>
+		/// <param name="default"></param>
+		/// <returns></returns>
+		public static Task<T> Silent<T>(this Task<T> task, T @default)
+		{
+			return task.ContinueWith(
+				t =>
+				{
+					try
+					{
+						return t.Result;
+					}
+					catch (Exception e)
+					{
+						Debug.Print(e.ToString());
+						return @default;
+					}
+				}
+			);
+		} // func Success
+
+		/// <summary>Invoke task a return <c>false</c> on exception.</summary>
+		/// <param name="task"></param>
+		/// <returns></returns>
+		public static Task<bool> Success(this Task task)
+		{
+			return task.ContinueWith(
+				t =>
+				{
+					try
+					{
+						t.Wait();
+						return true;
+					}
+					catch (Exception e)
+					{
+						Debug.Print(e.ToString());
+						return false;
+					}
+				}
+			);
+		} // func Success
+
+		/// <summary>Invoke task and raise on timeout.</summary>
+		/// <param name="task"></param>
+		/// <param name="timeout"></param>
+		/// <returns></returns>
+		public static async Task Timeout(this Task task, int timeout)
+		{
+			var timeoutTask = Task.Delay(timeout);
+			var r = await Task.WhenAny(task, timeoutTask).ConfigureAwait(false);
+			if (r == timeoutTask)
+				throw new TimeoutException();
+		} // func Timeout
+
+		/// <summary>Invoke task and raise on timeout.</summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="task"></param>
+		/// <param name="timeout"></param>
+		/// <returns></returns>
+		public static async Task<T> Timeout<T>(this Task<T> task, int timeout)
+		{
+			var timeoutTask = Task.Delay(timeout);
+			var r = await Task.WhenAny(task, timeoutTask).ConfigureAwait(false);
+			if (r == timeoutTask)
+				throw new TimeoutException();
+			return task.Result;
+		} // func Timeout
+
+		/// <summary>Fetch rows async from an enumeration.</summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="enumerator"></param>
+		/// <returns></returns>
+		public static Task<IEnumerable<T>> ToAsync<T>(this IEnumerable<T> enumerator)
+			=> Task.Run<IEnumerable<T>>(() => enumerator.ToArray());
 	} // class Procs
 
 	#endregion

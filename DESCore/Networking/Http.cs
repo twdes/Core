@@ -1683,6 +1683,28 @@ namespace TecWare.DE.Networking
 		} // func TryGetValue
 
 		/// <summary></summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="header"></param>
+		/// <param name="name"></param>
+		/// <param name="value"></param>
+		/// <returns></returns>
+		public static bool TryGetValue<T>(this HttpResponseHeaders header, string name, out T value)
+		{
+			if (TryGetValue(header, name, out var s))
+			{
+				try
+				{
+					value = Procs.ChangeType<T>(s);
+					return true;
+				}
+				catch { }
+			}
+
+			value = default;
+			return false;
+		} // func TryGetValue
+
+		/// <summary></summary>
 		/// <param name="header"></param>
 		/// <param name="name"></param>
 		/// <param name="value"></param>
