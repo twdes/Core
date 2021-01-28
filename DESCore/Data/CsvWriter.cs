@@ -412,12 +412,10 @@ namespace TecWare.DE.Data
 				GenerateColumnInfo(columns.Columns, CultureInfo.InvariantCulture);
 				doAttachIndex = false;
 			}
-			else
-			{
-				// write header
-				if (CoreWriter.Settings.HeaderRow >= 0)
-					WriteHeader();
-			}
+
+			// write header
+			if (CoreWriter.Settings.HeaderRow >= 0)
+				WriteHeader();
 
 			// emit first row
 			if (emitCurrent)
