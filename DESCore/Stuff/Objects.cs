@@ -17,7 +17,10 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Neo.IronLua;
@@ -852,6 +855,67 @@ namespace TecWare.DE.Stuff
 		/// <returns></returns>
 		public static Task<bool> MoveNextAsync(this IEnumerator enumerator)
 			=> Task.Run(new Func<bool>(enumerator.MoveNext));
+
+		#endregion
+
+		#region -- X509 subject -------------------------------------------------------
+
+		private readonly static Regex splitSubject = new Regex(@"\s*(?<n>\w+)\s*=\s*(?<v>[^,]*),?", RegexOptions.Singleline | RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+		/// <summary>Split subject into key-value parts.</summary>
+		/// <param name="certificate"></param>
+		/// <returns></returns>
+		public static IEnumerable<KeyValuePair<string, string>> SplitSubject(this X509Certificate certificate)
+		{
+			foreach (var m in splitSubject.Matches(certificate.Subject).Cast<Match>())
+				yield return new KeyValuePair<string, string>(m.Groups["n"].Value, m.Groups["v"].Value);
+		} // proc SplitSubject
+
+		/// <summary></summary>
+		/// <param name="certificate"></param>
+		/// <param name="commonName"></param>
+		/// <returns></returns>
+		public static bool TryGetCommonName(this X509Certificate certificate, out string commonName)
+		{
+			if (certificate == null)
+			{
+				commonName = null;
+				return false;
+			}
+			else
+			{
+				commonName = (from c in certificate.SplitSubject() where c.Key == "CN" select c.Value).FirstOrDefault();
+				return commonName != null;
+			}
+		} // func TryGetCommonName
+
+		/// <summary></summary>
+		/// <param name="certificate"></param>
+		/// <returns></returns>
+		public static string GetCommonName(this X509Certificate certificate)
+			=> TryGetCommonName(certificate, out var cn) ? cn : null;
+
+		/// <summary></summary>
+		/// <param name="hostName"></param>
+		/// <param name="commonName"></param>
+		/// <returns></returns>
+		public static bool ValidateHostName(string hostName, string commonName)
+		{
+			if (String.IsNullOrEmpty(hostName) || String.IsNullOrEmpty(commonName))
+				return false;
+
+			if (commonName != null && commonName.Length > 2 && commonName[0] == '*' && commonName[1] == '.') // wild card certificate
+				return hostName.EndsWith(commonName.Substring(1));
+			else 
+				return hostName == commonName;
+		} // func ValidateHostName
+
+		/// <summary></summary>
+		/// <param name="certificate"></param>
+		/// <param name="hostName"></param>
+		/// <returns></returns>
+		public static bool ValidateHostName(this X509Certificate certificate, string hostName)
+			=> certificate != null && TryGetCommonName(certificate, out var cn) && ValidateHostName(hostName, cn);
 
 		#endregion
 	} // class Procs
