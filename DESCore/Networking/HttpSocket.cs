@@ -227,8 +227,8 @@ namespace TecWare.DE.Networking
 			if (buf.Length > 16 << 10)
 				throw new ArgumentOutOfRangeException(nameof(message), message.Length, "Message to big.");
 
-			using (var source = GetSendCancellationTokenSource(0, cancellationToken))
-				await GetSocket().SendAsync(new ArraySegment<byte>(buf, 0, buf.Length), WebSocketMessageType.Text, true, source.Token);
+			using (var source = GetSendCancellationTokenSource(0, ref cancellationToken))
+				await GetSocket().SendAsync(new ArraySegment<byte>(buf, 0, buf.Length), WebSocketMessageType.Text, true, cancellationToken);
 		} // func SendAsync
 
 		#endregion

@@ -533,7 +533,7 @@ namespace TecWare.DE.Networking
 			var socket = GetSocket();
 
 			// send and wait for answer
-			var cancellationTokenSource = GetSendCancellationTokenSource(defaultTimeout, cancellationToken);
+			var cancellationTokenSource = GetSendCancellationTokenSource(defaultTimeout, ref cancellationToken);
 
 			var completionSource = (TaskCompletionSource<XElement>)await SendAsync(socket, xMessage, true, cancellationToken);
 			if (cancellationTokenSource == null)

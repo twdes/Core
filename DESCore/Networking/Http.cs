@@ -771,9 +771,9 @@ namespace TecWare.DE.Networking
 		/// <param name="timeout"></param>
 		/// <param name="cancellationToken"></param>
 		/// <returns></returns>
-		protected CancellationTokenSource GetSendCancellationTokenSource(int timeout, CancellationToken cancellationToken)
+		protected CancellationTokenSource GetSendCancellationTokenSource(int timeout, ref CancellationToken cancellationToken)
 		{
-			CancellationTokenSource cancellationTokenSource = null;
+			CancellationTokenSource cancellationTokenSource;
 			if (cancellationToken == CancellationToken.None || cancellationToken == currentConnectionToken)
 			{
 				if (timeout > 0)
