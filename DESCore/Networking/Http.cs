@@ -892,13 +892,41 @@ namespace TecWare.DE.Networking
 		private sealed class UnpackStreamContent : HttpContent
 		{
 			private readonly HttpContent innerContent;
+			private readonly long expectedContentSize = -1;
+			private readonly Func<Task<Stream>, Stream> createUnpackStream;
 
-			public UnpackStreamContent(HttpContent innerContent)
+			public UnpackStreamContent(HttpResponseMessage response, Func<Task<Stream>, Stream> createUnpackStream)
 			{
-				this.innerContent = innerContent ?? throw new ArgumentNullException(nameof(innerContent));
+				if (response == null)
+					throw new ArgumentNullException(nameof(response));
+				innerContent = response.Content ?? throw new ArgumentNullException(nameof(innerContent));
+				this.createUnpackStream = createUnpackStream ?? throw new ArgumentNullException(nameof(createUnpackStream));
 
+				// read alternative content-size
+				var updateContentLength = response.Headers.TryGetValue<long>("des-content-size", out var contentSize);
+				if (updateContentLength)
+					expectedContentSize = contentSize;
+
+				// copy headers
 				foreach (var c in innerContent.Headers)
-					Headers.Add(c.Key, c.Value);
+				{
+					if (c.Key == "Content-Length")
+					{
+						if (updateContentLength)
+						{
+							updateContentLength = false; // mark as updated
+							Headers.ContentLength = contentSize;
+						}
+						else
+							Headers.ContentLength = null; // content-length is they packed size, not the unpacked
+					}
+					else
+						Headers.Add(c.Key, c.Value);
+				}
+
+				// updtate length
+				if (updateContentLength)
+					Headers.ContentLength = contentSize;
 			} // ctor
 
 			protected override void Dispose(bool disposing)
@@ -907,16 +935,27 @@ namespace TecWare.DE.Networking
 				base.Dispose(disposing);
 			} // proc Dispose
 
+			protected override Task<Stream> CreateContentReadStreamAsync()
+				=> innerContent.ReadAsStreamAsync().ContinueWith(createUnpackStream);
+
 			protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
 			{
-				using (var src = new GZipStream(await innerContent.ReadAsStreamAsync(), CompressionMode.Decompress))
+				using (var src = await CreateContentReadStreamAsync())
 					await src.CopyToAsync(stream);
 			} // func SerializeToStreamAsync
 
 			protected override bool TryComputeLength(out long length)
 			{
-				length = 0;
-				return false;
+				if (expectedContentSize >= 0)
+				{
+					length = expectedContentSize;
+					return true;
+				}
+				else
+				{
+					length = expectedContentSize;
+					return false;
+				}
 			} // func TryComputeLength
 		} // class UnpackStreamContent
 
@@ -936,10 +975,24 @@ namespace TecWare.DE.Networking
 
 			protected override HttpResponseMessage ProcessResponse(HttpResponseMessage response, CancellationToken cancellationToken)
 			{
-				if (response.Content.Headers.ContentEncoding.Contains("gzip")) // result is packed, unpack
-					response.Content = new UnpackStreamContent(response.Content);
+				var contentEncoding = response.Content.Headers.ContentEncoding;
+				
+				if (contentEncoding != null) // exchange content
+				{
+					if (contentEncoding.Contains("gzip"))
+						response.Content = new UnpackStreamContent(response, CreateGZipStream);
+					else if (contentEncoding.Contains("deflate"))
+						response.Content = new UnpackStreamContent(response, CreateDeflateStream);
+				}
+
 				return response;
 			} // func ProcessResponse
+
+			private static Stream CreateGZipStream(Task<Stream> stream)
+				=> new GZipStream(stream.Result, CompressionMode.Decompress);
+			
+			private static Stream CreateDeflateStream(Task<Stream> stream)
+				=> new DeflateStream(stream.Result, CompressionMode.Decompress);
 		} // class DEClientHandler
 
 		#endregion
@@ -961,7 +1014,8 @@ namespace TecWare.DE.Networking
 
 			// add add encoding
 			DefaultRequestHeaders.AcceptCharset.Add(new StringWithQualityHeaderValue(DefaultEncoding.WebName));
-			DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue("gzip"));
+			DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue("gzip",1.0));
+			DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue("deflate", 0.9));
 			DefaultRequestHeaders.Add("des-multiple-authentifications", "true");
 		} // ctor
 
