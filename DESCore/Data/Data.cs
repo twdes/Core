@@ -443,15 +443,45 @@ namespace TecWare.DE.Data
 			this.columns = new SimpleDataColumns(columns);
 		} // ctor
 
-		/// <summary></summary>
-		/// <param name="index"></param>
-		/// <returns></returns>
+		/// <inheritdoc/>
 		public override object this[int index] => values[index];
-		/// <summary></summary>
+		/// <summary>Always true.</summary>
 		public override bool IsDataOwner => true;
-		/// <summary></summary>
+		/// <inheritdoc/>
 		public override IReadOnlyList<IDataColumn> Columns => columns.Columns;
 	} // class SimpleDataRow
+
+	#endregion
+
+	#region -- class DefaultDataRow ---------------------------------------------------
+
+	/// <summary>Data row with default values.</summary>
+	public sealed class DefaultDataRow : DynamicDataRow
+	{
+		private readonly IReadOnlyList<IDataColumn> columns;
+
+		/// <summary>Data row with default values.</summary>
+		/// <param name="columns"></param>
+		public DefaultDataRow(IReadOnlyList<IDataColumn> columns)
+		{
+			this.columns = columns ?? throw new ArgumentNullException(nameof(columns));
+		}
+
+		private object GetDefaultValue(int index)
+		{
+			var col = columns[index];
+			return col.Attributes.GetProperty("Nullable", false) || col.DataType.IsClass
+				? null
+				: Activator.CreateInstance(col.DataType);
+		} // func GetDefaultValue
+
+		/// <inheritdoc/>
+		public override object this[int index] => GetDefaultValue(index);
+		/// <inheritdoc/>
+		public override bool IsDataOwner => true;
+		/// <inheritdoc/>
+		public override IReadOnlyList<IDataColumn> Columns => columns;
+	} // class DefaultDataRow 
 
 	#endregion
 
@@ -838,6 +868,18 @@ namespace TecWare.DE.Data
 				return null;
 		} // func GetFormatProvider
 
+
+		/// <summary>Create a default data-row</summary>
+		/// <param name="columns"></param>
+		/// <returns></returns>
+		public static IDataRow GetDefaultValues(IReadOnlyList<IDataColumn> columns)
+			=> new DefaultDataRow(columns);
+
+		/// <summary>Create a default data-row</summary>
+		/// <param name="columns"></param>
+		/// <returns></returns>
+		public static IDataValues GetDefaultValues(IDataColumns columns)
+			=> new DefaultDataRow(columns.Columns);
 	} // class DataRowHelper
 
 	#endregion
