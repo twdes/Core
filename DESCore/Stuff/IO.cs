@@ -304,6 +304,28 @@ namespace TecWare.DE.Stuff
 			}
 		} // func TrySplitUncPath
 
+		/// <summary></summary>
+		/// <param name="name"></param>
+		/// <param name="replaceChar"></param>
+		/// <returns></returns>
+		public static string FilterFileName(string name, char replaceChar = '_')
+		{
+			if (String.IsNullOrEmpty(name))
+				return name;
+
+			var invalidChars = Path.GetInvalidFileNameChars();
+			var sb = new StringBuilder(name.Length);
+			for (var i = 0;i< name.Length;i++)
+			{
+				var c = name[i];
+				if (Array.IndexOf(invalidChars, c) >= 0)
+					sb.Append(replaceChar);
+				else
+					sb.Append(c);
+			}
+			return sb.ToString();
+		} // func FilterFileName
+
 		/// <summary>Utf-8 encoder/decoder that not emits the utf-8 header.</summary>
 		public static Encoding Utf8Encoding { get; } = new UTF8Encoding(false);
 	} // class Procs
