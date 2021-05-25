@@ -878,7 +878,7 @@ namespace TecWare.DE.Data
 		/// <summary>Create a default data-row</summary>
 		/// <param name="columns"></param>
 		/// <returns></returns>
-		public static IDataValues GetDefaultValues(IDataColumns columns)
+		public static IDataValues GetDefaultValues(this IDataColumns columns)
 			=> new DefaultDataRow(columns.Columns);
 	} // class DataRowHelper
 
