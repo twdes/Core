@@ -100,6 +100,7 @@ namespace TecWare.DE.Data
 			private readonly XName xnFields = "fields";
 			private readonly XName xnRows = "rows";
 			private readonly XName xnRow = "r";
+			private readonly XName xnException = "exception";
 
 			private readonly XmlViewDataReader owner;
 			private bool disposeXml = true;
@@ -213,7 +214,10 @@ namespace TecWare.DE.Data
 					#region -- ReadingState.FetchRows --
 					case ReadingState.FetchRows:
 						if (xml.NodeType != XmlNodeType.Element || xml.LocalName != xnRow.LocalName)
+						{
+							CheckForException();
 							throw new InvalidDataException($"Expected \"r\", read \"{xml.LocalName}\".");
+						}
 
 						var values = new object[columns.Length];
 
@@ -259,12 +263,22 @@ namespace TecWare.DE.Data
 
 			private void CheckForCorrectEof()
 			{
+				CheckForException();
 				if (xml.NodeType != XmlNodeType.EndElement || xml.LocalName != xnView.LocalName)
 					throw new InvalidDataException($"Expected \"{xnView}\", read \"{xml.LocalName}\".");
 				xml.Read();
 				if (!xml.EOF)
 					throw new InvalidDataException("Unexpected eof.");
 			} // proc CheckForCorrectEof
+
+			private void CheckForException()
+			{
+				if (xml.NodeType == XmlNodeType.Element && xml.LocalName == xnException.LocalName)
+				{
+					var messageText = xml.GetAttribute(XName.Get("text"), "Unknown Exception");
+					throw new InvalidDataException(messageText);
+				}
+			} // proc CheckForException
 
 			public bool MoveNext()
 				=> MoveNext(false);
