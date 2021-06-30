@@ -42,6 +42,35 @@ namespace TecWare.DE.Data
 
 	#endregion
 
+
+	#region -- class TextReaderException ----------------------------------------------
+
+	/// <summary></summary>
+	public class TextReaderException : Exception
+	{
+		private readonly int lineIndex;
+		private readonly int columnIndex;
+
+		/// <summary></summary>
+		/// <param name="lineIndex"></param>
+		/// <param name="columnIndex"></param>
+		/// <param name="message"></param>
+		/// <param name="innerException"></param>
+		public TextReaderException(int lineIndex, int columnIndex, string message, Exception innerException = null)
+			: base(message, innerException)
+		{
+			this.lineIndex = lineIndex;
+			this.columnIndex = columnIndex;
+		} // ctor
+
+		/// <summary></summary>
+		public int LineNumber => lineIndex;
+		/// <summary></summary>
+		public int ColumnIndex => columnIndex;
+	} // class TextReaderException
+
+	#endregion
+
 	#region -- class TextCoreReader ---------------------------------------------------
 
 	/// <summary>Base text reader implementation.</summary>
@@ -224,6 +253,8 @@ namespace TecWare.DE.Data
 		private int charBufferLength = 0;
 		private readonly char[] charBuffer;
 
+		private int lineCount = 0;
+
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		/// <summary></summary>
@@ -296,10 +327,14 @@ namespace TecWare.DE.Data
 					case 10: // \r
 						if (c != '\r')
 							charOffset--;
+
+						lineCount++;
 						return true;
 					case 11: // \r
 						if (c != '\n')
 							charOffset--;
+						
+						lineCount++;
 						return true;
 						#endregion
 				}
@@ -370,7 +405,7 @@ namespace TecWare.DE.Data
 							if (mode == CsvQuotation.Forced || mode == CsvQuotation.ForceText)
 							{
 								if (sbValue.Length > 0) // parse error
-									throw new ArgumentException("todo: error text for invalid forced quote format (double quote).");
+									throw new TextReaderException(lineCount, currentColumn, "Invalid quotation of value (double quote).");
 								state = 5;
 								returnStringEmpty = true;
 							}
@@ -388,7 +423,7 @@ namespace TecWare.DE.Data
 						else if (mode != CsvQuotation.Forced)
 							sbValue.Append(c);
 						else if (!Char.IsWhiteSpace(c))
-							throw new ArgumentException("todo: error text for invalid forced quotes (quote expected.).");
+							throw new TextReaderException(lineCount, currentColumn, "Invalid quotation of value (quote expected.).");
 
 						break;
 					#endregion
@@ -454,7 +489,10 @@ namespace TecWare.DE.Data
 				if (s == ReadColumnReturn.EoF)
 					return false;
 				else if (s == ReadColumnReturn.EoL)
+				{
+					lineCount++;
 					return true;
+				}
 				else
 					currentColumn++;
 			}
