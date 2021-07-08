@@ -300,12 +300,20 @@ namespace TecWare.DE.Data
 			{
 				Index = -1;
 				Name = name ?? throw new ArgumentNullException(nameof(name));
-				this.converter = converter ?? throw new ArgumentNullException(nameof(converter));
+				this.converter = converter;
 				this.formatProvider = formatProvider ?? CultureInfo.InvariantCulture;
 			} // ctor
 
 			public string Get(IDataRow row)
-				=> converter.Format(Index >= 0 ? row[Index] : null);
+			{
+				if (converter != null)
+					return converter.Format(Index >= 0 ? row[Index] : null);
+				else
+				{
+					var v = Index >= 0 ? row[Index] : null;
+					return Convert.ToString(v, formatProvider);
+				}	
+			} // func Get
 
 			public string Name { get; }
 			public int Index { get; set; }
@@ -353,7 +361,7 @@ namespace TecWare.DE.Data
 				var col = columns[i];
 				columnsInfo[i] = new ValueGet(
 					col.Name,
-					col.GetConverter() ?? SimpleValueConverter.Default,
+					col.GetConverter(),
 					col.GetFormatProvider() ?? defaultCulture
 				)
 				{ Index = i };
@@ -415,7 +423,7 @@ namespace TecWare.DE.Data
 
 			// write header
 			if (CoreWriter.Settings.HeaderRow >= 0)
-				WriteHeader();
+				WriteHeader(); 
 
 			// emit first row
 			if (emitCurrent)
