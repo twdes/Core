@@ -376,6 +376,8 @@ namespace TecWare.DE.Data
 					{
 						if (sbValue.Length > 0 || currentColumn > 0)
 						{
+							if (state == 8 || state == 9)
+								sbValue.Append(quote);
 							SetColumn(currentColumn, sbValue.ToString());
 							return ReadColumnReturn.EoL;
 						}
@@ -412,7 +414,7 @@ namespace TecWare.DE.Data
 							else if (mode == CsvQuotation.Normal && sbValue.Length == 0)
 							{
 								returnStringEmpty = true;
-								state = 5;
+								state = 8;
 							}
 							else
 							{
@@ -453,8 +455,38 @@ namespace TecWare.DE.Data
 						if (c == quote)
 							state = 0; // ignore double quotes
 						else
-							goto case 0;
+						{
+							state = 0;
+							goto case 0; 
+						}
 						break;
+					#endregion
+
+					#region -- 8,9 Quotecounter --
+					case 8:
+						if (c == quote) // 2x quote
+							state = 9; // check for 3
+						else // 1 quote at beginning -> forced text
+						{
+							mode = CsvQuotation.Forced;
+							state = 5;
+							goto case 5;
+						}
+						break;
+					case 9:
+						if (c == quote) // 3x quotes -> start forced text and a quote single quote at the beginning
+						{
+							sbValue.Append(quote);
+							mode = CsvQuotation.Forced;
+							state = 5;
+							goto case 5;
+						}
+						else
+						{
+							sbValue.Append(quote); // 2x quotes -> simple escaped quote
+							state = 0;
+							goto case 0;
+						}
 					#endregion
 
 					#region -- 10, 11 NewLines --
