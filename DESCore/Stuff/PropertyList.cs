@@ -181,8 +181,8 @@ namespace TecWare.DE.Stuff
 
 		#endregion
 
-		private PropertyDictionary parentDictionary = null;
-		private Dictionary<string, PropertyValue> properties = new Dictionary<string, PropertyValue>(StringComparer.OrdinalIgnoreCase);
+		private IPropertyReadOnlyDictionary parentProperties = null;
+		private readonly Dictionary<string, PropertyValue> properties = new Dictionary<string, PropertyValue>(StringComparer.OrdinalIgnoreCase);
 
 		#region -- Ctor ---------------------------------------------------------------
 
@@ -192,10 +192,12 @@ namespace TecWare.DE.Stuff
 		} // ctor
 
 		/// <summary>Erzeugt ein leeres Dictionary</summary>
-		/// <param name="parent">Mit dem angegebenen ParameterDictionary</param>
-		public PropertyDictionary(PropertyDictionary parent)
+		/// <param name="parentProperties">Mit dem angegebenen ParameterDictionary</param>
+		/// <param name="args"></param>
+		public PropertyDictionary(IPropertyReadOnlyDictionary parentProperties, params PropertyValue[] args)
 		{
-			this.parentDictionary = parent;
+			this.parentProperties = parentProperties;
+			AddRange(args);
 		} // ctor
 
 		/// <summary>Erzeugt ein Dictionary.</summary>
@@ -253,35 +255,38 @@ namespace TecWare.DE.Stuff
 
 		/// <summary></summary>
 		/// <param name="args"></param>
-		public void AddRange(IEnumerable<KeyValuePair<string, string>> args)
+		public PropertyDictionary AddRange(IEnumerable<KeyValuePair<string, string>> args)
 		{
 			if (args != null)
 			{
 				foreach (var c in args)
 					SetProperty(c.Key, typeof(string), c.Value);
 			}
+			return this;
 		} // proc AddRange
 
 		/// <summary></summary>
 		/// <param name="args"></param>
-		public void AddRange(IEnumerable<KeyValuePair<string, object>> args)
+		public PropertyDictionary AddRange(IEnumerable<KeyValuePair<string, object>> args)
 		{
 			if (args != null)
 			{
 				foreach (var c in args)
 					SetProperty(c.Key, null, c.Value);
 			}
+			return this;
 		} // proc AddRange
 
 		/// <summary></summary>
 		/// <param name="args"></param>
-		public void AddRange(IEnumerable<PropertyValue> args)
+		public PropertyDictionary AddRange(IEnumerable<PropertyValue> args)
 		{
 			if (args != null)
 			{
 				foreach (var c in args)
 					SetProperty(c);
 			}
+			return this;
 		} // proc AddRange
 
 		#endregion
@@ -325,9 +330,14 @@ namespace TecWare.DE.Stuff
 					type = p.Type;
 					return true;
 				}
-				else if (parentDictionary != null)
+				else if (parentProperties is PropertyDictionary parentDictionary)
 				{
 					return parentDictionary.TryGetProperty(name, out value, out type);
+				}
+				else if (parentProperties.TryGetProperty(name, out value) && value != null)
+				{
+					type = value.GetType();
+					return true;
 				}
 			}
 
@@ -410,10 +420,9 @@ namespace TecWare.DE.Stuff
 		/// <returns><c>true</c>, wenn der Parameter gefunden wurde.</returns>
 		public bool Contains(string name, bool fullHierachy)
 		{
-			var l = properties.ContainsKey(name);
-			if (!l && parentDictionary != null && fullHierachy)
-				return parentDictionary.Contains(name, true);
-			return l;
+			return !properties.ContainsKey(name)
+				&& fullHierachy
+				&& parentProperties is PropertyDictionary parentDictionary && parentDictionary.Contains(name, true);
 		} // func Contains
 
 		#endregion
@@ -428,17 +437,17 @@ namespace TecWare.DE.Stuff
 		} // prop this
 
 		/// <summary></summary>
-		public IEnumerable<KeyValuePair<string, object>> PropertyObjects => from c in properties select new KeyValuePair<string, object>(c.Key, c.Value.Value);
+		public IEnumerable<KeyValuePair<string, object>> PropertyObjects => properties.Select(c => new KeyValuePair<string, object>(c.Key, c.Value.Value));
 		/// <summary></summary>
-		public IEnumerable<KeyValuePair<string, string>> PropertyStrings => from c in properties select new KeyValuePair<string, string>(c.Key, (string)Procs.ChangeType(c.Value.Value, typeof(string)));
+		public IEnumerable<KeyValuePair<string, string>> PropertyStrings => properties.Select(c => new KeyValuePair<string, string>(c.Key, (string)Procs.ChangeType(c.Value.Value, typeof(string))));
 		/// <summary>Gibt das Dictionary als Property-List zurück. Die Information zum Originaldatentyp geht dabei verloren.</summary>
 		public string PropertyList => Procs.JoinPropertyList(PropertyStrings);
 
 		/// <summary>Hinterlegter Parameter.</summary>
-		public PropertyDictionary Parent { get => parentDictionary; set => parentDictionary = value; }
+		public IPropertyReadOnlyDictionary Parent { get => parentProperties; set => parentProperties = value; }
 
 		/// <summary>Gibt die Anzahl der hinterlegten Parameter zurück.</summary>
-		public int Count { get { return properties.Count; } }
+		public int Count => properties.Count;
 
 		#region -- IEnumerable Member -------------------------------------------------
 
@@ -447,14 +456,14 @@ namespace TecWare.DE.Stuff
 			foreach (var c in properties.Values)
 				yield return c;
 
-			if (parentDictionary != null)
+			if (parentProperties is IPropertyEnumerableDictionary enumerableDictionary)
 			{
-				foreach (var c in parentDictionary)
+				foreach (var c in enumerableDictionary)
 					yield return c;
 			}
 		} // func GetEnumerator
 
-		System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
+		IEnumerator IEnumerable.GetEnumerator()
 			=> ((IEnumerable<PropertyValue>)this).GetEnumerator();
 
 		#endregion
