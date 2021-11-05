@@ -334,7 +334,7 @@ namespace TecWare.DE.Stuff
 				{
 					return parentDictionary.TryGetProperty(name, out value, out type);
 				}
-				else if (parentProperties.TryGetProperty(name, out value) && value != null)
+				else if (parentProperties != null && parentProperties.TryGetProperty(name, out value) && value != null)
 				{
 					type = value.GetType();
 					return true;

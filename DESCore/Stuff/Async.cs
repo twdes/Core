@@ -153,7 +153,7 @@ namespace TecWare.DE.Stuff
 		public bool IsEnabled
 		{
 			get => isEnabled;
-			set
+			private set
 			{
 				if (isEnabled != value)
 				{
