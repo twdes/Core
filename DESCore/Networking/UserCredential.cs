@@ -95,6 +95,11 @@ namespace TecWare.DE.Networking
 				? new NetworkCredential(userName, password, domain)
 				: null;
 
+		/// <summary>Get a full name.</summary>
+		/// <returns></returns>
+		public string GetName()
+			=> String.IsNullOrEmpty(domain) ? userName : domain + "\\" + userName;
+
 		/// <summary>Authentification type</summary>
 		public string AuthType => authType;
 		/// <summary>Domain</summary>
