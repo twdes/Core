@@ -83,8 +83,22 @@ namespace TecWare.DE.Networking
 			this.authType = authType ?? throw new ArgumentNullException(nameof(authType));
 			this.domain = domain;
 			this.userName = userName ?? String.Empty;
-			this.password = password != null ? password.Copy() : new SecureString();
+			this.password = CopyPassword(password);
 		} // ctor
+
+		private static SecureString CopyPassword(SecureString password)
+		{
+			if(password == null)
+				return EmptyPassword;
+			if (password.IsReadOnly())
+				return password;
+			else
+			{
+				var copy = password.Copy();
+				copy.MakeReadOnly();
+				return copy;
+			}
+		} // func CopyPassword
 
 		/// <summary>GetCredential implementation, that compares the authentification type, too.</summary>
 		/// <param name="uri"></param>
@@ -138,7 +152,10 @@ namespace TecWare.DE.Networking
 		public static UserCredential Create(string userName, string password)
 		{
 			using (var p = CreateSecureString(password))
+			{
+				p.MakeReadOnly();
 				return Create(userName, p);
+			}
 		} // func Create
 
 #if NET47
@@ -184,5 +201,15 @@ namespace TecWare.DE.Networking
 					return new UserCredential(userName, password);
 			}
 		} // func Create
+
+		private static SecureString CreateEmptyPassword()
+		{
+			var p = new SecureString();
+			p.MakeReadOnly();
+			return p;
+		} // func CreateEmptyPassword
+
+		/// <summary>Empty password</summary>
+		public static SecureString EmptyPassword { get; } = CreateEmptyPassword();
 	} // class UserCredential
 }
