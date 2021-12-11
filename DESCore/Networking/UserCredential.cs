@@ -88,10 +88,8 @@ namespace TecWare.DE.Networking
 
 		private static SecureString CopyPassword(SecureString password)
 		{
-			if(password == null)
+			if (password == null)
 				return EmptyPassword;
-			if (password.IsReadOnly())
-				return password;
 			else
 			{
 				var copy = password.Copy();
