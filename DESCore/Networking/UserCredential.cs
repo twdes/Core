@@ -83,13 +83,13 @@ namespace TecWare.DE.Networking
 			this.authType = authType ?? throw new ArgumentNullException(nameof(authType));
 			this.domain = domain;
 			this.userName = userName ?? String.Empty;
-			this.password = CopyPassword(password);
+			this.password = CopyPassword(password) ?? EmptyPassword;
 		} // ctor
 
 		private static SecureString CopyPassword(SecureString password)
 		{
 			if (password == null)
-				return EmptyPassword;
+				return null;
 			else
 			{
 				var copy = password.Copy();
@@ -151,7 +151,8 @@ namespace TecWare.DE.Networking
 		{
 			using (var p = CreateSecureString(password))
 			{
-				p.MakeReadOnly();
+				if (p != null)
+					p.MakeReadOnly();
 				return Create(userName, p);
 			}
 		} // func Create

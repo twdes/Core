@@ -23,17 +23,109 @@ namespace TecWare.DE.Stuff
 {
 	public static partial class Procs
 	{
-		/// <summary></summary>
+		#region -- EscapeSpecialChars -------------------------------------------------
+
+		/// <summary>Escape special chars</summary>
+		/// <param name="sb"></param>
+		/// <param name="value"></param>
+		/// <returns></returns>
+		public static StringBuilder EscapeSpecialChars(this StringBuilder sb, string value)
+		{
+			if (value != null)
+			{
+				foreach (var c in value)
+				{
+					switch (c)
+					{
+						case '\n':
+							sb.Append("\\n");
+							break;
+						case '\r':
+							break;
+						case '\t':
+							sb.Append("\\t");
+							break;
+						case '\\':
+							sb.Append(@"\\");
+							break;
+						case '\0':
+							sb.Append("\\0");
+							break;
+						default:
+							sb.Append(c);
+							break;
+					}
+				}
+			}
+			return sb;
+		} // func EscapeSpecialChars
+
+		/// <summary>Escape special chars</summary>
 		/// <param name="value"></param>
 		/// <returns></returns>
 		public static string EscapeSpecialChars(this string value)
-			=> Regex.Replace(value, @"\r\n?|\n|\t", m => m.Value == "\t" ? "\\t" : "\\n");
+		{
+			if (String.IsNullOrEmpty(value))
+				return value;
 
-		/// <summary></summary>
+			return EscapeSpecialChars(new StringBuilder(value.Length + 32), value).ToString();
+		} // func EscapeSpecialChars
+
+		/// <summary>unbespecial chars</summary>
+		/// /// <param name="sb"></param>
+		/// <param name="value"></param>
+		/// <returns></returns>
+		public static StringBuilder UnescapeSpecialChars(this StringBuilder sb, string value)
+		{
+			if (value != null)
+			{
+				var isEscape = false;
+				foreach (var c in value)
+				{
+					if (isEscape)
+					{
+						switch (c)
+						{
+							case 'n':
+								sb.Append('\n');
+								break;
+							case 't':
+								sb.Append('\t');
+								break;
+							case '\\':
+								sb.Append('\\');
+								break;
+							case '0':
+								sb.Append('\0');
+								break;
+							default:
+								sb.Append('\\').Append(c);
+								break;
+						}
+						isEscape = false;
+					}
+					else if (c == '\\')
+						isEscape = true;
+					else
+						sb.Append(c);
+				}
+			}
+
+			return sb;
+		} // func UnescapeSpecialChars
+
+		/// <summary>Escape special chars</summary>
 		/// <param name="value"></param>
 		/// <returns></returns>
 		public static string UnescapeSpecialChars(this string value)
-			=> Regex.Replace(value, @"\\n|\\t", m => m.Value == @"\t" ? "\t" : "\n");
+		{
+			if (String.IsNullOrEmpty(value))
+				return value;
+
+			return UnescapeSpecialChars(new StringBuilder(value.Length), value).ToString();
+		} // func EscapeSpecialChars
+
+		#endregion
 
 		/// <summary></summary>
 		/// <param name="language"></param>
