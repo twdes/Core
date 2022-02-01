@@ -37,8 +37,14 @@ namespace TecWare.DE.Data
 			if (String.IsNullOrEmpty(propertyName))
 				throw new ArgumentNullException();
 
-			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+			OnPropertyChanged(this, new PropertyChangedEventArgs(propertyName));
 		} // proc OnPropertyChanged
+
+		/// <summary></summary>
+		/// <param name="_"></param>
+		/// <param name="args"></param>
+		protected void OnPropertyChanged(object _, PropertyChangedEventArgs args)
+			=> PropertyChanged?.Invoke(this, args);
 
 		/// <summary></summary>
 		/// <typeparam name="T"></typeparam>
