@@ -444,11 +444,17 @@ namespace TecWare.DE.Data
 							sbValue.Append(c);
 							state = 5;
 						}
-						else
+						else if (c == delemiter || c == '\r' || c == '\n' || mode == CsvQuotation.Forced || mode == CsvQuotation.ForceText)
 						{
 							charOffset--;
 							state = 0;
 							mode = CsvQuotation.Forced; // set quote to force, to ignore chars afterwards
+						}
+						else
+						{
+							sbValue.Append(quote);
+							sbValue.Append(c);
+							state = 5;
 						}
 						break;
 					case 7:
@@ -466,9 +472,8 @@ namespace TecWare.DE.Data
 					case 8:
 						if (c == quote) // 2x quote
 							state = 9; // check for 3
-						else // 1 quote at beginning -> forced text
+						else // 1 quote at beginning -> text
 						{
-							mode = CsvQuotation.Forced;
 							state = 5;
 							goto case 5;
 						}

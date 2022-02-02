@@ -241,7 +241,7 @@ namespace TecWare.DE.Data
 			}
 			BaseWriter.WriteLine();
 		} // proc WriteRow
-	} // class TextFixedWriter
+	} // class TextCsvWriter
 
 	#endregion
 
