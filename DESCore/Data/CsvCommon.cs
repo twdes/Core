@@ -26,8 +26,10 @@ namespace TecWare.DE.Data
 	{
 		/// <summary>No quotation allowed.</summary>
 		None,
-		/// <summary>Normal quotation if needed.</summary>
+		/// <summary>Normal quotation if needed (quote must be escaped, RFC-4180, rule 7).</summary>
 		Normal,
+		/// <summary>Quotations are not double. Only one quote on the beginning and end.</summary>
+		NoneRfc,
 		/// <summary>Quote all text-columns.</summary>
 		ForceText,
 		/// <summary>Quote all columns.</summary>

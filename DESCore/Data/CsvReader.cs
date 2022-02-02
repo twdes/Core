@@ -411,6 +411,11 @@ namespace TecWare.DE.Data
 								state = 5;
 								returnStringEmpty = true;
 							}
+							else if (mode == CsvQuotation.NoneRfc && sbValue.Length == 0)
+							{
+								returnStringEmpty = true;
+								state = 20;
+							}
 							else if (mode == CsvQuotation.Normal && sbValue.Length == 0)
 							{
 								returnStringEmpty = true;
@@ -444,17 +449,11 @@ namespace TecWare.DE.Data
 							sbValue.Append(c);
 							state = 5;
 						}
-						else if (c == delemiter || c == '\r' || c == '\n' || mode == CsvQuotation.Forced || mode == CsvQuotation.ForceText)
+						else
 						{
 							charOffset--;
 							state = 0;
 							mode = CsvQuotation.Forced; // set quote to force, to ignore chars afterwards
-						}
-						else
-						{
-							sbValue.Append(quote);
-							sbValue.Append(c);
-							state = 5;
 						}
 						break;
 					case 7:
@@ -472,8 +471,9 @@ namespace TecWare.DE.Data
 					case 8:
 						if (c == quote) // 2x quote
 							state = 9; // check for 3
-						else // 1 quote at beginning -> text
+						else // 1 quote at beginning -> forced text
 						{
+							mode = CsvQuotation.Forced;
 							state = 5;
 							goto case 5;
 						}
@@ -491,6 +491,27 @@ namespace TecWare.DE.Data
 							sbValue.Append(quote); // 2x quotes -> simple escaped quote
 							state = 0;
 							goto case 0;
+						}
+					#endregion
+
+					#region -- 20 NoneRfc --
+					case 20:
+						if (c == quote)
+							state = 21;
+						else
+							sbValue.Append(c);
+						break;
+					case 21:
+						if(c == delemiter || c == '\r' || c == '\n')
+						{
+							state = 0;
+							goto case 0;
+						}
+						else
+						{
+							state = 20;
+							sbValue.Append(quote);
+							goto case 20;
 						}
 					#endregion
 

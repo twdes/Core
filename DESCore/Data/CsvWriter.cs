@@ -185,6 +185,7 @@ namespace TecWare.DE.Data
 				case CsvQuotation.ForceText:
 					quoteValue = new Func<string, bool?, bool>((v, isText) => isText.HasValue && isText.Value);
 					break;
+				case CsvQuotation.NoneRfc:
 				case CsvQuotation.Normal:
 					quoteValue = new Func<string, bool?, bool>((v, isText) => GetQuotedNormal(v, Settings.Quote));
 					break;
@@ -224,7 +225,7 @@ namespace TecWare.DE.Data
 				BaseWriter.Write("\"");
 				for (var i = 0; i < len; i++)
 				{
-					if (v[i] == '"')
+					if (v[i] == '"' && Settings.Quotation != CsvQuotation.NoneRfc)
 						BaseWriter.Write("\"\"");
 					else
 						BaseWriter.Write(v[i]);
