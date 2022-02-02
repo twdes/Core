@@ -30,7 +30,7 @@ namespace TecWare.DE.Data
 	public interface ITextCoreWriter : IDisposable
 	{
 		/// <summary>Write a value line</summary>
-		/// <param name="values"></param>
+		/// <param name="values">Values as text</param>
 		void WriteRow(IEnumerable<string> values);
 
 		/// <summary>Base output stream.</summary>
@@ -38,6 +38,19 @@ namespace TecWare.DE.Data
 		/// <summary>CSV-configuration</summary>
 		TextCoreSettings Settings { get; }
 	} // interface ITextCoreWriter
+
+	#endregion
+
+	#region -- interface ITextCoreWriter2 ---------------------------------------------
+
+	/// <summary>Extented WriteRow implementation</summary>
+	public interface ITextCoreWriter2 : ITextCoreWriter
+	{
+		/// <summary>Write a value line</summary>
+		/// <param name="values">Values as text</param>
+		/// <param name="isText">Is this a text column.</param>
+		void WriteRow(IEnumerable<string> values, bool[] isText);
+	} // interface ITextCoreWriter2
 
 	#endregion
 
@@ -106,7 +119,7 @@ namespace TecWare.DE.Data
 		/// <summary></summary>
 		/// <param name="sw"></param>
 		/// <param name="settings"></param>
-		public TextFixedWriter(TextWriter sw, TextFixedSettings settings) 
+		public TextFixedWriter(TextWriter sw, TextFixedSettings settings)
 			: base(sw, settings)
 		{
 			lineBuffer = new char[settings.CreateOffsets(out lineOffsets)];
@@ -154,20 +167,20 @@ namespace TecWare.DE.Data
 	#region -- class TextCsvWriter ----------------------------------------------------
 
 	/// <summary>Write a csv file.</summary>
-	public sealed class TextCsvWriter : TextCoreWriter<TextCsvSettings>
+	public sealed class TextCsvWriter : TextCoreWriter<TextCsvSettings>, ITextCoreWriter2
 	{
 		private readonly Func<string, bool?, bool> quoteValue;
 
 		/// <summary></summary>
 		/// <param name="sw"></param>
 		/// <param name="settings"></param>
-		public TextCsvWriter(TextWriter sw, TextCsvSettings settings) 
+		public TextCsvWriter(TextWriter sw, TextCsvSettings settings)
 			: base(sw, settings)
 		{
 			switch (Settings.Quotation)
 			{
 				case CsvQuotation.Forced:
-					quoteValue= new Func<string, bool?, bool>((v, isText) => true);
+					quoteValue = new Func<string, bool?, bool>((v, isText) => true);
 					break;
 				case CsvQuotation.ForceText:
 					quoteValue = new Func<string, bool?, bool>((v, isText) => isText.HasValue && isText.Value);
@@ -312,7 +325,7 @@ namespace TecWare.DE.Data
 				{
 					var v = Index >= 0 ? row[Index] : null;
 					return Convert.ToString(v, formatProvider);
-				}	
+				}
 			} // func Get
 
 			public string Name { get; }
@@ -321,6 +334,7 @@ namespace TecWare.DE.Data
 
 		#endregion
 
+		private bool[] isText = null;
 		private ValueGet[] columnsInfo = null;
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
@@ -355,6 +369,7 @@ namespace TecWare.DE.Data
 
 		private void GenerateColumnInfo(IReadOnlyList<IDataColumn> columns, CultureInfo defaultCulture)
 		{
+			isText = CoreWriter is ITextCoreWriter2 ? new bool[columns.Count] : null;
 			columnsInfo = new ValueGet[columns.Count];
 			for (var i = 0; i < columnsInfo.Length; i++)
 			{
@@ -365,6 +380,9 @@ namespace TecWare.DE.Data
 					col.GetFormatProvider() ?? defaultCulture
 				)
 				{ Index = i };
+
+				if (isText != null)
+					isText[i] = col.DataType == typeof(string);
 			}
 		} // proc GenerateColumnInfo
 
@@ -379,8 +397,8 @@ namespace TecWare.DE.Data
 		private void WriteHeader()
 			=> CoreWriter.WriteRow(columnsInfo.Select(c => c.Name));
 
-		private void WriteRow(IDataRow row)
-			=> CoreWriter.WriteRow(columnsInfo.Select(c => c.Get(row)));
+		private IEnumerable<string> GetRowValues(IDataRow row)
+			=> columnsInfo.Select(c => c.Get(row));
 
 		/// <summary>Write rows</summary>
 		/// <param name="rows"></param>
@@ -421,16 +439,20 @@ namespace TecWare.DE.Data
 				doAttachIndex = false;
 			}
 
+			var writeRow = isText != null
+				? new Action<IDataRow>(r => ((ITextCoreWriter2)CoreWriter).WriteRow(GetRowValues(r), isText))
+				: new Action<IDataRow>(r => CoreWriter.WriteRow(GetRowValues(r)));
+
 			// write header
 			if (CoreWriter.Settings.HeaderRow >= 0)
-				WriteHeader(); 
+				WriteHeader();
 
 			// emit first row
 			if (emitCurrent)
 			{
 				if (doAttachIndex)
 					AttachIndex(rowEnumerator.Current);
-				WriteRow(rowEnumerator.Current);
+				writeRow(rowEnumerator.Current);
 			}
 			else
 			{
@@ -438,7 +460,7 @@ namespace TecWare.DE.Data
 				{
 					if (doAttachIndex)
 						AttachIndex(rowEnumerator.Current);
-					WriteRow(rowEnumerator.Current);
+					writeRow(rowEnumerator.Current);
 				}
 				else
 					return;
@@ -446,7 +468,7 @@ namespace TecWare.DE.Data
 
 			// emit all other rows
 			while (rowEnumerator.MoveNext())
-				WriteRow(rowEnumerator.Current);
+				writeRow(rowEnumerator.Current);
 		} // proc Write
 	} // class TextDataRowEnumerator
 
