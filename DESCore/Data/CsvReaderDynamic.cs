@@ -75,6 +75,9 @@ namespace TecWare.DE.Data
 
 			private static object GetValueTyped(string value, Type dataType, IFormatProvider formatProvider)
 			{
+				if (dataType == null)
+					throw new ArgumentNullException(nameof(dataType));
+
 				if (dataType.IsGenericType && !dataType.IsGenericTypeDefinition && dataType.GetGenericTypeDefinition() == typeof(Nullable<>))
 				{
 					var baseType = dataType.GetGenericArguments()[0];

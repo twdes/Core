@@ -24,34 +24,34 @@ namespace TecWare.DE.Data
 {
 	#region -- class ObservableObject -------------------------------------------------
 
-	/// <summary></summary>
+	/// <summary>Simple base class <see cref="INotifyPropertyChanged"/> implementation.</summary>
 	public class ObservableObject : INotifyPropertyChanged
 	{
-		/// <summary>Informiert über geänderte Objekte</summary>
+		/// <summary>A property value is changed.</summary>
 		public event PropertyChangedEventHandler PropertyChanged;
 
-		/// <summary></summary>
-		/// <param name="propertyName"></param>
+		/// <summary>Invokes PropertyChanged.</summary>
+		/// <param name="propertyName">Name of the property.</param>
 		protected virtual void OnPropertyChanged(string propertyName)
 		{
 			if (String.IsNullOrEmpty(propertyName))
 				throw new ArgumentNullException();
 
-			OnPropertyChanged(this, new PropertyChangedEventArgs(propertyName));
+			InvokePropertyChanged(this, new PropertyChangedEventArgs(propertyName));
 		} // proc OnPropertyChanged
 
-		/// <summary></summary>
-		/// <param name="_"></param>
-		/// <param name="args"></param>
-		protected void OnPropertyChanged(object _, PropertyChangedEventArgs args)
+		/// <summary>Invokes PropertyChanged.</summary>
+		/// <param name="_">Sender of the property change event. The <c>sender</c> is changed <c>this</c>.</param>
+		/// <param name="args">Property change event arguments.</param>
+		protected void InvokePropertyChanged(object _, PropertyChangedEventArgs args)
 			=> PropertyChanged?.Invoke(this, args);
 
-		/// <summary></summary>
+		/// <summary>Set a property and invoke property changed event.</summary>
 		/// <typeparam name="T"></typeparam>
-		/// <param name="value"></param>
-		/// <param name="newValue"></param>
-		/// <param name="getPropertyName"></param>
-		/// <returns></returns>
+		/// <param name="value">Reference to the member or variable, that holds the value.</param>
+		/// <param name="newValue">Value to set.</param>
+		/// <param name="getPropertyName">Function that returns the propery name.</param>
+		/// <returns><c>true</c>, if the values is changed.</returns>
 		protected bool Set<T>(ref T value, T newValue, Func<string> getPropertyName)
 		{
 			if (EqualityComparer<T>.Default.Equals(value, newValue))
@@ -62,27 +62,26 @@ namespace TecWare.DE.Data
 			return true;
 		} // func Set
 
-		/// <summary></summary>
+		/// <summary>Set a property and invoke property changed event.</summary>
 		/// <typeparam name="T"></typeparam>
-		/// <param name="value"></param>
-		/// <param name="newValue"></param>
-		/// <param name="propertyName"></param>
-		/// <returns></returns>
+		/// <param name="value">Reference to the member or variable, that holds the value.</param>
+		/// <param name="newValue">Value to set.</param>
+		/// <param name="propertyName">Name of the property.</param>
+		/// <returns><c>true</c>, if the values is changed.</returns>
 		protected bool Set<T>(ref T value, T newValue, [CallerMemberName] string propertyName = null)
-		{
-			return Set(ref value, newValue, () => propertyName);
-		} // func Set
+			=> Set(ref value, newValue, () => propertyName);
 
-		/// <summary></summary>
+		/// <summary>Set a property and invoke property changed event.</summary>
 		/// <typeparam name="T"></typeparam>
 		/// <param name="propertyExpression"></param>
-		/// <param name="value"></param>
-		/// <param name="newValue"></param>
-		/// <returns></returns>
+		/// <param name="value">Reference to the member or variable, that holds the value.</param>
+		/// <param name="newValue">Value to set.</param>
+		/// <returns><c>true</c>, if the values is changed.</returns>
+		[Obsolete("use nameof instead.")]
 		protected bool Set<T>(Expression<Func<T>> propertyExpression, ref T value, T newValue)
 		{
 			if (propertyExpression == null)
-				throw new ArgumentNullException("propertyExpression");
+				throw new ArgumentNullException(nameof(propertyExpression));
 
 			return Set(ref value, newValue, () => ((PropertyInfo)((MemberExpression)(propertyExpression.Body)).Member).Name);
 		} // func Set

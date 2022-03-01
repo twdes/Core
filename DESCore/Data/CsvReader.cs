@@ -430,7 +430,7 @@ namespace TecWare.DE.Data
 						else if (mode != CsvQuotation.Forced)
 							sbValue.Append(c);
 						else if (!Char.IsWhiteSpace(c))
-							throw new TextReaderException(lineCount, currentColumn, "Invalid quotation of value (quote expected.).");
+							throw new TextReaderException(lineCount, currentColumn, "Invalid quotation of value (quote expected).");
 
 						break;
 					#endregion
@@ -502,7 +502,7 @@ namespace TecWare.DE.Data
 							sbValue.Append(c);
 						break;
 					case 21:
-						if(c == delemiter || c == '\r' || c == '\n')
+						if (c == delemiter || c == '\r' || c == '\n')
 						{
 							state = 0;
 							goto case 0;
