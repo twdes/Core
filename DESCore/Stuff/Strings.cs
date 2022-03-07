@@ -165,7 +165,7 @@ namespace TecWare.DE.Stuff
 		private static bool StaticFalseFilter(string value)
 			=> false;
 
-		private static Func<string, bool> GetFilterFunctionEx(string filterExpression)
+		private static Predicate<string> GetFilterFunctionEx(string filterExpression)
 		{
 			var r = new StringBuilder();
 
@@ -215,11 +215,11 @@ namespace TecWare.DE.Stuff
 		/// <param name="filterExpression"></param>
 		/// <param name="defaultFilter"></param>
 		/// <returns></returns>
-		public static Func<string, bool> GetFilerFunction(string filterExpression, bool? defaultFilter = null)
+		public static Predicate<string> GetFilterFunction(string filterExpression, bool? defaultFilter = null)
 		{
 			if (String.IsNullOrEmpty(filterExpression))
 				return  defaultFilter.HasValue 
-					?  (defaultFilter.Value ? new Func<string, bool>(StaticTrueFilter) : new Func<string, bool>(StaticFalseFilter))
+					?  (defaultFilter.Value ? new Predicate<string>(StaticTrueFilter) : new Predicate<string>(StaticFalseFilter))
 					: null;
 
 			var p1 = filterExpression.IndexOf('*');
@@ -273,7 +273,7 @@ namespace TecWare.DE.Stuff
 		/// <param name="filterExpression"></param>
 		/// <returns></returns>
 		public static bool IsFilterEqual(string value, string filterExpression)
-			=> GetFilerFunction(filterExpression, true)(value);
+			=> GetFilterFunction(filterExpression, true)(value);
 
 		#endregion
 
