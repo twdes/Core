@@ -868,7 +868,6 @@ namespace TecWare.DE.Data
 				return null;
 		} // func GetFormatProvider
 
-
 		/// <summary>Create a default data-row</summary>
 		/// <param name="columns"></param>
 		/// <returns></returns>

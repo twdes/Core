@@ -367,6 +367,9 @@ namespace TecWare.DE.Data
 			var mode = Settings.Quotation;
 			var returnStringEmpty = false;
 
+			void SetColumnLocal()
+				=> SetColumn(currentColumn, returnStringEmpty || sbValue.Length > 0 ? sbValue.ToString() : null);
+
 			while (true)
 			{
 				// read next block
@@ -378,7 +381,7 @@ namespace TecWare.DE.Data
 						{
 							if (state == 8 || state == 9)
 								sbValue.Append(quote);
-							SetColumn(currentColumn, sbValue.ToString());
+							SetColumnLocal();
 							return ReadColumnReturn.EoL;
 						}
 						else
@@ -395,7 +398,7 @@ namespace TecWare.DE.Data
 					case 0: // collect all until quote
 						if (c == delemiter) // end of column
 						{
-							SetColumn(currentColumn, returnStringEmpty || sbValue.Length > 0 ? sbValue.ToString() : null);
+							SetColumnLocal();
 							return ReadColumnReturn.EoC;
 						}
 						else if (c == '\n')
@@ -519,12 +522,12 @@ namespace TecWare.DE.Data
 					case 10: // \r
 						if (c != '\r')
 							charOffset--;
-						SetColumn(currentColumn, sbValue.ToString());
+						SetColumnLocal();
 						return ReadColumnReturn.EoL;
 					case 11: // \r
 						if (c != '\n')
 							charOffset--;
-						SetColumn(currentColumn, sbValue.ToString());
+						SetColumnLocal();
 						return ReadColumnReturn.EoL;
 						#endregion
 				}
