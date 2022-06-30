@@ -65,6 +65,12 @@ namespace TecWare.DE.Data
 					this.formatProvider = formatProvider;
 				} // ctor
 
+				public object ParseGuid(string value)
+					=> value == null ? Guid.Empty : Guid.Parse(value);
+
+				public object TryParseGuid(string value)
+					=> value != null && Guid.TryParse(value, out var r) ? r : Guid.Empty;
+
 				public object ParseDecimal(string value)
 					=> value == null ? 0.0m : Decimal.Parse(value, NumberStyles.Currency | NumberStyles.Float, formatProvider);
 
@@ -279,6 +285,8 @@ namespace TecWare.DE.Data
 
 					if (dataType == typeof(string))
 						return new Func<string, object>(ConvertNone);
+					else if (dataType == typeof(Guid))
+						return isStrict ? new Func<string, object>(new FormatConverter(formatProvider).ParseGuid) : new FormatConverter(formatProvider).TryParseGuid;
 
 					else if (dataType == typeof(decimal))
 						return isStrict ? new Func<string, object>(new FormatConverter(formatProvider).ParseDecimal) : new FormatConverter(formatProvider).TryParseDecimal;
