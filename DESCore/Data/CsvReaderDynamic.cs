@@ -89,54 +89,53 @@ namespace TecWare.DE.Data
 				public object TryParseSingle(string value)
 					=> value != null && Single.TryParse(value, NumberStyles.Currency | NumberStyles.Float, formatProvider, out var r) ? r : 0.0f;
 
-
 				public object ParseByte(string value)
-					=> value == null ? 0 : Byte.Parse(value, NumberStyles.Integer, formatProvider);
+					=> value == null ? (byte)0 : Byte.Parse(value, NumberStyles.Integer, formatProvider);
 
 				public object TryParseByte(string value)
-					=> value != null && Byte.TryParse(value, NumberStyles.Integer, formatProvider, out var r) ? r : 0;
+					=> value != null && Byte.TryParse(value, NumberStyles.Integer, formatProvider, out var r) ? r : (byte)0;
 
 				public object ParseSByte(string value)
-					=> value == null ? 0 : SByte.Parse(value, NumberStyles.Integer, formatProvider);
+					=> value == null ? (sbyte)0 : SByte.Parse(value, NumberStyles.Integer, formatProvider);
 
 				public object TryParseSByte(string value)
-					=> value != null && SByte.TryParse(value, NumberStyles.Integer, formatProvider, out var r) ? r : 0;
+					=> value != null && SByte.TryParse(value, NumberStyles.Integer, formatProvider, out var r) ? r : (sbyte)0;
 
 				public object ParseUInt16(string value)
-					=> value == null ? 0 : UInt16.Parse(value, NumberStyles.Integer, formatProvider);
+					=> value == null ? (ushort)0 : UInt16.Parse(value, NumberStyles.Integer, formatProvider);
 
 				public object TryParseUInt16(string value)
-					=> value != null && UInt16.TryParse(value, NumberStyles.Integer, formatProvider, out var r) ? r : 0;
+					=> value != null && UInt16.TryParse(value, NumberStyles.Integer, formatProvider, out var r) ? r : (ushort)0;
 
 				public object ParseInt16(string value)
-					=> value == null ? 0 : Int16.Parse(value, NumberStyles.Integer, formatProvider);
+					=> value == null ? (short)0 : Int16.Parse(value, NumberStyles.Integer, formatProvider);
 
 				public object TryParseInt16(string value)
-					=> value != null && Int16.TryParse(value, NumberStyles.Integer, formatProvider, out var r) ? r : 0;
+					=> value != null && Int16.TryParse(value, NumberStyles.Integer, formatProvider, out var r) ? r : (short)0;
 
 				public object ParseUInt32(string value)
-					=> value == null ? 0 : UInt32.Parse(value, NumberStyles.Integer, formatProvider);
+					=> value == null ? (uint)0 : UInt32.Parse(value, NumberStyles.Integer, formatProvider);
 
 				public object TryParseUInt32(string value)
-					=> value != null && UInt32.TryParse(value, NumberStyles.Integer, formatProvider, out var r) ? r : 0;
+					=> value != null && UInt32.TryParse(value, NumberStyles.Integer, formatProvider, out var r) ? r : (uint)0;
 
 				public object ParseInt32(string value)
-					=> value == null ? 0 : Int32.Parse(value, NumberStyles.Integer, formatProvider);
+					=> value == null ? (int)0 : Int32.Parse(value, NumberStyles.Integer, formatProvider);
 
 				public object TryParseInt32(string value)
-					=> value != null && Int32.TryParse(value, NumberStyles.Integer, formatProvider, out var r) ? r : 0;
+					=> value != null && Int32.TryParse(value, NumberStyles.Integer, formatProvider, out var r) ? r : (int)0;
 
 				public object ParseUInt64(string value)
-					=> value == null ? 0 : UInt64.Parse(value, NumberStyles.Integer, formatProvider);
+					=> value == null ? (ulong)0 : UInt64.Parse(value, NumberStyles.Integer, formatProvider);
 
 				public object TryParseUInt64(string value)
-					=> value != null && UInt64.TryParse(value, NumberStyles.Integer, formatProvider, out var r) ? r : 0;
+					=> value != null && UInt64.TryParse(value, NumberStyles.Integer, formatProvider, out var r) ? r : (ulong)0;
 
 				public object ParseInt64(string value)
-					=> value == null ? 0 : Int64.Parse(value, NumberStyles.Integer, formatProvider);
+					=> value == null ? (long)0 : Int64.Parse(value, NumberStyles.Integer, formatProvider);
 
 				public object TryParseInt64(string value)
-					=> value != null && Int64.TryParse(value, NumberStyles.Integer, formatProvider, out var r) ? r : 0;
+					=> value != null && Int64.TryParse(value, NumberStyles.Integer, formatProvider, out var r) ? r : (long)0;
 
 
 				public object ParseDateTime(string value)
