@@ -3,7 +3,7 @@
   <PropertyGroup>
     <AssemblyName>DES.Core</AssemblyName>
     <RootNamespace>TecWare.DE</RootNamespace>
-    <TargetFrameworks>net47;netstandard2.1;netcoreapp3.1;net5.0</TargetFrameworks>
+    <TargetFrameworks>net48;netstandard2.1;netcoreapp3.1;net5.0</TargetFrameworks>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <SignAssembly>true</SignAssembly>
 		<PackageId>TecWare.DES.Core</PackageId>
