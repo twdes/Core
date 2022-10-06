@@ -340,10 +340,28 @@ namespace TecWare.DE.Stuff
 					return false;
 				throw new FormatException(String.Format("Text '{0}' is neither False nor True.", t));
 			}
-			else if (typeTo == typeof(DateTimeOffset) && (value == null || value is string))
-				return value == null ? DateTimeOffset.MinValue : DateTimeOffset.Parse((string)value, CultureInfo.InvariantCulture);
-			else if (typeTo == typeof(DateTime) && (value == null || value is string))
-				return value == null ? DateTime.MinValue : DateTime.Parse((string)value, CultureInfo.InvariantCulture);
+			else if (typeTo == typeof(DateTimeOffset))
+			{
+				if (value == null)
+					return DateTimeOffset.MinValue;
+				else if (value is string tmp)
+					return DateTimeOffset.Parse(tmp, CultureInfo.InvariantCulture);
+				else if (value is DateTime dt)
+					return new DateTimeOffset(dt);
+				else
+					return Lua.RtConvertValue(value, typeTo);
+			}
+			else if (typeTo == typeof(DateTime))
+			{
+				if (value == null)
+					return DateTime.MinValue;
+				else if (value is string tmp)
+					return DateTime.Parse(tmp, CultureInfo.InvariantCulture);
+				else if (value is DateTimeOffset dt)
+					return dt.LocalDateTime;
+				else
+					return Lua.RtConvertValue(value, typeTo);
+			}
 			else if (typeTo == typeof(XDocument) && (value == null || value is string))
 				return value == null ? null : XDocument.Parse((string)value);
 			else if (typeTo == typeof(XElement) && (value == null || value is string))
