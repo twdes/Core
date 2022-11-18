@@ -191,7 +191,7 @@ namespace TecWare.DE.Stuff
 		/// <summary>LuaTable to <c>IPropertyReadOnlyDictionary</c>.</summary>
 		/// <param name="table"></param>
 		/// <returns></returns>
-		public static IPropertyReadOnlyDictionary ToProperties(this LuaTable table)
+		public static IPropertyEnumerableDictionary ToProperties(this LuaTable table)
 			=> table == null ? null : new LuaTableProperties(table);
 
 		/// <summary><c>IPropertyReadOnlyDictionary</c> to table.</summary>
