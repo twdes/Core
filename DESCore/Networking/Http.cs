@@ -1147,6 +1147,16 @@ namespace TecWare.DE.Networking
 				return await r.GetTableAsync();
 		} // func GetTableAsync
 
+		/// <summary></summary>
+		/// <param name="requestUri"></param>
+		/// <param name="acceptedMimeType"></param>
+		/// <returns></returns>
+		public async Task<Stream> GetStreamWithExceptionAsync(string requestUri, string acceptedMimeType = null)
+		{
+			using (var r = await GetResponseAsync(requestUri, acceptedMimeType))
+				return await r.GetStreamWithExceptionAsync();
+		} // func GetTableAsync
+
 		#endregion
 
 		#region -- PutxxxxAsync -------------------------------------------------------
@@ -1414,6 +1424,68 @@ namespace TecWare.DE.Networking
 
 		#endregion
 
+		#region -- class HttpResponseStreamReader -------------------------------------
+
+		private class HttpResponseStreamReader : Stream
+		{
+			private readonly HttpResponseMessage response;
+			private readonly Stream src;
+
+			private readonly byte[] lastBytes = new byte[1024];
+
+			public HttpResponseStreamReader(HttpResponseMessage response, Stream src)
+			{
+				this.response = response ?? throw new ArgumentNullException(nameof(response));
+				this.src = src ?? throw new ArgumentNullException(nameof(src));
+			} // ctor
+
+			protected override void Dispose(bool disposing)
+			{
+				if (disposing)
+				{
+					CheckForExceptionResult(lastBytes);
+					src.Dispose();
+				}
+				base.Dispose(disposing);
+			} // proc Dispose
+
+			public override int Read(byte[] buffer, int offset, int count)
+			{
+				var r = src.Read(buffer, offset, count);
+				if (r < lastBytes.Length)
+				{
+					// move buffer forward
+					Array.Copy(lastBytes, r, lastBytes, 0, lastBytes.Length - r);
+					// append part
+					Array.Copy(buffer, 0, lastBytes, lastBytes.Length - r, r);
+				}
+				else
+					Array.Copy(buffer, buffer.Length - lastBytes.Length, lastBytes, 0, lastBytes.Length);
+				return r;
+			} // func Read
+
+			public override long Seek(long offset, SeekOrigin origin)
+				=> src.Seek(offset, origin);
+
+			public override void SetLength(long value)
+				=> src.SetLength(value);
+
+			public override void Write(byte[] buffer, int offset, int count)
+				=> src.Write(buffer, offset, count);
+
+			public override void Flush()
+				=> src.Flush();
+
+			public override bool CanRead => src.CanRead;
+			public override bool CanSeek => src.CanSeek;
+			public override bool CanWrite => src.CanWrite;
+			public override long Length => src.Length;
+
+			public override long Position { get => src.Position; set => src.Position = value; }
+		} // class HttpResponseStreamReader
+
+		#endregion
+
 		/// <summary>Check if the content.type is equal to the expected content-type</summary>
 		/// <param name="response"></param>
 		/// <param name="acceptedMimeType"></param>
@@ -1484,6 +1556,13 @@ namespace TecWare.DE.Networking
 			}
 		} // func FormatReturnState
 
+		private static void CheckForExceptionResult(byte[] bytes)
+		{
+			var len = BitConverter.ToInt16(bytes, 2);
+			if (bytes[0] == 0x23 && bytes[1] == 0x31 && len > 10 && len <= 1020)
+				throw new HttpResponseException(HttpStatusCode.InternalServerError, Encoding.Unicode.GetString(bytes, 4, len));
+		} // proc CheckForExceptionResult
+
 		private static void CheckForExceptionResult(string stateValue, string text)
 		{
 			if (TryParseReturnState(stateValue, out var state) && state != DEHttpReturnState.Ok)
@@ -1528,6 +1607,14 @@ namespace TecWare.DE.Networking
 			return t;
 		} // func CheckForExceptionResult
 
+		private static async Task<Stream> GetStreamCoreAsync(HttpResponseMessage response)
+		{
+			return new HttpResponseStreamReader(
+				response,
+				await response.Content.ReadAsStreamAsync()
+			);
+		} // func GetStreamCoreAsync
+
 		private static async Task<TextReader> GetTextReaderAsync(HttpResponseMessage response)
 		{
 			var enc = GetEncodingFromCharset(response.Content.Headers.ContentType?.CharSet);
@@ -1548,6 +1635,13 @@ namespace TecWare.DE.Networking
 			using (var tr = await GetTextReaderAsync(response))
 				return CheckForExceptionResult(LuaTable.FromJson(tr));
 		} // func GetJsonTableAsync
+
+		/// <summary></summary>
+		/// <param name="r"></param>
+		/// <param name="acceptedMimeType"></param>
+		/// <returns></returns>
+		public static async Task<Stream> GetStreamWithExceptionAsync(this HttpResponseMessage r, string acceptedMimeType = null)
+			=> await GetStreamCoreAsync(CheckMimeType(r, acceptedMimeType));
 
 		/// <summary></summary>
 		/// <param name="r"></param>
