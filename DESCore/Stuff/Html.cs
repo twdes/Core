@@ -361,13 +361,13 @@ namespace TecWare.DE.Stuff
               new KeyValuePair<string, int>("tilde", 732),
         };
 
-        #endregion
+		#endregion
 
-        /// <summary></summary>
-        /// <param name="charText"></param>
-        /// <param name="charValue"></param>
-        /// <returns></returns>
-        public static bool TryConvertHtmlChar(string charText, out char charValue)
+		/// <summary></summary>
+		/// <param name="charText"></param>
+		/// <param name="charValue"></param>
+		/// <returns></returns>
+		public static bool TryConvertHtmlChar(string charText, out char charValue)
         {
             if (String.IsNullOrEmpty(charText))
             {
@@ -529,6 +529,49 @@ namespace TecWare.DE.Stuff
             }
         } // func HtmlToText
 
-        #endregion
-    } // class Html
+		#endregion
+
+		#region -- TextToHtml ---------------------------------------------------------
+
+		private static bool TryConvertHtmlChar(char c, out string charText)
+		{
+			var idx = Array.FindIndex(htmlChars, kv => kv.Value == (int)c);
+			if (idx == -1)
+			{
+				charText = null;
+				return false;
+			}
+			else
+			{
+				charText = htmlChars[idx].Key;
+				return true;
+			}
+		} // func TryConvertHtmlChar
+
+		/// <summary>Converts a char to text.</summary>
+		/// <param name="c"></param>
+		/// <returns></returns>
+		public static string ConvertHtmlChar(char c)
+			=> TryConvertHtmlChar(c, out var charText) ? '&' + charText + ';' : new String(c, 1);
+
+		/// <summary></summary>
+		/// <param name="sb"></param>
+		/// <param name="text"></param>
+		public static StringBuilder TextToHtml(this StringBuilder sb, string text)
+		{
+			if (text != null)
+			{
+				for (var i = 0; i < text.Length; i++)
+				{
+					if (TryConvertHtmlChar(text[i], out var charText))
+						sb.Append('&').Append(charText).Append(';');
+					else
+						sb.Append(text[i]);
+				}
+			}
+			return sb;
+		} // proc TextToHtml
+
+		#endregion
+	} // class Html
 }
