@@ -568,7 +568,7 @@ namespace TecWare.DE.Data
 		/// <summary></summary>
 		public void Dispose()
 			=> enumerator.Dispose();
-		
+
 		#endregion
 
 		private PropertyColumnInfo GetProperty(string propertyName, bool throwException)
@@ -682,8 +682,9 @@ namespace TecWare.DE.Data
 
 		/// <summary></summary>
 		/// <param name="column"></param>
-		public SimpleDataColumn(IDataColumn column)
-			: this(column.Name, column.DataType, column.Attributes)
+		/// <param name="attributes"></param>
+		public SimpleDataColumn(IDataColumn column, IPropertyEnumerableDictionary attributes = null)
+			: this(column.Name, column.DataType, attributes ?? column.Attributes)
 		{
 		} // ctor
 
@@ -759,11 +760,12 @@ namespace TecWare.DE.Data
 				throw new ArgumentOutOfRangeException(String.Format("Column '{0}' not found", columnName));
 			return -1;
 		} // func FindColumnIndex
-		  /// <summary></summary>
-		  /// <param name="columns"></param>
-		  /// <param name="throwException"></param>
-		  /// <param name="columnNames"></param>
-		  /// <returns></returns>
+
+		/// <summary></summary>
+		/// <param name="columns"></param>
+		/// <param name="throwException"></param>
+		/// <param name="columnNames"></param>
+		/// <returns></returns>
 		public static int[] FindColumnIndices(this IDataColumns columns, bool throwException, params string[] columnNames)
 		{
 			// init result
@@ -781,10 +783,13 @@ namespace TecWare.DE.Data
 			}
 
 			// return values
-			for (var i = 0; i < idx.Length; i++)
+			if (throwException)
 			{
-				if (idx[i] == -1)
-					throw new ArgumentOutOfRangeException(nameof(columnNames), columnNames[i], $"Column '{columnNames[i]}' not found.");
+				for (var i = 0; i < idx.Length; i++)
+				{
+					if (idx[i] == -1)
+						throw new ArgumentOutOfRangeException(nameof(columnNames), columnNames[i], $"Column '{columnNames[i]}' not found.");
+				}
 			}
 
 			return idx;
