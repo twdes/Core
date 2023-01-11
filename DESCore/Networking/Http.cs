@@ -1454,13 +1454,16 @@ namespace TecWare.DE.Networking
 				var r = src.Read(buffer, offset, count);
 				if (r < lastBytes.Length)
 				{
-					// move buffer forward
-					Array.Copy(lastBytes, r, lastBytes, 0, lastBytes.Length - r);
-					// append part
-					Array.Copy(buffer, 0, lastBytes, lastBytes.Length - r, r);
+					if (r > 0)
+					{
+						// move buffer forward
+						Array.Copy(lastBytes, r, lastBytes, 0, lastBytes.Length - r);
+						// append part
+						Array.Copy(buffer, 0, lastBytes, lastBytes.Length - r, r);
+					}
 				}
 				else
-					Array.Copy(buffer, buffer.Length - lastBytes.Length, lastBytes, 0, lastBytes.Length);
+					Array.Copy(buffer, r - lastBytes.Length, lastBytes, 0, lastBytes.Length);
 				return r;
 			} // func Read
 
