@@ -1446,7 +1446,7 @@ namespace TecWare.DE.Networking
 				{
 					if (!isEof)
 					{
-						src.SkipBytes(bufferSize: 1024); // check if there is any exception at the end
+						this.SkipBytes(bufferSize: 1024); // check if there is any exception at the end
 						isEof = true;
 					}
 
