@@ -1431,6 +1431,7 @@ namespace TecWare.DE.Networking
 			private readonly HttpResponseMessage response;
 			private readonly Stream src;
 
+			private bool isEof = false;
 			private readonly byte[] lastBytes = new byte[1024];
 
 			public HttpResponseStreamReader(HttpResponseMessage response, Stream src)
@@ -1443,6 +1444,12 @@ namespace TecWare.DE.Networking
 			{
 				if (disposing)
 				{
+					if (!isEof)
+					{
+						src.SkipBytes(bufferSize: 1024); // check if there is any exception at the end
+						isEof = true;
+					}
+
 					CheckForExceptionResult(lastBytes);
 					src.Dispose();
 				}
@@ -1461,6 +1468,8 @@ namespace TecWare.DE.Networking
 						// append part
 						Array.Copy(buffer, 0, lastBytes, lastBytes.Length - r, r);
 					}
+					else
+						isEof = true;
 				}
 				else
 					Array.Copy(buffer, r - lastBytes.Length, lastBytes, 0, lastBytes.Length);

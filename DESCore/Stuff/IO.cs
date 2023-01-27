@@ -235,6 +235,54 @@ namespace TecWare.DE.Stuff
 			}
 		} // func ReadInArray
 
+		/// <summary></summary>
+		/// <param name="src"></param>
+		/// <param name="byteCount"></param>
+		/// <param name="bufferSize"></param>
+		public static async Task<long> SkipBytesAsync(this Stream src, long byteCount = Int64.MaxValue, int bufferSize = 81920)
+		{
+			var buffer = new byte[bufferSize];
+			var skippedBytes = 0L;
+			while (true)
+			{
+				var restSize = Math.Min(bufferSize, byteCount - skippedBytes);
+				if (restSize > 0) // skip needed
+				{
+					var r = await src.ReadAsync(buffer, 0, (int)restSize);
+					if (r <= 0) // eof reached
+						break;
+					skippedBytes += r;
+				}
+				else
+					break;
+			}
+			return skippedBytes;
+		} // func SkipBytes
+
+		/// <summary></summary>
+		/// <param name="src"></param>
+		/// <param name="byteCount"></param>
+		/// <param name="bufferSize"></param>
+		public static long SkipBytes(this Stream src, long byteCount = Int64.MaxValue, int bufferSize = 81920)
+		{
+			var buffer = new byte[bufferSize];
+			var skippedBytes = 0L;
+			while (true)
+			{
+				var restSize = Math.Min(bufferSize, byteCount - skippedBytes);
+				if (restSize > 0) // skip needed
+				{
+					var r = src.Read(buffer, 0, (int)restSize);
+					if (r <= 0) // eof reached
+						break;
+					skippedBytes += r;
+				}
+				else
+					break;
+			}
+			return skippedBytes;
+		} // func SkipBytes
+
 		#endregion
 
 		#region -- FileFilterToRegex --------------------------------------------------
