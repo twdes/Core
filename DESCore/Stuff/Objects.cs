@@ -37,11 +37,23 @@ namespace TecWare.DE.Stuff
 		/// <summary></summary>
 		/// <param name="dispose"></param>
 		public DisposableScope(Action dispose)
-			=> this.dispose = dispose;
+			=> this.dispose = dispose ?? throw new ArgumentNullException(nameof(dispose));
 
 		/// <summary></summary>
 		public void Dispose()
 			=> dispose();
+
+		#region -- class EmptyDisposableScope -----------------------------------------
+
+		private sealed class EmptyDisposableScope : IDisposable
+		{ 
+			void IDisposable.Dispose() { }
+		} // class EmptyDisposableScope
+
+		#endregion
+
+		/// <summary>No dispose.</summary>
+		public static IDisposable Empty { get; } = new EmptyDisposableScope();
 	} // class class DisposableScope
 
 	#endregion

@@ -25,6 +25,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.WebSockets;
 using System.Reflection;
+using System.Security;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -468,7 +469,6 @@ namespace TecWare.DE.Networking
 				)
 				: null;
 		} // func Get
-
 
 		/// <summary></summary>
 		/// <param name="e"></param>
@@ -1004,7 +1004,8 @@ namespace TecWare.DE.Networking
 		/// <param name="credentials"></param>
 		/// <param name="baseUri"></param>
 		/// <param name="defaultEncoding"></param>
-		private DEHttpClient(DEClientHandler messageHandler, ICredentials credentials, Uri baseUri, Encoding defaultEncoding = null)
+		/// <param name="rfc7617"></param>
+		private DEHttpClient(DEClientHandler messageHandler, ICredentials credentials, Uri baseUri, Encoding defaultEncoding, bool rfc7617)
 			: base(messageHandler, true)
 		{
 			this.Credentials = credentials;
@@ -1014,10 +1015,21 @@ namespace TecWare.DE.Networking
 
 			// add add encoding
 			DefaultRequestHeaders.AcceptCharset.Add(new StringWithQualityHeaderValue(DefaultEncoding.WebName));
-			DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue("gzip",1.0));
+			DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue("gzip", 1.0));
 			DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue("deflate", 0.9));
 			DefaultRequestHeaders.Add("des-multiple-authentifications", "true");
+
+			if (rfc7617 && credentials != null)
+			{
+				if (credentials is UserCredential userCred && userCred.AuthType == "Basic")
+					SetDefaultAuthorization(userCred.UserName, userCred.GetPlainPassword());
+				else if (credentials is NetworkCredential network && network.Domain == null)
+					SetDefaultAuthorization(network.UserName, network.Password);
+			}
 		} // ctor
+
+		private void SetDefaultAuthorization(string userName, string password)
+			=> DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes($"{userName}:{password}")));
 
 		#endregion
 
@@ -1328,7 +1340,8 @@ namespace TecWare.DE.Networking
 		/// <param name="credentials">Optional credentials</param>
 		/// <param name="defaultEncoding">Default encoding.</param>
 		/// <param name="httpHandler">Defines a http client handler.</param>
-		public static DEHttpClient Create(Uri baseUri, ICredentials credentials = null, Encoding defaultEncoding = null, HttpMessageHandler httpHandler = null)
+		/// <param name="rfc7617">Use utf8 for username/password encoding on basic authentification</param>
+		public static DEHttpClient Create(Uri baseUri, ICredentials credentials = null, Encoding defaultEncoding = null, HttpMessageHandler httpHandler = null, bool rfc7617 = true)
 		{
 			if (httpHandler == null)
 				httpHandler = GetDefaultMessageHandler();
@@ -1337,7 +1350,7 @@ namespace TecWare.DE.Networking
 
 			try
 			{
-				return new DEHttpClient(new DEClientHandler(httpHandler), credentials, baseUri, defaultEncoding);
+				return new DEHttpClient(new DEClientHandler(httpHandler), credentials, baseUri, defaultEncoding, rfc7617);
 			}
 			catch
 			{
@@ -1445,10 +1458,7 @@ namespace TecWare.DE.Networking
 				if (disposing)
 				{
 					if (!isEof)
-					{
 						this.SkipBytes(bufferSize: 1024); // check if there is any exception at the end
-						isEof = true;
-					}
 
 					CheckForExceptionResult(lastBytes);
 					src.Dispose();

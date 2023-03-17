@@ -14,7 +14,9 @@
 //
 #endregion
 using System;
+using System.ComponentModel;
 using System.Net;
+using System.Runtime.InteropServices;
 using System.Security;
 using TecWare.DE.Stuff;
 
@@ -112,6 +114,29 @@ namespace TecWare.DE.Networking
 		public string GetName()
 			=> String.IsNullOrEmpty(domain) ? userName : domain + "\\" + userName;
 
+		/// <summary>Returns a plain text password.</summary>
+		/// <returns></returns>
+		[EditorBrowsable(EditorBrowsableState.Advanced)]
+		public string GetPlainPassword()
+		{
+			if (password == null)
+				return null;
+			else if (password.Length == 0)
+				return String.Empty;
+			else
+			{
+				var pwdPtr = Marshal.SecureStringToGlobalAllocUnicode(password);
+				try
+				{
+					return Marshal.PtrToStringUni(pwdPtr);
+				}
+				finally
+				{
+					Marshal.ZeroFreeGlobalAllocUnicode(pwdPtr);
+				}
+			}
+		} // func GetPlainPassword
+
 		/// <summary>Authentification type</summary>
 		public string AuthType => authType;
 		/// <summary>Domain</summary>
@@ -157,7 +182,7 @@ namespace TecWare.DE.Networking
 			}
 		} // func Create
 
-#if NET47
+#if NET48
 		private static unsafe SecureString CreateSecureString(string password)
 		{
 			if (String.IsNullOrEmpty(password))
@@ -189,7 +214,7 @@ namespace TecWare.DE.Networking
 				throw new ArgumentNullException(nameof(userName));
 
 			var p = userName.IndexOf('\\');
-			if(p >= 0)
+			if (p >= 0)
 				return new UserCredential(userName.Substring(0, p), userName.Substring(p + 1), password);
 			else
 			{
