@@ -374,6 +374,34 @@ namespace TecWare.DE.Stuff
 			return sb.ToString();
 		} // func FilterFileName
 
+		private static string GetUniqueFileName(string path, string name, string extension, int idx)
+			=> Path.Combine(path, idx == 0 ? name + extension : name + "." + idx.ToString() + extension);
+
+		/// <summary>Create a unique file name.</summary>
+		/// <param name="fileName">Filename</param>
+		/// <returns></returns>
+		public static string GetUniqueFileName(string fileName)
+		{
+			var idx = 0;
+
+			string path = null;
+			string extension = null;
+			string name = null;
+
+			while (File.Exists(fileName))
+			{
+				if (idx == 0)
+				{
+					path = Path.GetDirectoryName(fileName);
+					extension = Path.GetExtension(fileName);
+					name = Path.GetFileNameWithoutExtension(fileName);
+				}
+				fileName = GetUniqueFileName(path, name, extension, idx++);
+			}
+
+			return fileName;
+		} // string GetUniqueFileName
+
 		/// <summary>Utf-8 encoder/decoder that not emits the utf-8 header.</summary>
 		public static Encoding Utf8Encoding { get; } = new UTF8Encoding(false);
 	} // class Procs
