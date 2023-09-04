@@ -46,7 +46,7 @@ namespace TecWare.DE.Stuff
 		#region -- class EmptyDisposableScope -----------------------------------------
 
 		private sealed class EmptyDisposableScope : IDisposable
-		{ 
+		{
 			void IDisposable.Dispose() { }
 		} // class EmptyDisposableScope
 
@@ -405,11 +405,11 @@ namespace TecWare.DE.Stuff
 		/// <returns></returns>
 		public static object Parse(this IStringConverter converter, string text, IFormatProvider formatProvider = null)
 			=> converter.TryParse(text, formatProvider, out var v) ? v : throw new FormatException();
-		
+
 		#endregion
 
 		#region -- GetService ---------------------------------------------------------
-		
+
 		/// <summary></summary>
 		/// <typeparam name="T"></typeparam>
 		/// <param name="sp"></param>
@@ -418,7 +418,7 @@ namespace TecWare.DE.Stuff
 		public static T GetService<T>(this IServiceProvider sp, bool throwException = false)
 			where T : class
 			=> GetService<T>(sp, typeof(T), throwException);
-		
+
 		/// <summary></summary>
 		/// <typeparam name="T"></typeparam>
 		/// <param name="sp"></param>
@@ -478,7 +478,7 @@ namespace TecWare.DE.Stuff
 
 			return CompareBytesIntern(a, aOffset, b, bOffset, length);
 		} // proc CompareBytes
-		
+
 		private static bool CompareBytesIntern(byte[] a, int aOffset, byte[] b, int bOffset, int length)
 		{
 			for (var i = 0; i < length; i++)
@@ -731,7 +731,7 @@ namespace TecWare.DE.Stuff
 
 		private sealed class RangeEnumeratorUntyped : RangeEnumeratorCore<IEnumerator>
 		{
-			public RangeEnumeratorUntyped(IEnumerator enumerator, int start, int count) 
+			public RangeEnumeratorUntyped(IEnumerator enumerator, int start, int count)
 				: base(enumerator, start, count)
 			{
 			}
@@ -936,7 +936,7 @@ namespace TecWare.DE.Stuff
 
 			if (commonName != null && commonName.Length > 2 && commonName[0] == '*' && commonName[1] == '.') // wild card certificate
 				return hostName.EndsWith(commonName.Substring(1));
-			else 
+			else
 				return hostName == commonName;
 		} // func ValidateHostName
 

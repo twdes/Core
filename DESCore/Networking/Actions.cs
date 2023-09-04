@@ -15,7 +15,9 @@
 #endregion
 using Neo.IronLua;
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using TecWare.DE.Stuff;
@@ -50,7 +52,7 @@ namespace TecWare.DE.Networking
 	#region -- class DEAction ---------------------------------------------------------
 
 	/// <summary>Action definiton for the client implementation.</summary>
-	public sealed class DEAction
+	public sealed class DEAction : IReadOnlyList<DEActionParam>
 	{
 		private readonly string path;
 		private readonly string actionName;
@@ -142,8 +144,23 @@ namespace TecWare.DE.Networking
 
 		#endregion
 
+		/// <summary></summary>
+		/// <returns></returns>
+		public IEnumerator<DEActionParam> GetEnumerator()
+			=> parameters.Cast<DEActionParam>().GetEnumerator();
+
+		IEnumerator IEnumerable.GetEnumerator()
+			=> parameters.GetEnumerator();
+
 		/// <summary>Name of the action.</summary>
 		public string Name => actionName;
+
+		/// <summary>Number of paramters</summary>
+		public int Count => parameters.Length;
+		/// <summary></summary>
+		/// <param name="index"></param>
+		/// <returns></returns>
+		public DEActionParam this[int index] => parameters[index];
 
 		#region -- Create -------------------------------------------------------------
 
