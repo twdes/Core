@@ -134,6 +134,8 @@ namespace TecWare.DE.Networking
 			public const string Xaml = "application/xaml+xml";
 			[MimeTypeInfo(true, ".dat")]
 			public const string OctetStream = "application/octet-stream";
+			[MimeTypeInfo(false)]
+			public const string Xform = "x-www-form-urlencoded";
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 		} // class Application
 	} // class MimeTypes
