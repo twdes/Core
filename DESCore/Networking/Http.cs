@@ -135,7 +135,9 @@ namespace TecWare.DE.Networking
 			[MimeTypeInfo(true, ".dat")]
 			public const string OctetStream = "application/octet-stream";
 			[MimeTypeInfo(false)]
-			public const string Xform = "x-www-form-urlencoded";
+			public const string Xform = "application/x-www-form-urlencoded";
+			[MimeTypeInfo(true, ".json")]
+			public const string Json = "application/json";
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 		} // class Application
 	} // class MimeTypes
