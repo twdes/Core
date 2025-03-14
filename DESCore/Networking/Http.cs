@@ -100,8 +100,10 @@ namespace TecWare.DE.Networking
 			public const string Lson = "text/x-lson";
 			[MimeTypeInfo(false)]
 			public const string DataSet = "text/dataset";
-			[MimeTypeInfo(false)]
+			[MimeTypeInfo(false, ".md")]
 			public const string Markdown = "text/markdown";
+			[MimeTypeInfo(false, ".ics")]
+			public const string Calendar = "text/vcalendar";
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 		} // class Text
 
