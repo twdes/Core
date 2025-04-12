@@ -103,7 +103,7 @@ namespace TecWare.DE.Networking
 			[MimeTypeInfo(false, ".md")]
 			public const string Markdown = "text/markdown";
 			[MimeTypeInfo(false, ".ics")]
-			public const string Calendar = "text/vcalendar";
+			public const string Calendar = "text/calendar";
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 		} // class Text
 

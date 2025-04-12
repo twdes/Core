@@ -402,6 +402,12 @@ namespace TecWare.DE.Stuff
 			return fileName;
 		} // string GetUniqueFileName
 
+		/// <summary>Create a unique file name.</summary>
+		/// <param name="fileInfo">Filename</param>
+		/// <returns></returns>
+		public static FileInfo GetUniqueFileName(this FileInfo fileInfo)
+			=> new FileInfo(GetUniqueFileName(fileInfo.FullName));
+
 		/// <summary>Utf-8 encoder/decoder that not emits the utf-8 header.</summary>
 		public static Encoding Utf8Encoding { get; } = new UTF8Encoding(false);
 	} // class Procs
