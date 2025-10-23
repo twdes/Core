@@ -192,7 +192,7 @@ namespace TecWare.DE.Data
 			switch (state)
 			{
 				case ReadingState.Unread:
-					if (reader == null)
+					if (reader is null)
 						reader = command.ExecuteReader(CommandBehavior.SingleResult);
 
 					state = ReadingState.FetchRows;
@@ -202,7 +202,9 @@ namespace TecWare.DE.Data
 						goto case ReadingState.FetchRows;
 
 				case ReadingState.FetchRows:
-					if (!reader.Read())
+					if (reader is null)
+						throw new ObjectDisposedException(nameof(DbDataRow));
+					else if (!reader.Read())
 						goto case ReadingState.Complete;
 
 					return true;
