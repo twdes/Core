@@ -1830,7 +1830,7 @@ namespace TecWare.DE.Networking
 					firstAdded = true;
 				}
 
-				sb.Append(Uri.EscapeUriString(a.Name))
+				sb.Append(Uri.EscapeDataString(a.Name))
 					.Append('=');
 
 				sb.Append(Uri.EscapeDataString(a.Value.ChangeType<string>()));

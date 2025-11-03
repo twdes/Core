@@ -355,5 +355,59 @@ namespace TecWare.DE.Stuff
 		} // func GetFirstLine
 
 		#endregion
+
+		#region -- IsUtf8 -------------------------------------------------------------
+
+		/// <summary>Test for Utf8</summary>
+		/// <param name="bytes"></param>
+		/// <returns></returns>
+		public static bool IsUtf8(byte[] bytes)
+		{
+			var i = 0;
+
+			bool IsUtf8Sequence(int count)
+			{
+				while (count > 0)
+				{
+					if (i >= bytes.Length)
+						return false;
+
+					var b = bytes[i++];
+					if ((b >> 6) != 0x02)
+						return false;
+					count--;
+				}
+				return true;
+			} // func IsUtf8Sequence
+
+			while (i < bytes.Length)
+			{
+				var b = bytes[i++];
+
+				if (b < 0x7F)
+				{ }
+				else if ((b >> 5) == 0x06)
+				{
+					if (!IsUtf8Sequence(1))
+						return false;
+				}
+				else if ((b >> 4) == 0xE)
+				{
+					if (!IsUtf8Sequence(2))
+						return false;
+				}
+				else if ((b >> 5) == 0x1E)
+				{
+					if (!IsUtf8Sequence(3))
+						return false;
+				}
+				else
+					return false;
+			}
+
+			return true;
+		} // func IsUtf8
+
+		#endregion
 	} // class Procs
 }
