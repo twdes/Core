@@ -250,7 +250,9 @@ namespace TecWare.DE.Data
 			get
 			{
 				CheckDisposed();
-				if (state != ReadingState.FetchRows)
+				if (state == ReadingState.Complete)
+					return null;
+				else if (state != ReadingState.FetchRows)
 					throw new InvalidOperationException("The state of the object forbids the retrieval of this property.");
 				return dataRowProxy;
 			}
