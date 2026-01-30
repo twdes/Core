@@ -109,14 +109,20 @@ namespace TecWare.DE.Stuff
 	/// <summary></summary>
 	public sealed class LogMessageScopeProxy : IDisposable
 	{
+		private readonly bool dispose;
 		private readonly ILogMessageScope scope;
 		private readonly Stopwatch stopWatch;
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
-		internal LogMessageScopeProxy(ILogMessageScope scope, bool stopTime = false)
+		/// <summary></summary>
+		/// <param name="scope"></param>
+		/// <param name="stopTime"></param>
+		/// <param name="dispose"></param>
+		public LogMessageScopeProxy(ILogMessageScope scope, bool stopTime = false, bool dispose = true)
 		{
 			this.scope = scope;
+			this.dispose = dispose;
 			this.stopWatch = stopTime ? Stopwatch.StartNew() : null;
 		} // ctor
 
@@ -133,7 +139,8 @@ namespace TecWare.DE.Stuff
 					this.NewLine()
 						.WriteLine("=== Duration = {0:N0}ms, {1:N0}ticks ===", stopWatch.ElapsedMilliseconds, stopWatch.ElapsedTicks);
 				}
-				scope?.Dispose();
+				if (dispose)
+					scope?.Dispose();
 			}
 		} // proc Dispose
 
@@ -239,6 +246,9 @@ namespace TecWare.DE.Stuff
 
 		/// <summary></summary>
 		public LogMsgType Typ => scope?.Typ ?? LogMsgType.Information;
+
+		/// <summary>Scope to proxy.</summary>
+		public ILogMessageScope Scope => scope;
 
 		/// <summary></summary>
 		public static LogMessageScopeProxy Empty { get; } = new LogMessageScopeProxy(null);
