@@ -42,7 +42,6 @@ namespace TecWare.DE.Data
 
 	#endregion
 
-
 	#region -- class TextReaderException ----------------------------------------------
 
 	/// <summary></summary>

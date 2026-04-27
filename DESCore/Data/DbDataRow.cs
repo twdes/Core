@@ -98,7 +98,7 @@ namespace TecWare.DE.Data
 
 		#endregion
 
-		private bool isDisposed;
+		private bool isDisposed = false;
 		private readonly DbCommand command;
 		private DbDataReader reader;
 		private readonly bool leaveOpen;
@@ -205,12 +205,14 @@ namespace TecWare.DE.Data
 					if (reader is null)
 						throw new ObjectDisposedException(nameof(DbDataRow));
 					else if (!reader.Read())
+					{
+						state = ReadingState.Complete;
 						goto case ReadingState.Complete;
+					}
 
 					return true;
 
 				case ReadingState.Complete:
-					state = ReadingState.Complete;
 					return false;
 				default:
 					throw new InvalidOperationException("The state of the object is invalid.");
@@ -290,7 +292,7 @@ namespace TecWare.DE.Data
 		/// <param name="command"></param>
 		public DbRowEnumerable(DbCommand command)
 		{
-			this.command = command;
+			this.command = command ?? throw new ArgumentNullException(nameof(command));
 		} // ctor
 
 		/// <summary></summary>
