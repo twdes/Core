@@ -433,7 +433,7 @@ namespace TecWare.DE.Stuff
 				r = sp.GetService(serviceType) as T;
 
 			if (r == null && throwException)
-				throw new ArgumentException(String.Format("Service {0} is not implemented by {1}.", serviceType.Name, typeof(T).Name));
+				throw new ArgumentException(String.Format("Service not found (({1}){0}).", serviceType.Name, typeof(T).Name));
 
 			return r;
 		} // func GetService
