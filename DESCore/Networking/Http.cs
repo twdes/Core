@@ -1686,7 +1686,7 @@ namespace TecWare.DE.Networking
 		{
 			if (r.Content.Headers.ContentType?.MediaType == MimeTypes.Text.Lson)
 				return await GetTableAsync(r);
-			else if (r.Content.Headers.ContentType?.MediaType == MimeTypes.Text.Json)
+			else if (r.Content.Headers.ContentType?.MediaType == MimeTypes.Text.Json || r.Content.Headers.ContentType?.MediaType == MimeTypes.Application.Json)
 				return await GetJsonTableAsync(r);
 			else if (r.Content.Headers.ContentType?.MediaType == MimeTypes.Text.Xml)
 				return Procs.CreateLuaTable(await GetXmlAsync(r, MimeTypes.Text.Xml, rootName));
